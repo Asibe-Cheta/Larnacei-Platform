@@ -1,0 +1,240 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  password      String
+  phone         String?
+  role          UserRole  @default(USER)
+  isVerified    Boolean   @default(false)
+  isKYCVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  properties    Property[]
+  bookings      Booking[]
+  payments      Payment[]
+  kycDocuments  KYCDocument[]
+  favorites     Favorite[]
+  reviews       Review[]
+
+  @@map("users")
+}
+
+model Property {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  price       Decimal
+  currency    String        @default("NGN")
+  category    PropertyCategory
+  type        PropertyType
+  status      PropertyStatus @default(AVAILABLE)
+  
+  // Location
+  address     String
+  city        String
+  state       String
+  country     String        @default("Nigeria")
+  latitude    Float?
+  longitude   Float?
+  
+  // Property details
+  bedrooms    Int?
+  bathrooms   Int?
+  area        Float? // in square meters
+  amenities   String[] // JSON array of amenities
+  
+  // Images
+  images      String[] // JSON array of image URLs
+  
+  // Contact
+  contactPhone String?
+  contactEmail String?
+  
+  // Metadata
+  isFeatured  Boolean       @default(false)
+  isVerified  Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookings    Booking[]
+  favorites   Favorite[]
+  reviews     Review[]
+  
+  @@map("properties")
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  startDate   DateTime
+  endDate     DateTime
+  totalAmount Decimal
+  status      BookingStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId  String
+  property    Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  payment     Payment?
+  
+  @@map("bookings")
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  amount      Decimal
+  currency    String        @default("NGN")
+  status      PaymentStatus @default(PENDING)
+  paymentMethod PaymentMethod
+  paystackReference String? @unique
+  paystackTransactionId String?
+  description String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId   String?       @unique
+  booking     Booking?      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  
+  @@map("payments")
+}
+
+model KYCDocument {
+  id          String        @id @default(cuid())
+  documentType KYCDocumentType
+  documentUrl String
+  status      KYCStatus     @default(PENDING)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  
+  // Relations
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("kyc_documents")
+}
+
+model Favorite {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now())
+  
+  // Relations
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId  String
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, propertyId])
+  @@map("favorites")
+}
+
+model Review {
+  id          String    @id @default(cuid())
+  rating      Int       // 1-5 stars
+  comment     String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  // Relations
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  propertyId  String
+  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, propertyId])
+  @@map("reviews")
+}
+
+// Enums
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum PropertyCategory {
+  SHORT_STAYS
+  LONG_TERM_RENTALS
+  LANDED_PROPERTIES
+  PROPERTY_SALES
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  VILLA
+  LAND
+  COMMERCIAL
+  OFFICE
+  SHOP
+  WAREHOUSE
+}
+
+enum PropertyStatus {
+  AVAILABLE
+  RENTED
+  SOLD
+  UNDER_MAINTENANCE
+  UNAVAILABLE
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  PAYSTACK
+  BANK_TRANSFER
+  CASH
+}
+
+enum KYCDocumentType {
+  NATIONAL_ID
+  DRIVERS_LICENSE
+  PASSPORT
+  UTILITY_BILL
+  BANK_STATEMENT
+}
+
+enum KYCStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
