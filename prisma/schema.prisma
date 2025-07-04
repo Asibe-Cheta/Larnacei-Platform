@@ -1,208 +1,511 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// NextAuth.js required models
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String      @id @default(cuid())
+  email         String      @unique
+  emailVerified DateTime?
+  phone         String?     @unique
+  phoneVerified Boolean     @default(false)
   name          String?
-  password      String
-  phone         String?
-  role          UserRole  @default(USER)
-  isVerified    Boolean   @default(false)
-  isKYCVerified Boolean   @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  image         String?
+  password      String?     // For credentials authentication
+  role          UserRole    @default(SEEKER)
+  accountType   AccountType @default(INDIVIDUAL)
+
+  // Verification Status
+  isVerified        Boolean           @default(false)
+  verificationLevel VerificationLevel @default(NONE)
+  kycStatus         KYCStatus         @default(PENDING)
+
+  // Payment Integration
+  paystackCustomerId String?
+  paystackAccountId  String?
+
+  // Profile Information
+  bio            String?
+  location       String?
+  experience     Int? // Years of experience
+  specialization String[] // Areas of expertise
+  socialLinks    Json? // Social media links
+
+  // Contact Preferences
+  contactPreference ContactPreference @default(EMAIL)
+  availabilityHours Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // Relations
-  properties    Property[]
-  bookings      Booking[]
-  payments      Payment[]
-  kycDocuments  KYCDocument[]
-  favorites     Favorite[]
-  reviews       Review[]
+  accounts         Account[]
+  sessions         Session[]
+  properties       Property[]
+  bookings         Booking[]
+  reviews          Review[]
+  messages         Message[]
+  notifications    Notification[]
+  inquiries        PropertyInquiry[]
+  verificationDocs VerificationDocument[]
+  favorites        PropertyFavorite[]
 
   @@map("users")
 }
 
 model Property {
-  id          String        @id @default(cuid())
+  id          String @id @default(cuid())
   title       String
   description String
-  price       Decimal
-  currency    String        @default("NGN")
-  category    PropertyCategory
-  type        PropertyType
-  status      PropertyStatus @default(AVAILABLE)
-  
+
+  // Property Classification
+  type     PropertyType
+  category PropertyCategory
+  purpose  PropertyPurpose
+
   // Location
-  address     String
-  city        String
-  state       String
-  country     String        @default("Nigeria")
-  latitude    Float?
-  longitude   Float?
-  
-  // Property details
-  bedrooms    Int?
-  bathrooms   Int?
-  area        Float? // in square meters
-  amenities   String[] // JSON array of amenities
-  
-  // Images
-  images      String[] // JSON array of image URLs
-  
-  // Contact
-  contactPhone String?
-  contactEmail String?
-  
-  // Metadata
-  isFeatured  Boolean       @default(false)
-  isVerified  Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
+  location      String
+  state         String
+  city          String
+  lga           String // Local Government Area
+  streetAddress String
+  landmark      String?
+  latitude      Float?
+  longitude     Float?
+
+  // Pricing
+  price        Int // Base price in kobo
+  currency     Currency @default(NGN)
+  isNegotiable Boolean  @default(false)
+
+  // Property Details
+  bedrooms       Int?
+  bathrooms      Int?
+  toilets        Int?
+  sizeInSqm      Float?
+  sizeInHectares Float?
+  parkingSpaces  Int?   @default(0)
+  yearBuilt      Int?
+  floorLevel     Int?
+  totalFloors    Int?
+
+  // Features & Condition
+  features         String[] // JSON array of features
+  furnishingStatus FurnishingStatus?
+  condition        PropertyCondition
+
+  // Availability
+  availabilityStatus AvailabilityStatus @default(AVAILABLE)
+  availableFrom      DateTime?
+  inspectionType     InspectionType     @default(BY_APPOINTMENT)
+
+  // Legal Documentation
+  titleDocuments Json // Document checklist
+  ownershipType  OwnershipType
+  legalStatus    LegalStatus   @default(CLEAR)
+
+  // Media
+  images         PropertyImage[]
+  videos         PropertyVideo[]
+  virtualTourUrl String?
+  floorPlanUrl   String?
+
+  // Status & Verification
+  isActive         Boolean          @default(false)
+  isVerified       Boolean          @default(false)
+  isFeatured       Boolean          @default(false)
+  moderationStatus ModerationStatus @default(PENDING)
+
+  // Analytics
+  viewCount     Int @default(0)
+  inquiryCount  Int @default(0)
+  favoriteCount Int @default(0)
+
   // Relations
-  userId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookings    Booking[]
-  favorites   Favorite[]
-  reviews     Review[]
-  
+  ownerId      String
+  owner        User               @relation(fields: [ownerId], references: [id])
+  bookings     Booking[]
+  reviews      Review[]
+  availability Availability[]
+  inquiries    PropertyInquiry[]
+  favorites    PropertyFavorite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("properties")
 }
 
-model Booking {
-  id          String        @id @default(cuid())
-  startDate   DateTime
-  endDate     DateTime
-  totalAmount Decimal
-  status      BookingStatus @default(PENDING)
-  notes       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
+model PropertyImage {
+  id         String   @id @default(cuid())
+  url        String
+  alt        String?
+  order      Int      @default(0)
+  isPrimary  Boolean  @default(false)
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("property_images")
+}
+
+model PropertyVideo {
+  id         String    @id @default(cuid())
+  url        String
+  title      String?
+  type       VideoType @default(WALKTHROUGH)
+  propertyId String
+  property   Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@map("property_videos")
+}
+
+model PropertyInquiry {
+  id                String            @id @default(cuid())
+  message           String
+  inquiryType       InquiryType
+  contactPreference ContactPreference
+
+  // Inquiry Details
+  intendedUse     String?
+  budget          Int?
+  timeframe       String?
+  financingNeeded Boolean @default(false)
+
+  status InquiryStatus @default(NEW)
+
   // Relations
-  userId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  propertyId  String
-  property    Property      @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  payment     Payment?
-  
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  inquirerId String
+  inquirer   User     @relation(fields: [inquirerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("property_inquiries")
+}
+
+model Booking {
+  id          String   @id @default(cuid())
+  checkIn     DateTime
+  checkOut    DateTime
+  guests      Int
+  totalPrice  Int // In kobo
+  serviceFee  Int      @default(0)
+  cleaningFee Int      @default(0)
+  taxes       Int      @default(0)
+
+  status            BookingStatus @default(PENDING)
+  paymentStatus     PaymentStatus @default(PENDING)
+  paystackPaymentId String?
+
+  // Relations
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  guestId    String
+  guest      User     @relation(fields: [guestId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@map("bookings")
 }
 
-model Payment {
-  id          String        @id @default(cuid())
-  amount      Decimal
-  currency    String        @default("NGN")
-  status      PaymentStatus @default(PENDING)
-  paymentMethod PaymentMethod
-  paystackReference String? @unique
-  paystackTransactionId String?
-  description String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  // Relations
-  userId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bookingId   String?       @unique
-  booking     Booking?      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  
-  @@map("payments")
-}
-
-model KYCDocument {
-  id          String        @id @default(cuid())
-  documentType KYCDocumentType
-  documentUrl String
-  status      KYCStatus     @default(PENDING)
-  notes       String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  
-  // Relations
-  userId      String
-  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  @@map("kyc_documents")
-}
-
-model Favorite {
-  id          String    @id @default(cuid())
-  createdAt   DateTime  @default(now())
-  
-  // Relations
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  propertyId  String
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, propertyId])
-  @@map("favorites")
-}
-
 model Review {
-  id          String    @id @default(cuid())
-  rating      Int       // 1-5 stars
-  comment     String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  
+  id      String  @id @default(cuid())
+  rating  Int // 1-5 stars
+  comment String?
+
   // Relations
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  propertyId  String
-  property    Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
-  
-  @@unique([userId, propertyId])
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id])
+
+  createdAt DateTime @default(now())
+
   @@map("reviews")
+}
+
+model Message {
+  id      String  @id @default(cuid())
+  content String
+  isRead  Boolean @default(false)
+
+  // Relations
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("messages")
+}
+
+model Notification {
+  id      String           @id @default(cuid())
+  title   String
+  message String
+  type    NotificationType
+  isRead  Boolean          @default(false)
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model Availability {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  isAvailable Boolean  @default(true)
+  price       Int? // Override price for specific date
+
+  // Relations
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([propertyId, date])
+  @@map("availability")
+}
+
+model VerificationDocument {
+  id             String       @id @default(cuid())
+  documentType   DocumentType
+  documentUrl    String
+  documentNumber String?
+
+  verificationStatus VerificationStatus @default(PENDING)
+  verifiedAt         DateTime?
+  verifiedBy         String?
+  rejectionReason    String?
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("verification_documents")
+}
+
+model PropertyFavorite {
+  id String @id @default(cuid())
+
+  // Relations
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, propertyId])
+  @@map("property_favorites")
 }
 
 // Enums
 enum UserRole {
-  USER
+  SEEKER
+  OWNER
+  AGENT
   ADMIN
-  MODERATOR
+  SUPER_ADMIN
+}
+
+enum AccountType {
+  INDIVIDUAL
+  AGENT
+  AGENCY
+  CORPORATE
+}
+
+enum VerificationLevel {
+  NONE
+  EMAIL_VERIFIED
+  PHONE_VERIFIED
+  ID_VERIFIED
+  BUSINESS_VERIFIED
+  FULL_VERIFIED
+}
+
+enum KYCStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  INCOMPLETE
 }
 
 enum PropertyCategory {
-  SHORT_STAYS
-  LONG_TERM_RENTALS
-  LANDED_PROPERTIES
-  PROPERTY_SALES
+  SHORT_STAY
+  LONG_TERM_RENTAL
+  LANDED_PROPERTY
+  PROPERTY_SALE
 }
 
 enum PropertyType {
   APARTMENT
   HOUSE
-  VILLA
   LAND
   COMMERCIAL
-  OFFICE
-  SHOP
-  WAREHOUSE
+  VILLA
+  DUPLEX
+  STUDIO
+  PENTHOUSE
 }
 
-enum PropertyStatus {
+enum PropertyPurpose {
+  FOR_SALE
+  FOR_RENT
+  FOR_LEASE
+  SHORT_STAY
+}
+
+enum PropertyCondition {
+  NEW
+  OLD
+  RENOVATED
+  UNDER_CONSTRUCTION
+  NEEDS_RENOVATION
+}
+
+enum FurnishingStatus {
+  FURNISHED
+  SEMI_FURNISHED
+  UNFURNISHED
+}
+
+enum Currency {
+  NGN
+  USD
+  GBP
+  EUR
+}
+
+enum AvailabilityStatus {
   AVAILABLE
-  RENTED
-  SOLD
-  UNDER_MAINTENANCE
-  UNAVAILABLE
+  OCCUPIED
+  MAINTENANCE
+  RESERVED
+}
+
+enum InspectionType {
+  ANYTIME
+  BY_APPOINTMENT
+  VIRTUAL_ONLY
+  WEEKENDS_ONLY
+  WEEKDAYS_ONLY
+}
+
+enum OwnershipType {
+  PERSONAL
+  FAMILY
+  AGENCY
+  CORPORATE
+  GOVERNMENT
+}
+
+enum LegalStatus {
+  CLEAR
+  PENDING
+  DISPUTED
+  UNKNOWN
+}
+
+enum ContactPreference {
+  EMAIL
+  PHONE
+  WHATSAPP
+  PLATFORM_MESSAGE
+}
+
+enum InquiryType {
+  GENERAL_INFO
+  VIEWING_REQUEST
+  PRICE_INQUIRY
+  PURCHASE_INTENT
+  RENTAL_APPLICATION
+  INVESTMENT_INQUIRY
+}
+
+enum InquiryStatus {
+  NEW
+  RESPONDED
+  IN_PROGRESS
+  CLOSED
+  SPAM
+}
+
+enum DocumentType {
+  NIN
+  BVN
+  DRIVERS_LICENSE
+  VOTERS_CARD
+  PASSPORT
+  CAC_CERTIFICATE
+  BUSINESS_LICENSE
+  REAN_MEMBERSHIP
+}
+
+enum VerificationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+  UNDER_REVIEW
 }
 
 enum BookingStatus {
@@ -210,31 +513,31 @@ enum BookingStatus {
   CONFIRMED
   CANCELLED
   COMPLETED
+  REFUNDED
 }
 
 enum PaymentStatus {
   PENDING
-  SUCCESSFUL
+  PAID
   FAILED
   REFUNDED
+  PROCESSING
 }
 
-enum PaymentMethod {
-  PAYSTACK
-  BANK_TRANSFER
-  CASH
+enum NotificationType {
+  BOOKING_REQUEST
+  BOOKING_CONFIRMED
+  PAYMENT_RECEIVED
+  REVIEW_RECEIVED
+  MESSAGE_RECEIVED
+  PROPERTY_APPROVED
+  PROPERTY_REJECTED
+  VERIFICATION_COMPLETE
 }
 
-enum KYCDocumentType {
-  NATIONAL_ID
-  DRIVERS_LICENSE
-  PASSPORT
-  UTILITY_BILL
-  BANK_STATEMENT
-}
-
-enum KYCStatus {
-  PENDING
-  APPROVED
-  REJECTED
+enum VideoType {
+  WALKTHROUGH
+  DRONE
+  NEIGHBORHOOD
+  VIRTUAL_TOUR
 }
