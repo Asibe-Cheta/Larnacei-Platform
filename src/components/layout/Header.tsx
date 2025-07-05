@@ -3,9 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useSession, signOut } from 'next-auth/react';
 
 export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { data: session, status } = useSession();
+  const user = session?.user;
+  const initial = user?.name?.[0] || user?.email?.[0] || 'U';
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -60,12 +64,30 @@ export default function Header() {
           </nav>
           
           <div className="hidden md:flex items-center space-x-4">
-            <Link href="/signin" className="text-gray-700 hover:text-red-700 transition-colors">
-              Sign In
-            </Link>
-            <Link href="/list-property" className="btn btn-primary text-sm">
-              List Property
-            </Link>
+            {status === 'authenticated' ? (
+              <div className="relative group">
+                <button className="flex items-center space-x-2 text-gray-700 hover:text-gray-900 focus:outline-none">
+                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium">{initial.toLowerCase()}</span>
+                  </div>
+                  <span className="hidden md:block">{user?.name || user?.email}</span>
+                  <span className="material-icons text-sm">arrow_drop_down</span>
+                </button>
+                <div className="absolute right-0 mt-2 w-40 bg-white border rounded shadow-lg opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity z-50">
+                  <Link href="/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">Dashboard</Link>
+                  <button onClick={() => signOut()} className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100">Sign Out</button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <Link href="/signin" className="text-gray-700 hover:text-red-700 transition-colors">
+                  Sign In
+                </Link>
+                <Link href="/list-property" className="btn btn-primary text-sm">
+                  List Property
+                </Link>
+              </>
+            )}
           </div>
           
           <div className="md:hidden">
@@ -149,22 +171,43 @@ export default function Header() {
           </Link>
           
           <hr className="border-gray-700 my-4" />
-          
-          <Link
-            href="/signin"
-            className="hover:text-red-300 flex items-center justify-center transition-colors"
-            onClick={closeMobileMenu}
-          >
-            <span className="material-icons mr-2">login</span>
-            Sign In
-          </Link>
-          <Link
-            href="/list-property"
-            className="btn btn-primary w-full mt-4"
-            onClick={closeMobileMenu}
-          >
-            List Property
-          </Link>
+          {status === 'authenticated' ? (
+            <>
+              <Link
+                href="/dashboard"
+                className="hover:text-red-300 flex items-center justify-center transition-colors"
+                onClick={closeMobileMenu}
+              >
+                <span className="material-icons mr-2">dashboard</span>
+                Dashboard
+              </Link>
+              <button
+                onClick={() => { signOut(); closeMobileMenu(); }}
+                className="hover:text-red-300 flex items-center justify-center transition-colors w-full mt-2"
+              >
+                <span className="material-icons mr-2">logout</span>
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/signin"
+                className="hover:text-red-300 flex items-center justify-center transition-colors"
+                onClick={closeMobileMenu}
+              >
+                <span className="material-icons mr-2">login</span>
+                Sign In
+              </Link>
+              <Link
+                href="/list-property"
+                className="btn btn-primary w-full mt-4"
+                onClick={closeMobileMenu}
+              >
+                List Property
+              </Link>
+            </>
+          )}
         </nav>
       </div>
     </>

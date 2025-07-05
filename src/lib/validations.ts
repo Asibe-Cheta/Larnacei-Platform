@@ -230,9 +230,28 @@ export const userProfileUpdateSchema = z.object({
   location: z.string().max(200).optional(),
   experience: z.number().min(0).max(50).optional(),
   specialization: z.array(z.string()).max(10).optional(),
-  socialLinks: z.record(z.string().url()).optional(),
+  streetAddress: z.string().max(200).optional(),
+  city: z.string().max(100).optional(),
+  state: z.string().max(100).optional(),
+  lga: z.string().max(100).optional(),
+  businessName: z.string().max(100).optional(),
+  cacNumber: z.string().max(50).optional(),
+  socialLinks: z.object({
+    linkedin: z.string().url().optional(),
+    instagram: z.string().url().optional(),
+    twitter: z.string().url().optional(),
+    website: z.string().url().optional(),
+  }).partial().optional(),
   contactPreference: z.nativeEnum(ContactPreference).optional(),
   availabilityHours: z.record(z.any()).optional(),
+  emailNotifications: z.object({
+    inquiries: z.boolean().optional(),
+    updates: z.boolean().optional(),
+    marketing: z.boolean().optional(),
+  }).partial().optional(),
+  smsNotifications: z.boolean().optional(),
+  profileVisibility: z.boolean().optional(),
+  showContactInfo: z.boolean().optional(),
 });
 
 /**

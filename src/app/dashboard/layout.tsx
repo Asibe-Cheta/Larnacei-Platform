@@ -1,23 +1,12 @@
 "use client";
+import { ReactNode } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname } from "next/navigation";
+import { Grid, Home, MessageSquare, BarChart2, Settings } from "lucide-react";
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname, redirect } from 'next/navigation';
-import React from 'react';
-import { Grid, Home, MessageSquare, BarChart2, Settings } from 'lucide-react';
-
-export default function DashboardRootPage() {
-  redirect('/dashboard/overview');
-}
-
-export function DashboardPage() {
-  // This page is now a client component for navigation purposes
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  // Optionally, you can fetch stats here with SWR or move the stats to the overview subroute
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -53,7 +42,6 @@ export function DashboardPage() {
           </div>
         </div>
       </header>
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Navigation Tabs */}
         <div className="bg-gray-100 border-b border-gray-200 mb-8">
@@ -88,11 +76,9 @@ export function DashboardPage() {
             })}
           </nav>
         </div>
-
         {/* Render the current tab's content via nested routes */}
         <div className="py-8">
-          {/* This will render the active subroute's page.tsx */}
-          {/* You may want to add a <Outlet /> or {children} here if using a layout */}
+          {children}
         </div>
       </div>
     </div>
