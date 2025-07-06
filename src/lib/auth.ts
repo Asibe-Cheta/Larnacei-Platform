@@ -87,6 +87,4 @@ export const authOptions: NextAuthOptions = {
     signUp: "/signup",
   },
   secret: process.env.NEXTAUTH_SECRET,
-};
-
-export { authOptions } from './authOptions'; 
+}; 

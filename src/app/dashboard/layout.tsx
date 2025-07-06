@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { Grid, Home, MessageSquare, BarChart2, Settings } from "lucide-react";
+import { Grid, Home, MessageSquare, BarChart2, Settings, CreditCard } from "lucide-react";
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -50,6 +50,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               { id: 'overview', label: 'Overview', icon: Grid, href: '/dashboard/overview' },
               { id: 'properties', label: 'My Properties', icon: Home, href: '/dashboard/properties' },
               { id: 'inquiries', label: 'Inquiries', icon: MessageSquare, href: '/dashboard/inquiries' },
+              { id: 'messages', label: 'Messages', icon: MessageSquare, href: '/dashboard/messages' },
+              { id: 'payments', label: 'Payments', icon: CreditCard, href: '/dashboard/payments' },
               { id: 'analytics', label: 'Analytics', icon: BarChart2, href: '/dashboard/analytics' },
               { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' }
             ].map((tab) => {

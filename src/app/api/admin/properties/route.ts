@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/lib/authOptions";
 import { prisma } from "@/lib/prisma";
 import { UserRole } from "@prisma/client";
 
@@ -10,38 +10,78 @@ import { UserRole } from "@prisma/client";
  */
 export async function GET(request: NextRequest) {
   try {
-    // Check authentication and admin role
+    // Check admin authentication
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: "Authentication required" },
-        { status: 401 }
-      );
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userRole = (session.user as any).role;
-    if (userRole !== UserRole.ADMIN && userRole !== UserRole.SUPER_ADMIN) {
-      return NextResponse.json(
-        { success: false, message: "Admin access required" },
-        { status: 403 }
-      );
+    // Verify admin role
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true }
+    });
+
+    if (user?.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Parse query parameters
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get("page") || "1");
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const status = searchParams.get("status"); // pending, approved, rejected, all
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const search = searchParams.get('search') || '';
+    const type = searchParams.get('type') || '';
+    const status = searchParams.get('status') || '';
+    const category = searchParams.get('category') || '';
+
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
-    
-    if (status && status !== "all") {
-      where.moderationStatus = status.toUpperCase();
+    const where: any = {
+      // Only get properties that are admin-managed (demo, featured, partner, showcase)
+      OR: [
+        { isDemo: true },
+        { isFeatured: true },
+        { isPartnerProperty: true },
+        { isShowcase: true }
+      ]
+    };
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { location: { contains: search, mode: 'insensitive' } },
+        { description: { contains: search, mode: 'insensitive' } }
+      ];
     }
 
-    // Fetch properties for moderation
+    if (type) {
+      switch (type) {
+        case 'demo':
+          where.isDemo = true;
+          break;
+        case 'featured':
+          where.isFeatured = true;
+          break;
+        case 'partner':
+          where.isPartnerProperty = true;
+          break;
+        case 'showcase':
+          where.isShowcase = true;
+          break;
+      }
+    }
+
+    if (status) {
+      where.status = status.toUpperCase();
+    }
+
+    if (category) {
+      where.category = category.toUpperCase();
+    }
+
+    // Get properties with related data
     const [properties, total] = await Promise.all([
       prisma.property.findMany({
         where,
@@ -51,79 +91,82 @@ export async function GET(request: NextRequest) {
               id: true,
               name: true,
               email: true,
-              phone: true,
-              isVerified: true,
-              verificationLevel: true,
-              role: true,
-            },
+              phone: true
+            }
           },
           images: {
-            orderBy: { order: "asc" },
-            take: 1,
-          },
-          _count: {
             select: {
-              images: true,
-              videos: true,
-              reviews: true,
-              inquiries: true,
+              id: true,
+              url: true,
+              isPrimary: true
             },
+            orderBy: { isPrimary: 'desc' }
           },
+          inquiries: {
+            select: { id: true }
+          },
+          bookings: {
+            select: { id: true }
+          }
         },
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         skip,
-        take: limit,
+        take: limit
       }),
-      prisma.property.count({ where }),
+      prisma.property.count({ where })
     ]);
 
-    // Calculate pagination metadata
-    const totalPages = Math.ceil(total / limit);
-    const hasNext = page < totalPages;
-    const hasPrev = page > 1;
+    // Transform data for admin interface
+    const transformedProperties = properties.map(property => {
+      const primaryImage = property.images.find(img => img.isPrimary)?.url || 
+                          property.images[0]?.url || '/images/placeholder.jpg';
 
-    // Get moderation statistics
-    const stats = await prisma.property.groupBy({
-      by: ["moderationStatus"],
-      _count: {
-        id: true,
-      },
+      // Determine property type based on flags
+      let propertyType = 'regular';
+      if (property.isDemo) propertyType = 'demo';
+      else if (property.isFeatured) propertyType = 'featured';
+      else if (property.isPartnerProperty) propertyType = 'partner';
+      else if (property.isShowcase) propertyType = 'showcase';
+
+      return {
+        id: property.id,
+        title: property.title,
+        location: property.location,
+        price: property.price,
+        currency: property.currency,
+        category: property.category,
+        type: propertyType,
+        status: property.status.toLowerCase(),
+        views: property.views || 0,
+        inquiries: property.inquiries.length,
+        bookings: property.bookings.length,
+        createdAt: property.createdAt.toISOString(),
+        updatedAt: property.updatedAt.toISOString(),
+        image: primaryImage,
+        owner: property.owner,
+        description: property.description,
+        bedrooms: property.bedrooms,
+        bathrooms: property.bathrooms,
+        area: property.area,
+        areaUnit: property.areaUnit,
+        isVerified: property.isVerified,
+        isApproved: property.isApproved,
+        isActive: property.isActive
+      };
     });
 
-    const summary = {
-      total: total,
-      pending: stats.find(s => s.moderationStatus === "PENDING")?._count.id || 0,
-      approved: stats.find(s => s.moderationStatus === "APPROVED")?._count.id || 0,
-      rejected: stats.find(s => s.moderationStatus === "REJECTED")?._count.id || 0,
-      flagged: stats.find(s => s.moderationStatus === "FLAGGED")?._count.id || 0,
-    };
+    return NextResponse.json({
+      properties: transformedProperties,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit)
+    });
 
+  } catch (error) {
+    console.error('Admin properties API error:', error);
     return NextResponse.json(
-      {
-        success: true,
-        message: "Properties fetched successfully",
-        data: properties,
-        summary,
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasNext,
-          hasPrev,
-        },
-      },
-      { status: 200 }
-    );
-  } catch (error: any) {
-    console.error("Admin properties fetch error:", error);
-    
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to fetch properties",
-        error: error.message,
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -221,6 +264,99 @@ export async function PUT(request: NextRequest) {
         message: "Failed to update property moderation status",
         error: error.message,
       },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/admin/properties - Create new admin property
+export async function POST(request: NextRequest) {
+  try {
+    // Check admin authentication
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify admin role
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { role: true }
+    });
+
+    if (user?.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const {
+      title,
+      description,
+      location,
+      price,
+      currency,
+      category,
+      bedrooms,
+      bathrooms,
+      area,
+      areaUnit,
+      type, // demo, featured, partner, showcase
+      ownerId
+    } = body;
+
+    // Validate required fields
+    if (!title || !location || !price || !category || !type || !ownerId) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
+    // Set property flags based on type
+    const propertyData: any = {
+      title,
+      description,
+      location,
+      price: parseFloat(price),
+      currency: currency || 'NGN',
+      category: category.toUpperCase(),
+      bedrooms: bedrooms ? parseInt(bedrooms) : null,
+      bathrooms: bathrooms ? parseInt(bathrooms) : null,
+      area: area ? parseFloat(area) : null,
+      areaUnit: areaUnit || 'sqft',
+      ownerId,
+      status: 'ACTIVE',
+      isVerified: true,
+      isApproved: true,
+      isActive: true,
+      isDemo: type === 'demo',
+      isFeatured: type === 'featured',
+      isPartnerProperty: type === 'partner',
+      isShowcase: type === 'showcase'
+    };
+
+    const property = await prisma.property.create({
+      data: propertyData,
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        }
+      }
+    });
+
+    return NextResponse.json({
+      message: 'Property created successfully',
+      property
+    });
+
+  } catch (error) {
+    console.error('Create admin property error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

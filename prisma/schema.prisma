@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
@@ -47,7 +47,7 @@ model User {
   phoneVerified Boolean     @default(false)
   name          String?
   image         String?
-  password      String?     // For credentials authentication
+  password      String? // For credentials authentication
   role          UserRole    @default(SEEKER)
   accountType   AccountType @default(INDIVIDUAL)
 
@@ -75,16 +75,20 @@ model User {
   updatedAt DateTime @updatedAt
 
   // Relations
-  accounts         Account[]
-  sessions         Session[]
-  properties       Property[]
-  bookings         Booking[]
-  reviews          Review[]
-  messages         Message[]
-  notifications    Notification[]
-  inquiries        PropertyInquiry[]
-  verificationDocs VerificationDocument[]
-  favorites        PropertyFavorite[]
+  accounts                 Account[]
+  sessions                 Session[]
+  properties               Property[]
+  bookings                 Booking[]
+  reviews                  Review[]
+  messages                 Message[]
+  notifications            Notification[]
+  inquiries                PropertyInquiry[]
+  verificationDocs         VerificationDocument[]
+  favorites                PropertyFavorite[]
+  conversationParticipants ConversationParticipant[]
+  payments                 Payment[]
+  subscriptions            UserSubscription[]
+  payouts                  Payout[]
 
   @@map("users")
 }
@@ -158,13 +162,14 @@ model Property {
   favoriteCount Int @default(0)
 
   // Relations
-  ownerId      String
-  owner        User               @relation(fields: [ownerId], references: [id])
-  bookings     Booking[]
-  reviews      Review[]
-  availability Availability[]
-  inquiries    PropertyInquiry[]
-  favorites    PropertyFavorite[]
+  ownerId       String
+  owner         User               @relation(fields: [ownerId], references: [id])
+  bookings      Booking[]
+  reviews       Review[]
+  availability  Availability[]
+  inquiries     PropertyInquiry[]
+  favorites     PropertyFavorite[]
+  conversations Conversation[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -211,13 +216,25 @@ model PropertyInquiry {
   timeframe       String?
   financingNeeded Boolean @default(false)
 
+  // Enhanced fields for better inquiry management
+  inquirerName           String? // For non-registered users
+  inquirerEmail          String? // For non-registered users  
+  inquirerPhone          String? // For non-registered users
+  preferredContactMethod String? // WhatsApp, Phone, Email, SMS
+  requestViewing         Boolean   @default(false)
+  viewingDate            DateTime?
+  viewingTime            String?
+  virtualViewingInterest Boolean   @default(false)
+
   status InquiryStatus @default(NEW)
 
   // Relations
-  propertyId String
-  property   Property @relation(fields: [propertyId], references: [id])
-  inquirerId String
-  inquirer   User     @relation(fields: [inquirerId], references: [id])
+  propertyId     String
+  property       Property      @relation(fields: [propertyId], references: [id])
+  inquirerId     String?
+  inquirer       User?         @relation(fields: [inquirerId], references: [id])
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -226,24 +243,51 @@ model PropertyInquiry {
 }
 
 model Booking {
-  id          String   @id @default(cuid())
-  checkIn     DateTime
-  checkOut    DateTime
-  guests      Int
-  totalPrice  Int // In kobo
-  serviceFee  Int      @default(0)
-  cleaningFee Int      @default(0)
-  taxes       Int      @default(0)
-
-  status            BookingStatus @default(PENDING)
-  paymentStatus     PaymentStatus @default(PENDING)
-  paystackPaymentId String?
-
-  // Relations
+  id         String   @id @default(cuid())
   propertyId String
   property   Property @relation(fields: [propertyId], references: [id])
   guestId    String
   guest      User     @relation(fields: [guestId], references: [id])
+
+  // Booking Details
+  checkIn        DateTime @db.Date
+  checkOut       DateTime @db.Date
+  totalNights    Int
+  numberOfGuests Int
+  adults         Int
+  children       Int      @default(0)
+
+  // Pricing Breakdown
+  basePrice       Int // Nightly rate × nights (in kobo)
+  cleaningFee     Int      @default(0)
+  serviceFee      Int      @default(0)
+  securityDeposit Int      @default(0)
+  taxes           Int      @default(0)
+  discounts       Int      @default(0)
+  totalAmount     Int // Final amount (in kobo)
+  currency        Currency @default(NGN)
+
+  // Booking Status
+  status        BookingStatus @default(PENDING)
+  paymentStatus PaymentStatus @default(PENDING)
+
+  // Payment Information
+  paymentIntentId String? // Paystack payment reference
+  paidAt          DateTime?
+  refundAmount    Int       @default(0)
+  refundedAt      DateTime?
+
+  // Additional Information
+  specialRequests    String?
+  guestNotes         String?
+  hostNotes          String?
+  cancellationReason String?
+  cancelledAt        DateTime?
+  cancelledBy        String? // User ID who cancelled
+
+  // Relations
+  payments Payment[]
+  reviews  Review[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -261,6 +305,8 @@ model Review {
   property   Property @relation(fields: [propertyId], references: [id])
   authorId   String
   author     User     @relation(fields: [authorId], references: [id])
+  bookingId  String?
+  booking    Booking? @relation(fields: [bookingId], references: [id])
 
   createdAt DateTime @default(now())
 
@@ -268,17 +314,66 @@ model Review {
 }
 
 model Message {
-  id      String  @id @default(cuid())
-  content String
-  isRead  Boolean @default(false)
+  id          String      @id @default(cuid())
+  content     String
+  messageType MessageType @default(TEXT)
+  isRead      Boolean     @default(false)
+  readAt      DateTime?
 
   // Relations
-  senderId String
-  sender   User   @relation(fields: [senderId], references: [id])
+  senderId       String
+  sender         User                @relation(fields: [senderId], references: [id])
+  conversationId String
+  conversation   Conversation        @relation(fields: [conversationId], references: [id])
+  attachments    MessageAttachment[]
 
   createdAt DateTime @default(now())
 
   @@map("messages")
+}
+
+model Conversation {
+  id         String             @id @default(cuid())
+  propertyId String
+  property   Property           @relation(fields: [propertyId], references: [id])
+  status     ConversationStatus @default(ACTIVE)
+
+  // Relations
+  participants ConversationParticipant[]
+  messages     Message[]
+  inquiries    PropertyInquiry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id             String          @id @default(cuid())
+  conversationId String
+  conversation   Conversation    @relation(fields: [conversationId], references: [id])
+  userId         String
+  user           User            @relation(fields: [userId], references: [id])
+  role           ParticipantRole @default(PARTICIPANT)
+  joinedAt       DateTime        @default(now())
+  leftAt         DateTime?
+
+  @@unique([conversationId, userId])
+  @@map("conversation_participants")
+}
+
+model MessageAttachment {
+  id         String   @id @default(cuid())
+  messageId  String
+  message    Message  @relation(fields: [messageId], references: [id])
+  fileName   String
+  fileUrl    String
+  fileType   String
+  fileSize   Int
+  uploadedAt DateTime @default(now())
+
+  @@map("message_attachments")
 }
 
 model Notification {
@@ -299,15 +394,16 @@ model Notification {
 
 model Availability {
   id          String   @id @default(cuid())
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
   date        DateTime @db.Date
   isAvailable Boolean  @default(true)
-  price       Int? // Override price for specific date
-
-  // Relations
-  propertyId String
-  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  customPrice Int? // Override default nightly rate
+  minimumStay Int? // Minimum nights for this date
+  notes       String? // Special conditions
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([propertyId, date])
   @@map("availability")
@@ -472,6 +568,7 @@ enum InquiryType {
   PURCHASE_INTENT
   RENTAL_APPLICATION
   INVESTMENT_INQUIRY
+  OTHER
 }
 
 enum InquiryStatus {
@@ -511,17 +608,20 @@ enum ModerationStatus {
 enum BookingStatus {
   PENDING
   CONFIRMED
+  CHECKED_IN
+  CHECKED_OUT
   CANCELLED
-  COMPLETED
   REFUNDED
+  COMPLETED
 }
 
 enum PaymentStatus {
   PENDING
+  PROCESSING
   PAID
   FAILED
   REFUNDED
-  PROCESSING
+  PARTIALLY_REFUNDED
 }
 
 enum NotificationType {
@@ -540,4 +640,177 @@ enum VideoType {
   DRONE
   NEIGHBORHOOD
   VIRTUAL_TOUR
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  SYSTEM
+}
+
+enum ConversationStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum ParticipantRole {
+  PARTICIPANT
+  ADMIN
+  MODERATOR
+}
+
+// New Payment System Models
+model Payment {
+  id String @id @default(cuid())
+
+  // Payment Details
+  amount        Int // Amount in kobo
+  currency      Currency      @default(NGN)
+  paymentMethod PaymentMethod
+  paymentType   PaymentType
+
+  // Paystack Integration
+  paystackReference         String? @unique
+  paystackAuthorizationCode String?
+  paystackChannel           String? // card, bank, ussd, etc.
+  paystackFees              Int     @default(0)
+
+  // Payment Status
+  status          PaymentStatus @default(PENDING)
+  gatewayResponse String?
+  paidAt          DateTime?
+
+  // Refund Information
+  refundAmount Int       @default(0)
+  refundedAt   DateTime?
+  refundReason String?
+
+  // Relations
+  bookingId String?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  // Premium Features
+  premiumFeatureId String?
+  premiumFeature   PremiumFeature? @relation(fields: [premiumFeatureId], references: [id])
+
+  // Subscriptions
+  subscriptions UserSubscription[] @relation("SubscriptionPayment")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payments")
+}
+
+model PremiumFeature {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  price       Int // Price in kobo
+  currency    Currency @default(NGN)
+  duration    Int? // Duration in days (null for one-time)
+  isActive    Boolean  @default(true)
+
+  // Feature Type
+  featureType PremiumFeatureType
+
+  // Relations
+  payments Payment[]
+
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  UserSubscription UserSubscription[]
+
+  @@map("premium_features")
+}
+
+model UserSubscription {
+  id               String         @id @default(cuid())
+  userId           String
+  user             User           @relation(fields: [userId], references: [id])
+  premiumFeatureId String
+  premiumFeature   PremiumFeature @relation(fields: [premiumFeatureId], references: [id])
+
+  // Subscription Details
+  startDate DateTime
+  endDate   DateTime?
+  isActive  Boolean   @default(true)
+  autoRenew Boolean   @default(false)
+
+  // Payment Tracking
+  lastPaymentId String?
+  lastPayment   Payment? @relation("SubscriptionPayment", fields: [lastPaymentId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("user_subscriptions")
+}
+
+model Payout {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Payout Details
+  amount        Int // Amount in kobo
+  currency      Currency @default(NGN)
+  bankCode      String
+  accountNumber String
+  accountName   String
+
+  // Status
+  status               PayoutStatus @default(PENDING)
+  paystackTransferCode String?
+  failureReason        String?
+
+  // Processing
+  processedAt DateTime?
+  completedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("payouts")
+}
+
+enum PaymentMethod {
+  CARD
+  BANK_TRANSFER
+  USSD
+  MOBILE_MONEY
+  WALLET
+}
+
+enum PaymentType {
+  BOOKING_PAYMENT
+  SECURITY_DEPOSIT
+  CLEANING_FEE
+  SERVICE_FEE
+  PREMIUM_FEATURE
+  SUBSCRIPTION
+  REFUND
+}
+
+enum PremiumFeatureType {
+  PREMIUM_LISTING
+  FEATURED_LISTING
+  TOP_PLACEMENT
+  PRIORITY_SUPPORT
+  ANALYTICS_DASHBOARD
+  MULTIPLE_PROPERTY_MANAGEMENT
+  CUSTOM_BRANDING
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
 }

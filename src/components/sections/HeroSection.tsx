@@ -11,8 +11,13 @@ export default function HeroSection() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle search logic here
-    console.log('Search:', searchData);
+    // Redirect to properties page with search parameters
+    const params = new URLSearchParams();
+    if (searchData.location) params.append('query', searchData.location);
+    if (searchData.propertyType !== 'All Types') params.append('type', searchData.propertyType);
+    
+    const searchUrl = `/properties?${params.toString()}`;
+    window.location.href = searchUrl;
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -33,16 +38,16 @@ export default function HeroSection() {
         </p>
         
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-4xl mx-auto">
-          <Link href="/short-stays" className="btn btn-outline-white text-lg py-4">
+          <Link href="/properties/short-stays" className="btn btn-outline-white text-lg py-4">
             Short Stays
           </Link>
-          <Link href="/rentals" className="btn btn-outline-white text-lg py-4">
+          <Link href="/properties/long-term-rentals" className="btn btn-outline-white text-lg py-4">
             Long-term Rentals
           </Link>
-          <Link href="/land-sales" className="btn btn-outline-white text-lg py-4">
+          <Link href="/properties/landed-properties" className="btn btn-outline-white text-lg py-4">
             Landed Properties
           </Link>
-          <Link href="/property-sales" className="btn btn-outline-white text-lg py-4">
+          <Link href="/properties/property-sales" className="btn btn-outline-white text-lg py-4">
             Property Sales
           </Link>
         </div>

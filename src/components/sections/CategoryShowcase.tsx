@@ -8,7 +8,7 @@ const categories = [
     description: 'Discover unique vacation rentals, holiday homes, and serviced apartments for your next trip. Enjoy comfort, convenience, and memorable experiences.',
     image: '/images/hs5.jpg',
     ctaText: 'Explore Stays',
-    ctaLink: '/short-stays',
+    ctaLink: '/properties/short-stays',
     reverse: false
   },
   {
@@ -17,7 +17,7 @@ const categories = [
     description: 'Find long-term residential leases, apartments, and houses for rent. Secure your ideal living space with ease and confidence.',
     image: '/images/hs4.jpg',
     ctaText: 'Find Rentals',
-    ctaLink: '/rentals',
+    ctaLink: '/properties/long-term-rentals',
     reverse: true
   },
   {
@@ -26,7 +26,7 @@ const categories = [
     description: 'Explore plots of land for sale, agricultural land, and development sites. Invest in the future with our curated land offerings.',
     image: '/images/hs1.jpg',
     ctaText: 'Browse Land',
-    ctaLink: '/land-sales',
+    ctaLink: '/properties/landed-properties',
     reverse: false
   },
   {
@@ -35,7 +35,7 @@ const categories = [
     description: 'Achieve your homeownership goals with our diverse range of houses, apartments, and commercial properties for sale.',
     image: '/images/hs6.jpg',
     ctaText: 'Buy Properties',
-    ctaLink: '/property-sales',
+    ctaLink: '/properties/property-sales',
     reverse: true
   }
 ];
