@@ -1,0 +1,65 @@
+{
+  "name": "Larnacei Property Platform",
+  "short_name": "Larnacei",
+  "description": "Nigerian Property Marketplace - Find your perfect property",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#7C0302",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-NG",
+  "categories": ["business", "real estate", "shopping"],
+  "icons": [
+    {
+      "src": "/images/Larnacei_coloured.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/images/Larnacei_coloured.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Property Sales",
+      "short_name": "Sales",
+      "description": "Browse properties for sale",
+      "url": "/properties/property-sales",
+      "icons": [
+        {
+          "src": "/images/Larnacei_coloured.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Rentals",
+      "short_name": "Rent",
+      "description": "Browse rental properties",
+      "url": "/properties/long-term-rentals",
+      "icons": [
+        {
+          "src": "/images/Larnacei_coloured.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "List Property",
+      "short_name": "List",
+      "description": "List your property",
+      "url": "/list-property",
+      "icons": [
+        {
+          "src": "/images/Larnacei_coloured.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ]
+} 
