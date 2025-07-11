@@ -1,22 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/authOptions";
-import { prisma } from "@/lib/prisma";
-import { UserRole } from "@prisma/client";
+import { NextRequest, NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/authOptions';
+import { prisma } from '@/lib/prisma';
+import { writeFile, mkdir } from 'fs/promises';
+import { join } from 'path';
 
-/**
- * GET /api/admin/properties
- * Get properties for admin moderation
- */
 export async function GET(request: NextRequest) {
   try {
-    // Check admin authentication
     const session = await getServerSession(authOptions);
+    
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify admin role
+    // Check if user is admin
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { role: true }
@@ -26,205 +23,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    // Parse query parameters
     const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search');
+    const type = searchParams.get('type');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
-    const search = searchParams.get('search') || '';
-    const type = searchParams.get('type') || '';
-    const status = searchParams.get('status') || '';
-    const category = searchParams.get('category') || '';
-
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
-      // Only get properties that are admin-managed (demo, featured, partner, showcase)
-      OR: [
-        { isDemo: true },
-        { isFeatured: true },
-        { isPartnerProperty: true },
-        { isShowcase: true }
-      ]
-    };
-
+    const where: any = {};
+    
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
-        { location: { contains: search, mode: 'insensitive' } },
-        { description: { contains: search, mode: 'insensitive' } }
+        { description: { contains: search, mode: 'insensitive' } },
+        { city: { contains: search, mode: 'insensitive' } },
+        { state: { contains: search, mode: 'insensitive' } },
       ];
     }
 
-    if (type) {
-      switch (type) {
-        case 'demo':
-          where.isDemo = true;
-          break;
-        case 'featured':
-          where.isFeatured = true;
-          break;
-        case 'partner':
-          where.isPartnerProperty = true;
-          break;
-        case 'showcase':
-          where.isShowcase = true;
-          break;
-      }
+    if (type && type !== 'all') {
+      where.propertyType = type;
     }
 
-    if (status) {
-      where.status = status.toUpperCase();
-    }
-
-    if (category) {
-      where.category = category.toUpperCase();
-    }
-
-    // Get properties with related data
-    const [properties, total] = await Promise.all([
-      prisma.property.findMany({
-        where,
-        include: {
-          owner: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              phone: true
-            }
-          },
-          images: {
-            select: {
-              id: true,
-              url: true,
-              isPrimary: true
-            },
-            orderBy: { isPrimary: 'desc' }
-          },
-          inquiries: {
-            select: { id: true }
-          },
-          bookings: {
-            select: { id: true }
-          }
-        },
-        orderBy: { createdAt: 'desc' },
-        skip,
-        take: limit
-      }),
-      prisma.property.count({ where })
-    ]);
-
-    // Transform data for admin interface
-    const transformedProperties = properties.map(property => {
-      const primaryImage = property.images.find(img => img.isPrimary)?.url || 
-                          property.images[0]?.url || '/images/placeholder.jpg';
-
-      // Determine property type based on flags
-      let propertyType = 'regular';
-      if (property.isDemo) propertyType = 'demo';
-      else if (property.isFeatured) propertyType = 'featured';
-      else if (property.isPartnerProperty) propertyType = 'partner';
-      else if (property.isShowcase) propertyType = 'showcase';
-
-      return {
-        id: property.id,
-        title: property.title,
-        location: property.location,
-        price: property.price,
-        currency: property.currency,
-        category: property.category,
-        type: propertyType,
-        status: property.status.toLowerCase(),
-        views: property.views || 0,
-        inquiries: property.inquiries.length,
-        bookings: property.bookings.length,
-        createdAt: property.createdAt.toISOString(),
-        updatedAt: property.updatedAt.toISOString(),
-        image: primaryImage,
-        owner: property.owner,
-        description: property.description,
-        bedrooms: property.bedrooms,
-        bathrooms: property.bathrooms,
-        area: property.area,
-        areaUnit: property.areaUnit,
-        isVerified: property.isVerified,
-        isApproved: property.isApproved,
-        isActive: property.isActive
-      };
-    });
-
-    return NextResponse.json({
-      properties: transformedProperties,
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit)
-    });
-
-  } catch (error) {
-    console.error('Admin properties API error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-/**
- * PUT /api/admin/properties
- * Update property moderation status
- */
-export async function PUT(request: NextRequest) {
-  try {
-    // Check authentication and admin role
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      return NextResponse.json(
-        { success: false, message: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    const userRole = (session.user as any).role;
-    if (userRole !== UserRole.ADMIN && userRole !== UserRole.SUPER_ADMIN) {
-      return NextResponse.json(
-        { success: false, message: "Admin access required" },
-        { status: 403 }
-      );
-    }
-
-    const body = await request.json();
-    const { propertyId, moderationStatus, reason } = body;
-
-    if (!propertyId || !moderationStatus) {
-      return NextResponse.json(
-        { success: false, message: "Property ID and moderation status are required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate moderation status
-    const validStatuses = ["PENDING", "APPROVED", "REJECTED", "FLAGGED"];
-    if (!validStatuses.includes(moderationStatus)) {
-      return NextResponse.json(
-        { success: false, message: "Invalid moderation status" },
-        { status: 400 }
-      );
-    }
-
-    // Update property moderation status
-    const updatedProperty = await prisma.property.update({
-      where: { id: propertyId },
-      data: {
-        moderationStatus,
-        isActive: moderationStatus === "APPROVED",
-        // Add rejection reason if provided
-        ...(moderationStatus === "REJECTED" && reason && { 
-          // Note: You might want to add a rejectionReason field to the Property model
-        }),
-      },
+    // Get properties with owner information
+    const properties = await prisma.property.findMany({
+      where,
       include: {
         owner: {
           select: {
@@ -234,51 +58,56 @@ export async function PUT(request: NextRequest) {
             phone: true,
           },
         },
+        images: {
+          select: {
+            id: true,
+            url: true,
+            alt: true,
+            isPrimary: true,
+          },
+        },
+        _count: {
+          select: {
+            images: true,
+            videos: true,
+            reviews: true,
+            inquiries: true,
+          },
+        },
       },
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit,
     });
 
-    // TODO: Send notification to property owner
-    // TODO: Send email notification based on status
+    // Get total count
+    const total = await prisma.property.count({ where });
 
+    return NextResponse.json({
+      properties,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    console.error('Error fetching admin properties:', error);
     return NextResponse.json(
-      {
-        success: true,
-        message: `Property ${moderationStatus.toLowerCase()} successfully`,
-        data: updatedProperty,
-      },
-      { status: 200 }
-    );
-  } catch (error: any) {
-    console.error("Property moderation update error:", error);
-    
-    if (error.code === "P2025") {
-      return NextResponse.json(
-        { success: false, message: "Property not found" },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to update property moderation status",
-        error: error.message,
-      },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
 
-// POST /api/admin/properties - Create new admin property
 export async function POST(request: NextRequest) {
   try {
-    // Check admin authentication
     const session = await getServerSession(authOptions);
+    
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify admin role
+    // Check if user is admin
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       select: { role: true }
@@ -288,73 +117,133 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await request.json();
-    const {
-      title,
-      description,
-      location,
-      price,
-      currency,
-      category,
-      bedrooms,
-      bathrooms,
-      area,
-      areaUnit,
-      type, // demo, featured, partner, showcase
-      ownerId
-    } = body;
+    const formData = await request.formData();
+    
+    // Extract form data
+    const title = formData.get('title') as string;
+    const description = formData.get('description') as string;
+    const category = formData.get('category') as string;
+    const type = formData.get('type') as string;
+    const price = formData.get('price') as string;
+    const currency = formData.get('currency') as string;
+    const city = formData.get('city') as string;
+    const state = formData.get('state') as string;
+    const address = formData.get('address') as string;
+    const bedrooms = formData.get('bedrooms') as string;
+    const bathrooms = formData.get('bathrooms') as string;
+    const sizeInSqm = formData.get('sizeInSqm') as string;
+         const isFeatured = formData.get('isFeatured') === 'true';
+     const isActive = formData.get('isActive') === 'true';
+     const isApproved = formData.get('isApproved') === 'true';
+     const isVerified = formData.get('isVerified') === 'true';
+    const amenities = JSON.parse(formData.get('amenities') as string || '[]');
+    const contactPhone = formData.get('contactPhone') as string;
+    const contactEmail = formData.get('contactEmail') as string;
+    const contactName = formData.get('contactName') as string;
+    
+    // Get image files
+    const imageFiles = formData.getAll('images') as File[];
 
     // Validate required fields
-    if (!title || !location || !price || !category || !type || !ownerId) {
+    if (!title || !description || !category || !type || !price || !city || !state || !address) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Set property flags based on type
-    const propertyData: any = {
-      title,
-      description,
-      location,
-      price: parseFloat(price),
-      currency: currency || 'NGN',
-      category: category.toUpperCase(),
-      bedrooms: bedrooms ? parseInt(bedrooms) : null,
-      bathrooms: bathrooms ? parseInt(bathrooms) : null,
-      area: area ? parseFloat(area) : null,
-      areaUnit: areaUnit || 'sqft',
-      ownerId,
-      status: 'ACTIVE',
-      isVerified: true,
-      isApproved: true,
-      isActive: true,
-      isDemo: type === 'demo',
-      isFeatured: type === 'featured',
-      isPartnerProperty: type === 'partner',
-      isShowcase: type === 'showcase'
-    };
-
-    const property = await prisma.property.create({
-      data: propertyData,
-      include: {
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
-      }
+    // Create or get admin user
+    let adminUser = await prisma.user.findFirst({
+      where: { role: 'ADMIN' }
     });
+
+    if (!adminUser) {
+      adminUser = await prisma.user.create({
+        data: {
+          email: 'admin@larnacei.com',
+          name: 'Larnacei Admin',
+          role: 'ADMIN',
+          isVerified: true,
+        },
+      });
+    }
+
+         // Create property
+     const property = await prisma.property.create({
+       data: {
+         title,
+         description,
+         category: category as any,
+         type: type as any,
+         price: parseFloat(price.replace(/,/g, '')),
+         currency: currency as any,
+         city,
+         state,
+         address,
+         bedrooms: bedrooms ? parseInt(bedrooms) : null,
+         bathrooms: bathrooms ? parseInt(bathrooms) : null,
+         sizeInSqm: sizeInSqm ? parseInt(sizeInSqm) : null,
+         isFeatured,
+         isActive,
+         isApproved,
+         isVerified,
+         features: amenities,
+         contactPhone,
+         contactEmail,
+         contactName,
+         ownerId: adminUser.id,
+         viewCount: 0,
+         inquiryCount: 0,
+         favoriteCount: 0,
+       },
+     });
+
+    // Handle image uploads
+    if (imageFiles.length > 0) {
+      const uploadPromises = imageFiles.map(async (file, index) => {
+        try {
+          // Create uploads directory if it doesn't exist
+          const uploadsDir = join(process.cwd(), 'public', 'uploads');
+          await mkdir(uploadsDir, { recursive: true });
+
+          // Generate unique filename
+          const timestamp = Date.now();
+          const filename = `${property.id}-${index}-${timestamp}.${file.name.split('.').pop()}`;
+          const filepath = join(uploadsDir, filename);
+
+          // Convert File to Buffer and save
+          const bytes = await file.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          await writeFile(filepath, buffer);
+
+          // Save image record to database
+          return prisma.propertyImage.create({
+            data: {
+              propertyId: property.id,
+              url: `/uploads/${filename}`,
+              alt: `${property.title} - Image ${index + 1}`,
+              isPrimary: index === 0, // First image is primary
+            },
+          });
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          return null;
+        }
+      });
+
+      await Promise.all(uploadPromises);
+    }
 
     return NextResponse.json({
-      message: 'Property created successfully',
-      property
+      success: true,
+      property: {
+        id: property.id,
+        title: property.title,
+        message: 'Property created successfully',
+      },
     });
-
   } catch (error) {
-    console.error('Create admin property error:', error);
+    console.error('Error creating admin property:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

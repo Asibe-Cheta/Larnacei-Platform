@@ -21,15 +21,19 @@ import {
 interface AdminProperty {
   id: string;
   title: string;
-  location: string;
+  city: string;
+  state: string;
   price: number;
   currency: string;
   category: string;
-  type: 'demo' | 'featured' | 'partner' | 'showcase';
-  status: 'active' | 'inactive' | 'draft';
-  views: number;
-  inquiries: number;
-  bookings: number;
+  type: string;
+  isFeatured: boolean;
+  isActive: boolean;
+  isApproved: boolean;
+  isVerified: boolean;
+  viewCount: number;
+  inquiryCount: number;
+  favoriteCount: number;
   createdAt: string;
   updatedAt: string;
   image?: string;
@@ -42,11 +46,7 @@ interface AdminProperty {
   description?: string;
   bedrooms?: number;
   bathrooms?: number;
-  area?: number;
-  areaUnit?: string;
-  isVerified: boolean;
-  isApproved: boolean;
-  isActive: boolean;
+  sizeInSqm?: number;
 }
 
 const fetcher = (url: string) => fetch(url).then(res => res.json());
@@ -191,7 +191,7 @@ export default function AdminPropertiesPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Featured</p>
               <p className="text-2xl font-bold text-gray-900">
-                {properties.filter(p => p.type === 'featured').length}
+                {properties.filter((p: AdminProperty) => p.isFeatured).length}
               </p>
             </div>
           </div>
@@ -205,7 +205,7 @@ export default function AdminPropertiesPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Partner</p>
               <p className="text-2xl font-bold text-gray-900">
-                {properties.filter(p => p.type === 'partner').length}
+                {properties.filter((p: AdminProperty) => p.type === 'COMMERCIAL').length}
               </p>
             </div>
           </div>
@@ -219,7 +219,7 @@ export default function AdminPropertiesPage() {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Showcase</p>
               <p className="text-2xl font-bold text-gray-900">
-                {properties.filter(p => p.type === 'showcase').length}
+                {properties.filter((p: AdminProperty) => p.type === 'VILLA').length}
               </p>
             </div>
           </div>
@@ -302,8 +302,8 @@ export default function AdminPropertiesPage() {
                         <div className="text-sm font-medium text-gray-900 max-w-[200px] truncate" title={property.title}>
                           {property.title}
                         </div>
-                        <div className="text-sm text-gray-500 max-w-[200px] truncate" title={property.location}>
-                          {property.location}
+                        <div className="text-sm text-gray-500 max-w-[200px] truncate" title={`${property.city}, ${property.state}`}>
+                          {property.city}, {property.state}
                         </div>
                         <div className="text-xs text-gray-400">
                           {getCategoryLabel(property.category)}
@@ -324,15 +324,15 @@ export default function AdminPropertiesPage() {
                     <div className="space-y-1">
                       <div className="flex items-center">
                         <Eye className="w-3 h-3 mr-1" />
-                        <span>{property.views.toLocaleString()}</span>
+                        <span>{property.viewCount.toLocaleString()}</span>
                       </div>
                       <div className="flex items-center">
                         <Users className="w-3 h-3 mr-1" />
-                        <span>{property.inquiries} inquiries</span>
+                        <span>{property.inquiryCount} inquiries</span>
                       </div>
                       <div className="flex items-center">
                         <Building className="w-3 h-3 mr-1" />
-                        <span>{property.bookings} bookings</span>
+                        <span>{property.favoriteCount} favorites</span>
                       </div>
                     </div>
                   </td>
