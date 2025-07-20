@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
@@ -44,10 +44,10 @@ interface SearchResponse {
   };
 }
 
-export default function PropertiesPage() {
+function PropertiesPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   const [properties, setProperties] = useState<PropertyWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +59,7 @@ export default function PropertiesPage() {
     hasNext: false,
     hasPrev: false,
   });
-  
+
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -80,22 +80,22 @@ export default function PropertiesPage() {
   const fetchProperties = async (page = 1) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const params = new URLSearchParams();
-      
+
       // Add filters to params
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
-      
+
       // Add pagination
       params.append('page', page.toString());
       params.append('limit', '12');
-      
+
       const response = await fetch(`/api/properties?${params.toString()}`);
       const data: SearchResponse = await response.json();
-      
+
       if (data.success) {
         setProperties(data.data);
         setPagination(data.pagination);
@@ -154,11 +154,11 @@ export default function PropertiesPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         {/* Search Header */}
         <SearchHeader onSearch={handleSearch} initialData={filters} />
-        
+
         {/* Results Summary */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
           <div className="mb-4 sm:mb-0">
@@ -171,18 +171,17 @@ export default function PropertiesPage() {
               </p>
             )}
           </div>
-          
+
           {/* View Toggle and Filter Button */}
           <div className="flex items-center gap-4">
             {/* View Mode Toggle */}
             <div className="flex items-center bg-white rounded-lg shadow-sm border">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`p-2 rounded-l-lg transition-colors ${
-                  viewMode === 'grid' 
-                    ? 'bg-red-600 text-white' 
+                className={`p-2 rounded-l-lg transition-colors ${viewMode === 'grid'
+                    ? 'bg-red-600 text-white'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -190,18 +189,17 @@ export default function PropertiesPage() {
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`p-2 rounded-r-lg transition-colors ${
-                  viewMode === 'list' 
-                    ? 'bg-red-600 text-white' 
+                className={`p-2 rounded-r-lg transition-colors ${viewMode === 'list'
+                    ? 'bg-red-600 text-white'
                     : 'text-gray-600 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                 </svg>
               </button>
             </div>
-            
+
             {/* Mobile Filter Button */}
             <button
               onClick={() => setShowFilters(!showFilters)}
@@ -279,11 +277,10 @@ export default function PropertiesPage() {
             ) : (
               <>
                 {/* Property Grid/List */}
-                <div className={`grid gap-6 ${
-                  viewMode === 'grid' 
-                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3' 
+                <div className={`grid gap-6 ${viewMode === 'grid'
+                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
                     : 'grid-cols-1'
-                }`}>
+                  }`}>
                   {properties.map((property) => (
                     <PropertyCard
                       key={property.id}
@@ -304,22 +301,21 @@ export default function PropertiesPage() {
                       >
                         Previous
                       </button>
-                      
+
                       {[...Array(pagination.totalPages)].map((_, i) => {
                         const page = i + 1;
                         const isCurrent = page === pagination.page;
                         const isNearCurrent = Math.abs(page - pagination.page) <= 2;
-                        
+
                         if (isCurrent || isNearCurrent || page === 1 || page === pagination.totalPages) {
                           return (
                             <button
                               key={page}
                               onClick={() => handlePageChange(page)}
-                              className={`px-3 py-2 text-sm font-medium rounded-md ${
-                                isCurrent
+                              className={`px-3 py-2 text-sm font-medium rounded-md ${isCurrent
                                   ? 'bg-red-600 text-white'
                                   : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
-                              }`}
+                                }`}
                             >
                               {page}
                             </button>
@@ -331,7 +327,7 @@ export default function PropertiesPage() {
                         }
                         return null;
                       })}
-                      
+
                       <button
                         onClick={() => handlePageChange(pagination.page + 1)}
                         disabled={!pagination.hasNext}
@@ -347,8 +343,43 @@ export default function PropertiesPage() {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function PropertiesPageLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <main className="container mx-auto px-4 py-8">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="bg-white rounded-lg shadow-sm border">
+                <div className="h-48 bg-gray-200 rounded-t-lg"></div>
+                <div className="p-4">
+                  <div className="h-4 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+      <Footer />
+    </div>
+  );
+}
+
+export default function PropertiesPage() {
+  return (
+    <Suspense fallback={<PropertiesPageLoading />}>
+      <PropertiesPageContent />
+    </Suspense>
   );
 } 

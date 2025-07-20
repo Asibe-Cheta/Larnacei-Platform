@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
-export default function VerifyEmailPage() {
+function VerifyEmailPageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const [verificationStatus, setVerificationStatus] = useState<'loading' | 'success' | 'error'>('loading');
@@ -124,5 +124,49 @@ export default function VerifyEmailPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// Loading component for Suspense fallback
+function VerifyEmailPageLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="flex justify-center">
+          <Link href="/" className="flex items-center space-x-2">
+            <Image
+              src="/images/Larnacei_coloured.png"
+              alt="Larnacei Global Limited Logo"
+              width={48}
+              height={48}
+              className="h-12"
+            />
+          </Link>
+        </div>
+        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+          Email Verification
+        </h2>
+      </div>
+
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+          <div className="text-center space-y-6">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+              <span className="material-icons text-blue-600 text-2xl animate-spin">hourglass_empty</span>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900">Loading...</h3>
+            <p className="text-gray-600">Please wait while we load the verification page.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<VerifyEmailPageLoading />}>
+      <VerifyEmailPageContent />
+    </Suspense>
   );
 } 
