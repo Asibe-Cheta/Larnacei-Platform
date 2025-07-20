@@ -7,7 +7,7 @@ import { validateNigerianPhone, formatNigerianPhone, validateEmail, validatePass
 import { signIn } from 'next-auth/react';
 
 type UserType = 'individual' | 'agent' | 'agency';
-type RegistrationStep = 'user-type' | 'basic-info' | 'verification';
+type RegistrationStep = 'user-type' | 'basic-info' | 'verification' | 'otp-verification';
 
 export default function SignUpPage() {
   const [currentStep, setCurrentStep] = useState<RegistrationStep>('user-type');
@@ -22,9 +22,14 @@ export default function SignUpPage() {
     agreeToTerms: false,
     agreeToMarketing: false
   });
+  const [otpData, setOtpData] = useState({
+    emailOtp: '',
+    phoneOtp: ''
+  });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
 
   const userTypes = [
     {
@@ -123,7 +128,7 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -160,17 +165,9 @@ export default function SignUpPage() {
         setIsLoading(false);
         return;
       }
-      // Auto sign-in after registration
-      const signInRes = await signIn('credentials', {
-        redirect: false,
-        email: formData.email,
-        password: formData.password,
-      });
-      if (signInRes?.ok) {
-        window.location.href = '/dashboard';
-      } else {
-        setCurrentStep('verification');
-      }
+
+      // Registration successful - show verification step
+      setCurrentStep('verification');
     } catch (err: any) {
       setErrors({ api: err.message || 'Registration failed' });
     } finally {
@@ -230,9 +227,8 @@ export default function SignUpPage() {
             id="firstName"
             name="firstName"
             required
-            className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${
-              errors.firstName ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.firstName ? 'border-red-500' : 'border-gray-300'
+              }`}
             value={formData.firstName}
             onChange={handleInputChange}
           />
@@ -249,9 +245,8 @@ export default function SignUpPage() {
             id="lastName"
             name="lastName"
             required
-            className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${
-              errors.lastName ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.lastName ? 'border-red-500' : 'border-gray-300'
+              }`}
             value={formData.lastName}
             onChange={handleInputChange}
           />
@@ -270,9 +265,8 @@ export default function SignUpPage() {
           id="email"
           name="email"
           required
-          className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${
-            errors.email ? 'border-red-500' : 'border-gray-300'
-          }`}
+          className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.email ? 'border-red-500' : 'border-gray-300'
+            }`}
           value={formData.email}
           onChange={handleInputChange}
         />
@@ -295,9 +289,8 @@ export default function SignUpPage() {
             name="phone"
             required
             placeholder="801 234 5678"
-            className={`block w-full pl-12 border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${
-              errors.phone ? 'border-red-500' : 'border-gray-300'
-            }`}
+            className={`block w-full pl-12 border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.phone ? 'border-red-500' : 'border-gray-300'
+              }`}
             value={formData.phone}
             onChange={handleInputChange}
           />
@@ -321,9 +314,8 @@ export default function SignUpPage() {
           name="password"
           required
           minLength={8}
-          className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${
-            errors.password ? 'border-red-500' : 'border-gray-300'
-          }`}
+          className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.password ? 'border-red-500' : 'border-gray-300'
+            }`}
           value={formData.password}
           onChange={handleInputChange}
         />
@@ -345,9 +337,8 @@ export default function SignUpPage() {
           id="confirmPassword"
           name="confirmPassword"
           required
-          className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${
-            errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-          }`}
+          className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+            }`}
           value={formData.confirmPassword}
           onChange={handleInputChange}
         />
@@ -363,9 +354,8 @@ export default function SignUpPage() {
             name="agreeToTerms"
             type="checkbox"
             required
-            className={`h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded mt-1 ${
-              errors.agreeToTerms ? 'border-red-500' : ''
-            }`}
+            className={`h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded mt-1 ${errors.agreeToTerms ? 'border-red-500' : ''
+              }`}
             checked={formData.agreeToTerms}
             onChange={handleInputChange}
           />
@@ -423,13 +413,110 @@ export default function SignUpPage() {
       <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
         <span className="material-icons text-green-600 text-2xl">email</span>
       </div>
-      <h3 className="text-lg font-medium text-gray-900">Check your email</h3>
+      <h3 className="text-lg font-medium text-gray-900">Check your email and phone</h3>
       <p className="text-gray-600">
-        We've sent a verification link to <strong>{formData.email}</strong>
+        We've sent verification codes to:
       </p>
-      <p className="text-sm text-gray-500">
-        Click the link in your email to verify your account and complete registration.
-      </p>
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <p className="text-sm text-gray-600 mb-2">
+          <strong>Email:</strong> {formData.email}
+        </p>
+        <p className="text-sm text-gray-600">
+          <strong>Phone:</strong> +234 {formData.phone}
+        </p>
+      </div>
+      
+      {/* Development mode info */}
+      {process.env.NODE_ENV === 'development' && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <h4 className="text-sm font-medium text-yellow-800 mb-2">Development Mode</h4>
+          <p className="text-sm text-yellow-700">
+            Check the server console for verification links and OTP codes.
+          </p>
+        </div>
+      )}
+      
+      <div className="space-y-4">
+        <p className="text-sm text-gray-500">
+          Please check your email and phone for verification codes. Enter the codes below to complete registration.
+        </p>
+        
+        {/* Email OTP Input */}
+        <div>
+          <label htmlFor="emailOtp" className="block text-sm font-medium text-gray-700 text-left">
+            Email Verification Code
+          </label>
+          <input
+            type="text"
+            id="emailOtp"
+            name="emailOtp"
+            placeholder="Enter code from email"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500"
+            value={otpData.emailOtp}
+            onChange={(e) => setOtpData(prev => ({ ...prev, emailOtp: e.target.value }))}
+          />
+        </div>
+
+        {/* Phone OTP Input */}
+        <div>
+          <label htmlFor="phoneOtp" className="block text-sm font-medium text-gray-700 text-left">
+            SMS Verification Code
+          </label>
+          <input
+            type="text"
+            id="phoneOtp"
+            name="phoneOtp"
+            placeholder="Enter code from SMS"
+            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500"
+            value={otpData.phoneOtp}
+            onChange={(e) => setOtpData(prev => ({ ...prev, phoneOtp: e.target.value }))}
+          />
+        </div>
+
+        <button
+          onClick={handleVerifyOTP}
+          disabled={isLoading || !otpData.emailOtp || !otpData.phoneOtp}
+          className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white primary-bg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {isLoading ? 'Verifying...' : 'Verify Codes'}
+        </button>
+
+        <div className="flex flex-col space-y-2">
+          <button
+            onClick={() => {
+              // Resend verification email
+              fetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  firstName: formData.firstName,
+                  lastName: formData.lastName,
+                  email: formData.email,
+                  phone: formData.phone,
+                  password: formData.password,
+                  accountType: userType === 'agent' ? 'AGENT' : userType === 'agency' ? 'AGENCY' : 'INDIVIDUAL',
+                }),
+              });
+            }}
+            className="text-sm text-red-600 hover:text-red-700 underline"
+          >
+            Resend verification email
+          </button>
+          <button
+            onClick={() => {
+              // Resend OTP
+              fetch('/api/sms/otp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phoneNumber: formData.phone }),
+              });
+            }}
+            className="text-sm text-red-600 hover:text-red-700 underline"
+          >
+            Resend SMS code
+          </button>
+        </div>
+      </div>
       <div className="pt-4">
         <Link
           href="/signin"
@@ -440,6 +527,41 @@ export default function SignUpPage() {
       </div>
     </div>
   );
+
+  const handleVerifyOTP = async () => {
+    setIsLoading(true);
+    setErrors({});
+
+    try {
+      // Verify email OTP
+      const emailResponse = await fetch('/api/auth/verify-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: otpData.emailOtp }),
+      });
+
+      // Verify phone OTP
+      const phoneResponse = await fetch('/api/sms/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: formData.phone,
+          otp: otpData.phoneOtp
+        }),
+      });
+
+      if (emailResponse.ok && phoneResponse.ok) {
+        // Both verifications successful
+        window.location.href = '/signin?verified=true';
+      } else {
+        setErrors({ api: 'Verification failed. Please check your codes and try again.' });
+      }
+    } catch (error) {
+      setErrors({ api: 'Verification failed. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">

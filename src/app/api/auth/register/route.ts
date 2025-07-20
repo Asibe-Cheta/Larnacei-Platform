@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { userRegistrationSchema } from "@/lib/validations";
 import bcrypt from "bcryptjs";
+import { sendVerificationEmail } from "@/lib/email-service";
+import { sendOTP } from "@/lib/twilio-service";
 
 /**
  * POST /api/auth/register
@@ -9,10 +11,35 @@ import bcrypt from "bcryptjs";
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error("JSON parsing error:", jsonError);
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid JSON in request body",
+        },
+        { status: 400 }
+      );
+    }
     
+    // Handle form data structure (firstName + lastName = name)
+    let registrationData = body;
+    if (body.firstName && body.lastName) {
+      registrationData = {
+        name: `${body.firstName} ${body.lastName}`.trim(),
+        email: body.email,
+        phone: body.phone,
+        password: body.password,
+        role: body.role || "SEEKER",
+        accountType: body.accountType || "INDIVIDUAL",
+      };
+    }
+
     // Validate request body
-    const validatedData = userRegistrationSchema.parse(body);
+    const validatedData = userRegistrationSchema.parse(registrationData);
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
@@ -65,17 +92,35 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // TODO: Send email verification
-    // TODO: Send welcome SMS
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "User registered successfully. Please check your email for verification.",
-        data: user,
-      },
-      { status: 201 }
-    );
+    try {
+      // Send email verification
+      await sendVerificationEmail(user.email, user.name, user.id);
+      
+      // Send OTP to phone number
+      await sendOTP(user.phone);
+      
+      return NextResponse.json(
+        {
+          success: true,
+          message: "User registered successfully. Please check your email and phone for verification codes.",
+          data: user,
+        },
+        { status: 201 }
+      );
+    } catch (emailError) {
+      console.error("Email/SMS sending error:", emailError);
+      
+      // User was created but email/SMS failed - still return success
+      // but with a warning
+      return NextResponse.json(
+        {
+          success: true,
+          message: "User registered successfully. Verification emails/SMS may be delayed.",
+          data: user,
+        },
+        { status: 201 }
+      );
+    }
   } catch (error: any) {
     console.error("User registration error:", error);
     

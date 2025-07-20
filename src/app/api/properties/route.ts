@@ -9,6 +9,7 @@ import {
   paginatedResponseSchema 
 } from "@/lib/validations";
 import { UserRole } from "@prisma/client";
+import { cacheManager } from "@/lib/redis";
 
 /**
  * POST /api/properties
@@ -78,6 +79,9 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Clear property caches when new property is created
+    await cacheManager.clearPropertyCaches();
+
     return NextResponse.json(
       {
         success: true,
@@ -141,6 +145,15 @@ export async function GET(request: NextRequest) {
     };
 
     const validatedParams = propertySearchSchema.parse(queryParams);
+
+    // Generate cache key based on search parameters
+    const cacheKey = `search:${JSON.stringify(validatedParams)}`;
+    
+    // Try to get cached results first
+    const cachedResults = await cacheManager.getSearchResults(cacheKey);
+    if (cachedResults) {
+      return NextResponse.json(cachedResults, { status: 200 });
+    }
 
     // Build filter conditions
     const where: any = {
@@ -227,22 +240,24 @@ export async function GET(request: NextRequest) {
     const hasNext = validatedParams.page < totalPages;
     const hasPrev = validatedParams.page > 1;
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Properties fetched successfully",
-        data: properties,
-        pagination: {
-          page: validatedParams.page,
-          limit: validatedParams.limit,
-          total,
-          totalPages,
-          hasNext,
-          hasPrev,
-        },
+    const response = {
+      success: true,
+      message: "Properties fetched successfully",
+      data: properties,
+      pagination: {
+        page: validatedParams.page,
+        limit: validatedParams.limit,
+        total,
+        totalPages,
+        hasNext,
+        hasPrev,
       },
-      { status: 200 }
-    );
+    };
+
+    // Cache the results
+    await cacheManager.setSearchResults(cacheKey, response);
+
+    return NextResponse.json(response, { status: 200 });
   } catch (error: any) {
     console.error("Property fetch error:", error);
     

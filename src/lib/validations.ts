@@ -25,7 +25,7 @@ export const nigerianPhoneSchema = z
     (phone) => {
       // Remove all non-digit characters
       const cleanPhone = phone.replace(/\D/g, "");
-      
+
       // Check if it's a valid Nigerian phone number
       // Supports: +2348012345678, 2348012345678, 08012345678, 8012345678
       const patterns = [
@@ -34,7 +34,7 @@ export const nigerianPhoneSchema = z
         /^0[789][01]\d{8}$/,     // 0 format
         /^[789][01]\d{8}$/,      // Direct format
       ];
-      
+
       return patterns.some(pattern => pattern.test(cleanPhone));
     },
     {
@@ -81,8 +81,8 @@ export const userRegistrationSchema = z.object({
     .string()
     .min(8, "Password must be at least 8 characters")
     .regex(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
-      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]*$/,
+      "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     ),
   role: z.nativeEnum(UserRole).default(UserRole.SEEKER),
   accountType: z.nativeEnum(AccountType).default(AccountType.INDIVIDUAL),
