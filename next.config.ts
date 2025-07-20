@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  
+
   // Image optimization for Nigerian networks
   images: {
     remotePatterns: [
@@ -45,7 +45,6 @@ const nextConfig: NextConfig = {
 
   // Bundle optimization
   experimental: {
-    optimizeCss: true,
     optimizePackageImports: ['@mui/material', '@mui/icons-material', 'lucide-react'],
   },
 
@@ -168,7 +167,7 @@ const nextConfig: NextConfig = {
 
   // Output configuration
   output: 'standalone',
-  
+
   // Trailing slash for better SEO
   trailingSlash: false,
 };
