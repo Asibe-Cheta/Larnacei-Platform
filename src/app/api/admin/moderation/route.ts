@@ -1,7 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
+
+interface ModerationRequest {
+  action: 'approve' | 'reject';
+  propertyIds: string[];
+  reason?: string;
+}
+
+interface ModerationResponse {
+  success: boolean;
+  message: string;
+  processedCount?: number;
+}
+
+interface PropertyModerationData {
+  id: string;
+  title: string;
+  status: string;
+  ownerId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,7 +53,18 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause for pending properties
-    const where: any = {
+    const where: {
+      status: string;
+      OR?: Array<{
+        title?: { contains: string; mode: string };
+        location?: { contains: string; mode: string };
+        owner?: { name: { contains: string; mode: string } };
+      }>;
+      owner?: {
+        verificationStatus?: string | { not: string };
+      };
+      priority?: string;
+    } = {
       status: 'PENDING'
     };
 
@@ -106,8 +138,8 @@ export async function GET(request: NextRequest) {
 
     // Transform data for moderation interface
     const transformedProperties = properties.map(property => {
-      const primaryImage = property.images.find(img => img.isPrimary)?.url || 
-                          property.images[0]?.url || '/images/placeholder.jpg';
+      const primaryImage = property.images.find(img => img.isPrimary)?.url ||
+        property.images[0]?.url || '/images/placeholder.jpg';
 
       // Calculate priority based on various factors
       let priority = 'LOW';
@@ -122,7 +154,7 @@ export async function GET(request: NextRequest) {
         if (property.images.length >= 5) factors.push(1);
         if (property.legalDocuments.length > 0) factors.push(1);
         if (property.price > 10000000) factors.push(1); // High value property
-        
+
         if (factors.length >= 3) priority = 'high';
         else if (factors.length >= 2) priority = 'medium';
         else priority = 'low';
@@ -205,7 +237,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Perform bulk action
-    const updateData: any = {
+    const updateData: {
+      status: string;
+      reviewedAt: Date;
+      reviewedBy: string;
+      rejectionReason?: string;
+    } = {
       status: action === 'approve' ? 'ACTIVE' : 'REJECTED',
       reviewedAt: new Date(),
       reviewedBy: session.user.email

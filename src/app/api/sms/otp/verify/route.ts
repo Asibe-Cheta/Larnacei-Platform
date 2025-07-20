@@ -1,57 +1,69 @@
-import { NextRequest, NextResponse } from "next/server";
-import { verifyOTP } from "@/lib/twilio-service";
+import { NextRequest, NextResponse } from 'next/server';
+import { verifyOTP } from '@/lib/twilio-service';
+import { z } from 'zod';
 
-/**
- * POST /api/sms/otp/verify
- * Verify OTP sent to phone number
- */
+interface VerifyOTPRequest {
+  phone: string;
+  otp: string;
+}
+
+interface VerifyOTPError {
+  message: string;
+  field?: string;
+}
+
+const verifyOTPSchema = z.object({
+  phone: z.string().min(1, 'Phone number is required'),
+  otp: z.string().min(4, 'OTP must be at least 4 digits').max(6, 'OTP must be at most 6 digits')
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { phoneNumber, otp } = body;
-
-    if (!phoneNumber || !otp) {
+    let body: VerifyOTPRequest;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error("JSON parsing error:", jsonError);
       return NextResponse.json(
-        {
-          success: false,
-          message: "Phone number and OTP are required",
-        },
+        { error: 'Invalid JSON in request body' },
         { status: 400 }
       );
     }
 
-    // Format phone number to international format
-    const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+234${phoneNumber.replace(/^0/, '')}`;
+    // Validate request body
+    const validationResult = verifyOTPSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errors: VerifyOTPError[] = validationResult.error.errors.map(err => ({
+        message: err.message,
+        field: err.path.join('.')
+      }));
+      return NextResponse.json(
+        { error: 'Validation failed', details: errors },
+        { status: 400 }
+      );
+    }
+
+    const { phone, otp } = validationResult.data;
 
     // Verify OTP
-    const isValid = verifyOTP(formattedPhone, otp);
+    const result = await verifyOTP(phone, otp);
 
-    if (isValid) {
-      return NextResponse.json(
-        {
-          success: true,
-          message: "OTP verified successfully",
-        },
-        { status: 200 }
-      );
+    if (result.success) {
+      return NextResponse.json({
+        message: 'OTP verified successfully',
+        phone: phone
+      });
     } else {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid OTP or OTP has expired",
-        },
+        { error: result.error || 'Invalid OTP' },
         { status: 400 }
       );
     }
-  } catch (error: any) {
-    console.error("OTP verification error:", error);
-    
+
+  } catch (error) {
+    console.error('Verify OTP error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to verify OTP",
-        error: error.message,
-      },
+      { error: 'Failed to verify OTP' },
       { status: 500 }
     );
   }

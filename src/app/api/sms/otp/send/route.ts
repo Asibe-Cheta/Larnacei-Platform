@@ -1,57 +1,60 @@
-import { NextRequest, NextResponse } from "next/server";
-import { sendOTP } from "@/lib/twilio-service";
+import { NextRequest, NextResponse } from 'next/server';
+import { sendOTP } from '@/lib/twilio-service';
+import { z } from 'zod';
 
-/**
- * POST /api/sms/otp/send
- * Send OTP to phone number
- */
+interface SendOTPRequest {
+  phone: string;
+}
+
+interface SendOTPError {
+  message: string;
+  field?: string;
+}
+
+const sendOTPSchema = z.object({
+  phone: z.string().min(1, 'Phone number is required')
+});
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const { phoneNumber } = body;
-
-    if (!phoneNumber) {
+    let body: SendOTPRequest;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error("JSON parsing error:", jsonError);
       return NextResponse.json(
-        {
-          success: false,
-          message: "Phone number is required",
-        },
+        { error: 'Invalid JSON in request body' },
         { status: 400 }
       );
     }
 
-    // Format phone number to international format
-    const formattedPhone = phoneNumber.startsWith('+') ? phoneNumber : `+234${phoneNumber.replace(/^0/, '')}`;
+    // Validate request body
+    const validationResult = sendOTPSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errors: SendOTPError[] = validationResult.error.errors.map(err => ({
+        message: err.message,
+        field: err.path.join('.')
+      }));
+      return NextResponse.json(
+        { error: 'Validation failed', details: errors },
+        { status: 400 }
+      );
+    }
+
+    const { phone } = validationResult.data;
 
     // Send OTP
-    const result = await sendOTP(formattedPhone);
+    await sendOTP(phone);
 
-    if (result.success) {
-      return NextResponse.json(
-        {
-          success: true,
-          message: "OTP sent successfully",
-        },
-        { status: 200 }
-      );
-    } else {
-      return NextResponse.json(
-        {
-          success: false,
-          message: result.error || "Failed to send OTP",
-        },
-        { status: 400 }
-      );
-    }
-  } catch (error: any) {
-    console.error("OTP send error:", error);
-    
+    return NextResponse.json({
+      message: 'OTP sent successfully',
+      phone: phone
+    });
+
+  } catch (error) {
+    console.error('Send OTP error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to send OTP",
-        error: error.message,
-      },
+      { error: 'Failed to send OTP' },
       { status: 500 }
     );
   }

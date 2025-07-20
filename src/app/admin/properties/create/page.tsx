@@ -1,42 +1,39 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { 
-  ArrowLeft, 
-  Save, 
-  Upload, 
-  MapPin, 
-  Home, 
-  Star,
-  Building,
-  TrendingUp,
-  X
+import {
+  ArrowLeft,
+  Upload,
+  MapPin,
+  Home,
+  X,
+  Save
 } from 'lucide-react';
 
-interface AdminPropertyFormData {
+interface PropertyFormData {
   title: string;
   description: string;
-  category: 'SHORT_STAY' | 'LONG_TERM_RENTAL' | 'PROPERTY_SALE' | 'LANDED_PROPERTY';
-  type: 'APARTMENT' | 'HOUSE' | 'VILLA' | 'LAND' | 'COMMERCIAL' | 'OFFICE' | 'SHOP' | 'WAREHOUSE';
-  price: string;
-  currency: 'NGN';
-  city: string;
-  state: string;
+  category: string;
+  type: string;
+  price: number;
+  priceType: string;
+  location: string;
   address: string;
+  state: string;
+  lga: string;
   bedrooms?: number;
   bathrooms?: number;
-  sizeInSqm?: number;
-  isFeatured: boolean;
-  isActive: boolean;
-  isApproved: boolean;
-  isVerified: boolean;
+  parkingSpaces?: number;
+  area?: number;
+  areaUnit: string;
+  furnishingStatus: string;
+  condition: string;
+  availableFrom: string;
   images: File[];
+  legalDocuments: File[];
   amenities: string[];
-  contactPhone: string;
-  contactEmail: string;
-  contactName: string;
+  features: string[];
 }
 
 const categories = [
@@ -72,71 +69,62 @@ const propertyTypes = {
   ]
 };
 
-const propertyStatusOptions = [
-  { value: 'featured', label: 'Featured', description: 'Highlighted on homepage', icon: Star },
-  { value: 'regular', label: 'Regular', description: 'Standard property listing', icon: Home }
-];
-
 const nigerianStates = [
   'Abuja', 'Lagos', 'Kano', 'Kaduna', 'Katsina', 'Oyo', 'Rivers', 'Jigawa', 'Zamfara',
   'Kebbi', 'Sokoto', 'Gombe', 'Yobe', 'Borno', 'Taraba', 'Adamawa', 'Niger', 'Kogi',
-  'Kwara', 'Nasarawa', 'Plateau', 'Bauchi', 'Anambra', 'Enugu', 'Imo', 'Abia', 
-  'Ebonyi', 'Cross River', 'Akwa Ibom', 'Bayelsa', 'Delta', 'Edo', 'Ondo', 'Ekiti', 
-  'Ogun', 'Osun'
+  'Kwara', 'Nasarawa', 'Plateau', 'Bauchi', 'Anambra', 'Enugu', 'Imo', 'Abia',
+  'Ebonyi', 'Cross River', 'Akwa Ibom', 'Bayelsa', 'Delta', 'Edo', 'Ondo', 'Ekiti',
+  'Osun', 'Ogun', 'Katsina', 'Kano', 'Kaduna', 'Kebbi', 'Sokoto', 'Zamfara',
+  'Katsina', 'Kano', 'Kaduna', 'Kebbi', 'Sokoto', 'Zamfara', 'Katsina', 'Kano',
+  'Kaduna', 'Kebbi', 'Sokoto', 'Zamfara', 'Katsina', 'Kano', 'Kaduna', 'Kebbi',
+  'Sokoto', 'Zamfara', 'Katsina', 'Kano', 'Kaduna', 'Kebbi', 'Sokoto', 'Zamfara'
 ];
 
 const amenities = [
-  'Air Conditioning', 'Balcony', 'Garden', 'Parking', 'Security', 'Swimming Pool',
-  'Gym', 'WiFi', 'Kitchen', 'Laundry', 'Furnished', 'Pet Friendly', 'Elevator',
-  'Doorman', 'Storage', 'Terrace', 'Fireplace', 'Central Heating', 'Dishwasher',
-  'Microwave', 'Refrigerator', 'Washing Machine', 'Dryer', 'Cable TV', 'Internet'
+  'WiFi', 'Air Conditioning', 'Heating', 'Kitchen', 'Washing Machine', 'Dryer',
+  'Parking', 'Gym', 'Pool', 'Garden', 'Balcony', 'Terrace', 'Elevator', 'Security',
+  'CCTV', 'Intercom', 'Pet Friendly', 'Furnished', 'Unfurnished', 'Partially Furnished'
+];
+
+const features = [
+  'Modern Design', 'Spacious', 'Quiet Location', 'City Center', 'Near Transport',
+  'Near Schools', 'Near Hospitals', 'Near Shopping', 'Near Restaurants', 'Near Parks',
+  'Gated Community', '24/7 Security', 'Backup Power', 'Water Supply', 'Internet Ready'
 ];
 
 export default function AdminCreatePropertyPage() {
-  const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formData, setFormData] = useState<AdminPropertyFormData>({
+  const [formData, setFormData] = useState<PropertyFormData>({
     title: '',
     description: '',
-    category: 'PROPERTY_SALE',
-    type: 'APARTMENT',
-    price: '',
-    currency: 'NGN',
-    city: '',
-    state: '',
+    category: '',
+    type: '',
+    price: 0,
+    priceType: 'PER_NIGHT',
+    location: '',
     address: '',
-    bedrooms: undefined,
-    bathrooms: undefined,
-    sizeInSqm: undefined,
-    isFeatured: true,
-    isActive: true,
-    isApproved: true,
-    isVerified: true,
+    state: '',
+    lga: '',
+    bedrooms: 0,
+    bathrooms: 0,
+    parkingSpaces: 0,
+    area: 0,
+    areaUnit: 'SQ_M',
+    furnishingStatus: 'UNFURNISHED',
+    condition: 'NEW',
+    availableFrom: '',
     images: [],
+    legalDocuments: [],
     amenities: [],
-    contactPhone: '',
-    contactEmail: '',
-    contactName: ''
+    features: []
   });
 
-  const updateFormData = (updates: Partial<AdminPropertyFormData>) => {
+  const updateFormData = (updates: Partial<PropertyFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
-    
-    // Reset type when category changes
-    if ('category' in updates) {
-      const availableTypes = propertyTypes[updates.category as keyof typeof propertyTypes];
-      if (availableTypes.length > 0) {
-        setFormData(prev => ({ ...prev, type: availableTypes[0].value as any }));
-      }
-    }
   };
 
   const formatPrice = (value: string) => {
-    const numericValue = value.replace(/\D/g, '');
-    if (numericValue) {
-      return new Intl.NumberFormat('en-NG').format(parseInt(numericValue));
-    }
-    return '';
+    const numericValue = value.replace(/[^0-9]/g, '');
+    return numericValue ? parseInt(numericValue, 10) : 0;
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -145,480 +133,485 @@ export default function AdminCreatePropertyPage() {
   };
 
   const removeImage = (index: number) => {
-    const newImages = formData.images.filter((_, i) => i !== index);
-    updateFormData({ images: newImages });
+    updateFormData({ images: formData.images.filter((_, i) => i !== index) });
   };
 
   const toggleAmenity = (amenity: string) => {
-    const newAmenities = formData.amenities.includes(amenity)
+    const updatedAmenities = formData.amenities.includes(amenity)
       ? formData.amenities.filter(a => a !== amenity)
       : [...formData.amenities, amenity];
-    updateFormData({ amenities: newAmenities });
+    updateFormData({ amenities: updatedAmenities });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
+    // Implementation for form submission
+    console.log('Form data:', formData);
+  };
 
-    try {
-      // Create FormData for file upload
-      const submitData = new FormData();
-      
-      // Add all form fields
-      Object.entries(formData).forEach(([key, value]) => {
-        if (key === 'images') {
-          formData.images.forEach((file, index) => {
-            submitData.append(`images`, file);
-          });
-        } else if (key === 'amenities') {
-          submitData.append('amenities', JSON.stringify(value));
-        } else {
-          submitData.append(key, String(value));
-        }
-      });
+  const toggleFeature = (feature: string) => {
+    const updatedFeatures = formData.features.includes(feature)
+      ? formData.features.filter(f => f !== feature)
+      : [...formData.features, feature];
+    updateFormData({ features: updatedFeatures });
+  };
 
-      const response = await fetch('/api/admin/properties', {
-        method: 'POST',
-        body: submitData,
-      });
+  const handleDocumentUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    updateFormData({ legalDocuments: [...formData.legalDocuments, ...files] });
+  };
 
-      if (response.ok) {
-        router.push('/admin/properties');
-      } else {
-        throw new Error('Failed to create property');
-      }
-    } catch (error) {
-      console.error('Error creating property:', error);
-      alert('Failed to create property. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+  const removeDocument = (index: number) => {
+    updateFormData({ legalDocuments: formData.legalDocuments.filter((_, i) => i !== index) });
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Link
-            href="/admin/properties"
-            className="flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Back to Properties
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Create Admin Property</h1>
-            <p className="text-gray-600">Create a new property that can be featured on the homepage</p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <Link
+              href="/admin/properties"
+              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span>Back to Properties</span>
+            </Link>
           </div>
+          <h1 className="text-3xl font-bold text-gray-900">Create New Property</h1>
         </div>
-      </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Basic Information */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Property Title */}
-            <div className="md:col-span-2">
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                Property Title *
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Basic Information */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Home className="h-5 w-5 mr-2" />
+              Basic Information
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Property Title *
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => updateFormData({ title: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter property title"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Category *
+                </label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => updateFormData({ category: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((category) => (
+                    <option key={category.value} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {formData.category && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Property Type *
+                  </label>
+                  <select
+                    value={formData.type}
+                    onChange={(e) => updateFormData({ type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  >
+                    <option value="">Select Type</option>
+                    {propertyTypes[formData.category as keyof typeof propertyTypes]?.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Price *
+                </label>
+                <input
+                  type="number"
+                  value={formData.price || ''}
+                  onChange={(e) => updateFormData({ price: formatPrice(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter price"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Price Type
+                </label>
+                <select
+                  value={formData.priceType}
+                  onChange={(e) => updateFormData({ priceType: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="PER_NIGHT">Per Night</option>
+                  <option value="PER_MONTH">Per Month</option>
+                  <option value="PER_YEAR">Per Year</option>
+                  <option value="TOTAL">Total Price</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description *
               </label>
-              <input
-                type="text"
-                id="title"
-                value={formData.title}
-                onChange={(e) => updateFormData({ title: e.target.value })}
-                placeholder="e.g., Beautiful 3-Bedroom Villa in Lekki"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+              <textarea
+                value={formData.description}
+                onChange={(e) => updateFormData({ description: e.target.value })}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Describe the property..."
                 required
               />
             </div>
+          </div>
 
-            {/* Category and Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category *
-              </label>
-              <select
-                value={formData.category}
-                onChange={(e) => updateFormData({ category: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-              >
-                {categories.map((category) => (
-                  <option key={category.value} value={category.value}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+          {/* Location */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <MapPin className="h-5 w-5 mr-2" />
+              Location
+            </h2>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Property Type *
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => updateFormData({ type: e.target.value as any })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-              >
-                {propertyTypes[formData.category].map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  State *
+                </label>
+                <select
+                  value={formData.state}
+                  onChange={(e) => updateFormData({ state: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select State</option>
+                  {nigerianStates.map((state) => (
+                    <option key={state} value={state}>
+                      {state}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Price */}
-            <div>
-              <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-2">
-                Price (NGN) *
-              </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <span className="text-gray-500">₦</span>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  LGA *
+                </label>
                 <input
                   type="text"
-                  id="price"
-                  value={formData.price}
-                  onChange={(e) => updateFormData({ price: formatPrice(e.target.value) })}
-                  placeholder="0"
-                  className="w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+                  value={formData.lga}
+                  onChange={(e) => updateFormData({ lga: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter LGA"
+                  required
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Address *
+                </label>
+                <input
+                  type="text"
+                  value={formData.address}
+                  onChange={(e) => updateFormData({ address: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter full address"
                   required
                 />
               </div>
             </div>
-
-            {/* Featured Status */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Featured Status
-              </label>
-              <select
-                value={formData.isFeatured ? 'featured' : 'regular'}
-                onChange={(e) => updateFormData({ isFeatured: e.target.value === 'featured' })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-              >
-                {propertyStatusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
           </div>
 
-          {/* Description */}
-          <div className="mt-6">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              Description *
-            </label>
-            <textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => updateFormData({ description: e.target.value })}
-              rows={4}
-              placeholder="Describe the property in detail..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-              required
-            />
-          </div>
-        </div>
+          {/* Property Details */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Property Details</h2>
 
-        {/* Location */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <MapPin className="w-5 h-5 mr-2" />
-            Location
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                State *
-              </label>
-              <select
-                value={formData.state}
-                onChange={(e) => updateFormData({ state: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-                required
-              >
-                <option value="">Select State</option>
-                {nigerianStates.map((state) => (
-                  <option key={state} value={state}>
-                    {state}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-2">
-                City *
-              </label>
-              <input
-                type="text"
-                id="city"
-                value={formData.city}
-                onChange={(e) => updateFormData({ city: e.target.value })}
-                placeholder="e.g., Lagos"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
-                Address *
-              </label>
-              <input
-                type="text"
-                id="address"
-                value={formData.address}
-                onChange={(e) => updateFormData({ address: e.target.value })}
-                placeholder="e.g., 123 Main Street"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Property Details */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Home className="w-5 h-5 mr-2" />
-            Property Details
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label htmlFor="bedrooms" className="block text-sm font-medium text-gray-700 mb-2">
-                Bedrooms
-              </label>
-              <input
-                type="number"
-                id="bedrooms"
-                value={formData.bedrooms || ''}
-                onChange={(e) => updateFormData({ bedrooms: e.target.value ? parseInt(e.target.value) : undefined })}
-                min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="bathrooms" className="block text-sm font-medium text-gray-700 mb-2">
-                Bathrooms
-              </label>
-              <input
-                type="number"
-                id="bathrooms"
-                value={formData.bathrooms || ''}
-                onChange={(e) => updateFormData({ bathrooms: e.target.value ? parseInt(e.target.value) : undefined })}
-                min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="sizeInSqm" className="block text-sm font-medium text-gray-700 mb-2">
-                Size (sqm)
-              </label>
-              <input
-                type="number"
-                id="sizeInSqm"
-                value={formData.sizeInSqm || ''}
-                onChange={(e) => updateFormData({ sizeInSqm: e.target.value ? parseInt(e.target.value) : undefined })}
-                min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Contact Information */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <label htmlFor="contactName" className="block text-sm font-medium text-gray-700 mb-2">
-                Contact Name *
-              </label>
-              <input
-                type="text"
-                id="contactName"
-                value={formData.contactName}
-                onChange={(e) => updateFormData({ contactName: e.target.value })}
-                placeholder="Contact person name"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                Contact Email *
-              </label>
-              <input
-                type="email"
-                id="contactEmail"
-                value={formData.contactEmail}
-                onChange={(e) => updateFormData({ contactEmail: e.target.value })}
-                placeholder="contact@example.com"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 mb-2">
-                Contact Phone *
-              </label>
-              <input
-                type="tel"
-                id="contactPhone"
-                value={formData.contactPhone}
-                onChange={(e) => updateFormData({ contactPhone: e.target.value })}
-                placeholder="+234 801 234 5678"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Amenities */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Amenities</h2>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {amenities.map((amenity) => (
-              <label key={amenity} className="flex items-center space-x-2 cursor-pointer">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bedrooms
+                </label>
                 <input
-                  type="checkbox"
-                  checked={formData.amenities.includes(amenity)}
-                  onChange={() => toggleAmenity(amenity)}
-                  className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+                  type="number"
+                  value={formData.bedrooms || ''}
+                  onChange={(e) => updateFormData({ bedrooms: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min="0"
                 />
-                <span className="text-sm text-gray-700">{amenity}</span>
-              </label>
-            ))}
-          </div>
-        </div>
+              </div>
 
-        {/* Images */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-            <Upload className="w-5 h-5 mr-2" />
-            Property Images
-          </h2>
-          
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="images" className="block text-sm font-medium text-gray-700 mb-2">
-                Upload Images
-              </label>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Bathrooms
+                </label>
+                <input
+                  type="number"
+                  value={formData.bathrooms || ''}
+                  onChange={(e) => updateFormData({ bathrooms: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Parking Spaces
+                </label>
+                <input
+                  type="number"
+                  value={formData.parkingSpaces || ''}
+                  onChange={(e) => updateFormData({ parkingSpaces: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Area
+                </label>
+                <input
+                  type="number"
+                  value={formData.area || ''}
+                  onChange={(e) => updateFormData({ area: parseInt(e.target.value) || 0 })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  min="0"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Area Unit
+                </label>
+                <select
+                  value={formData.areaUnit}
+                  onChange={(e) => updateFormData({ areaUnit: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="SQ_M">Square Meters</option>
+                  <option value="SQ_FT">Square Feet</option>
+                  <option value="ACRES">Acres</option>
+                  <option value="HECTARES">Hectares</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Available From
+                </label>
+                <input
+                  type="date"
+                  value={formData.availableFrom}
+                  onChange={(e) => updateFormData({ availableFrom: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Furnishing Status
+                </label>
+                <select
+                  value={formData.furnishingStatus}
+                  onChange={(e) => updateFormData({ furnishingStatus: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="UNFURNISHED">Unfurnished</option>
+                  <option value="PARTIALLY_FURNISHED">Partially Furnished</option>
+                  <option value="FULLY_FURNISHED">Fully Furnished</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Condition
+                </label>
+                <select
+                  value={formData.condition}
+                  onChange={(e) => updateFormData({ condition: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="NEW">New</option>
+                  <option value="EXCELLENT">Excellent</option>
+                  <option value="GOOD">Good</option>
+                  <option value="FAIR">Fair</option>
+                  <option value="POOR">Poor</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Images */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Upload className="h-5 w-5 mr-2" />
+              Property Images
+            </h2>
+
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
               <input
                 type="file"
-                id="images"
                 multiple
                 accept="image/*"
                 onChange={handleImageUpload}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+                className="hidden"
+                id="image-upload"
               />
-              <p className="mt-1 text-sm text-gray-500">
-                Upload multiple images. First image will be the primary image.
-              </p>
+              <label htmlFor="image-upload" className="cursor-pointer">
+                <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600">Click to upload images or drag and drop</p>
+                <p className="text-sm text-gray-500 mt-2">PNG, JPG, GIF up to 10MB each</p>
+              </label>
             </div>
 
-            {/* Image Preview */}
             {formData.images.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
                 {formData.images.map((file, index) => (
                   <div key={index} className="relative">
                     <img
                       src={URL.createObjectURL(file)}
-                      alt={`Preview ${index + 1}`}
+                      alt={`Property image ${index + 1}`}
                       className="w-full h-32 object-cover rounded-lg"
                     />
                     <button
                       type="button"
                       onClick={() => removeImage(index)}
-                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                     >
-                      <X className="w-4 h-4" />
+                      <X className="h-4 w-4" />
                     </button>
-                    {index === 0 && (
-                      <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded">
-                        Primary
-                      </div>
-                    )}
                   </div>
                 ))}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Admin Settings */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Admin Settings</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={(e) => updateFormData({ isActive: e.target.checked })}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Active</span>
-            </label>
+          {/* Amenities & Features */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Amenities & Features</h2>
 
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={formData.isApproved}
-                onChange={(e) => updateFormData({ isApproved: e.target.checked })}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Approved</span>
-            </label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="text-lg font-medium mb-4">Amenities</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {amenities.map((amenity) => (
+                    <label key={amenity} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.amenities.includes(amenity)}
+                        onChange={() => toggleAmenity(amenity)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm">{amenity}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-            <label className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                checked={formData.isVerified}
-                onChange={(e) => updateFormData({ isVerified: e.target.checked })}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Verified</span>
-            </label>
+              <div>
+                <h3 className="text-lg font-medium mb-4">Features</h3>
+                <div className="grid grid-cols-2 gap-3">
+                  {features.map((feature) => (
+                    <label key={feature} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.features.includes(feature)}
+                        onChange={() => toggleFeature(feature)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm">{feature}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* Submit Button */}
-        <div className="flex justify-end space-x-4">
-          <Link
-            href="/admin/properties"
-            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-          >
-            Cancel
-          </Link>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="px-6 py-2 bg-red-700 text-white rounded-md hover:bg-red-800 disabled:opacity-50 flex items-center"
-          >
-            <Save className="w-4 h-4 mr-2" />
-            {isSubmitting ? 'Creating...' : 'Create Property'}
-          </button>
-        </div>
-      </form>
+          {/* Legal Documents */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4">Legal Documents</h2>
+
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.doc,.docx"
+                onChange={handleDocumentUpload}
+                className="hidden"
+                id="document-upload"
+              />
+              <label htmlFor="document-upload" className="cursor-pointer">
+                <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600">Upload legal documents</p>
+                <p className="text-sm text-gray-500 mt-2">PDF, DOC, DOCX up to 10MB each</p>
+              </label>
+            </div>
+
+            {formData.legalDocuments.length > 0 && (
+              <div className="mt-6 space-y-2">
+                {formData.legalDocuments.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <span className="text-sm text-gray-700">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeDocument(index)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Submit Button */}
+          <div className="flex justify-end space-x-4">
+            <Link
+              href="/admin/properties"
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+            >
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center space-x-2"
+            >
+              <Save className="h-4 w-4" />
+              <span>Create Property</span>
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 } 

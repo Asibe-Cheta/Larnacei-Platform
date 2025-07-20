@@ -34,7 +34,7 @@ interface PropertyCardProps {
 
 export default function PropertyCard({ property, viewMode }: PropertyCardProps) {
   const [isFavorite, setIsFavorite] = useState(false);
-  const [imageIndex, setImageIndex] = useState(0);
+  const [imageIndex] = useState(0);
   const [showImageDots, setShowImageDots] = useState(false);
   const [isInView, setIsInView] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);

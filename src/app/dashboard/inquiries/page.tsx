@@ -105,12 +105,12 @@ export default function InquiriesPage() {
 
     try {
       const params = new URLSearchParams();
-      
+
       // Add filters
       Object.entries(filters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
-      
+
       // Add pagination
       params.append('page', pagination.page.toString());
       params.append('limit', pagination.limit.toString());
@@ -193,7 +193,9 @@ export default function InquiriesPage() {
     <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Inquiry Management</h1>
-        <p className="text-gray-600">Manage and respond to property inquiries from potential buyers and renters.</p>
+        <p className="text-gray-600 mt-1">
+          Manage and respond to property inquiries from potential buyers and renters.
+        </p>
       </div>
 
       {/* Summary Cards */}
@@ -382,7 +384,7 @@ export default function InquiriesPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
             <h3 className="text-lg font-medium text-gray-900 mb-2">No inquiries found</h3>
-            <p className="text-gray-600">You haven't received any inquiries yet, or no inquiries match your current filters.</p>
+                            <p className="text-gray-600">You haven&apos;t received any inquiries yet, or no inquiries match your current filters.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

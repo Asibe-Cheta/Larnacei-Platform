@@ -1,123 +1,102 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { validateNigerianPhone, formatNigerianPhone, validateEmail, validatePassword } from '@/utils/validation';
-import { signIn } from 'next-auth/react';
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Phone,
+  User,
+  Lock,
+  CheckCircle,
+  XCircle
+} from 'lucide-react';
 
-type UserType = 'individual' | 'agent' | 'agency';
-type RegistrationStep = 'user-type' | 'basic-info' | 'verification' | 'otp-verification';
+interface SignUpFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+  accountType: 'individual' | 'agent' | 'agency';
+  agreeToTerms: boolean;
+}
+
+interface SignUpError {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  password?: string;
+  confirmPassword?: string;
+  accountType?: string;
+  agreeToTerms?: string;
+  general?: string;
+}
 
 export default function SignUpPage() {
-  const [currentStep, setCurrentStep] = useState<RegistrationStep>('user-type');
-  const [userType, setUserType] = useState<UserType | null>(null);
-  const [formData, setFormData] = useState({
+  const router = useRouter();
+  const [formData, setFormData] = useState<SignUpFormData>({
     firstName: '',
     lastName: '',
     email: '',
     phone: '',
     password: '',
     confirmPassword: '',
+    accountType: 'individual',
     agreeToTerms: false,
-    agreeToMarketing: false
-  });
-  const [otpData, setOtpData] = useState({
-    emailOtp: '',
-    phoneOtp: ''
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<SignUpError>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
 
-  const userTypes = [
-    {
-      id: 'individual' as UserType,
-      title: 'Individual',
-      description: 'I want to buy, rent, or sell my own property',
-      icon: 'person',
-      features: ['List personal properties', 'Browse listings', 'Contact agents']
-    },
-    {
-      id: 'agent' as UserType,
-      title: 'Real Estate Agent',
-      description: 'I work as a licensed real estate agent',
-      icon: 'business',
-      features: ['List client properties', 'Manage listings', 'Professional tools']
-    },
-    {
-      id: 'agency' as UserType,
-      title: 'Agency/Company',
-      description: 'I represent a real estate company',
-      icon: 'business_center',
-      features: ['Multiple agent accounts', 'Company branding', 'Advanced analytics']
-    }
-  ];
-
-  const handleUserTypeSelect = (type: UserType) => {
-    setUserType(type);
-    setCurrentStep('basic-info');
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
-
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
-  };
-
   const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: SignUpError = {};
 
-    // First name validation
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'First name is required';
     }
 
-    // Last name validation
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Last name is required';
     }
 
-    // Email validation
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
-    } else if (!validateEmail(formData.email)) {
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    // Phone validation
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!validateNigerianPhone(formData.phone)) {
-      newErrors.phone = 'Please enter a valid Nigerian phone number';
+    } else if (!/^\+?[1-9]\d{1,14}$/.test(formData.phone.replace(/\s/g, ''))) {
+      newErrors.phone = 'Please enter a valid phone number';
     }
 
-    // Password validation
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else {
-      const passwordValidation = validatePassword(formData.password);
-      if (!passwordValidation.isValid) {
-        newErrors.password = passwordValidation.errors[0];
-      }
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters long';
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
+      newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
     }
 
-    // Confirm password validation
     if (!formData.confirmPassword) {
       newErrors.confirmPassword = 'Please confirm your password';
     } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
     }
 
-    // Terms agreement validation
+    if (!formData.accountType) {
+      newErrors.accountType = 'Please select an account type';
+    }
+
     if (!formData.agreeToTerms) {
       newErrors.agreeToTerms = 'You must agree to the terms and conditions';
     }
@@ -134,466 +113,349 @@ export default function SignUpPage() {
     }
 
     setIsLoading(true);
-    setErrors({});
-
-    // Format phone number to international format
-    const formattedPhone = formatNigerianPhone(formData.phone);
-
-    // Map userType to accountType
-    let accountType: 'INDIVIDUAL' | 'AGENT' | 'AGENCY' = 'INDIVIDUAL';
-    if (userType === 'agent') accountType = 'AGENT';
-    if (userType === 'agency') accountType = 'AGENCY';
-
-    // Prepare API payload
-    const payload = {
-      name: `${formData.firstName} ${formData.lastName}`.trim(),
-      email: formData.email,
-      phone: formattedPhone,
-      password: formData.password,
-      accountType,
-    };
 
     try {
-      const res = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setErrors({ api: data.message || 'Registration failed' });
-        setIsLoading(false);
-        return;
-      }
-
-      // Registration successful - show verification step
-      setCurrentStep('verification');
-    } catch (err: any) {
-      setErrors({ api: err.message || 'Registration failed' });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const renderUserTypeSelection = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-medium text-gray-900 mb-6">
-        Choose your account type
-      </h3>
-      {userTypes.map((type) => (
-        <button
-          key={type.id}
-          onClick={() => handleUserTypeSelect(type.id)}
-          className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-red-300 hover:bg-red-50 transition-all duration-200 text-left"
-        >
-          <div className="flex items-start space-x-4">
-            <div className="flex-shrink-0">
-              <div className="w-12 h-12 primary-bg rounded-lg flex items-center justify-center">
-                <span className="material-icons text-white text-xl">{type.icon}</span>
-              </div>
-            </div>
-            <div className="flex-1">
-              <h4 className="text-lg font-semibold text-gray-900">{type.title}</h4>
-              <p className="text-gray-600 mt-1">{type.description}</p>
-              <ul className="mt-3 space-y-1">
-                {type.features.map((feature, index) => (
-                  <li key={index} className="text-sm text-gray-500 flex items-center">
-                    <span className="material-icons text-green-500 text-sm mr-2">check</span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </button>
-      ))}
-    </div>
-  );
-
-  const renderBasicInfo = () => (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {errors.api && (
-        <div className="mb-2 p-3 rounded bg-[#7C0302]/10 border border-[#7C0302] text-[#7C0302] text-sm">
-          {errors.api}
-        </div>
-      )}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div>
-          <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
-            First name
-          </label>
-          <input
-            type="text"
-            id="firstName"
-            name="firstName"
-            required
-            className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.firstName ? 'border-red-500' : 'border-gray-300'
-              }`}
-            value={formData.firstName}
-            onChange={handleInputChange}
-          />
-          {errors.firstName && (
-            <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
-          )}
-        </div>
-        <div>
-          <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
-            Last name
-          </label>
-          <input
-            type="text"
-            id="lastName"
-            name="lastName"
-            required
-            className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.lastName ? 'border-red-500' : 'border-gray-300'
-              }`}
-            value={formData.lastName}
-            onChange={handleInputChange}
-          />
-          {errors.lastName && (
-            <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
-          )}
-        </div>
-      </div>
-
-      <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-          Email address
-        </label>
-        <input
-          type="email"
-          id="email"
-          name="email"
-          required
-          className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.email ? 'border-red-500' : 'border-gray-300'
-            }`}
-          value={formData.email}
-          onChange={handleInputChange}
-        />
-        {errors.email && (
-          <p className="mt-1 text-sm text-red-600">{errors.email}</p>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-          Phone number (Nigeria)
-        </label>
-        <div className="mt-1 relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span className="text-gray-500 sm:text-sm">+234</span>
-          </div>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            required
-            placeholder="801 234 5678"
-            className={`block w-full pl-12 border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.phone ? 'border-red-500' : 'border-gray-300'
-              }`}
-            value={formData.phone}
-            onChange={handleInputChange}
-          />
-        </div>
-        {errors.phone ? (
-          <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
-        ) : (
-          <p className="mt-1 text-sm text-gray-500">
-            Format: 801 234 5678 (we'll add +234 automatically)
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-          Password
-        </label>
-        <input
-          type="password"
-          id="password"
-          name="password"
-          required
-          minLength={8}
-          className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.password ? 'border-red-500' : 'border-gray-300'
-            }`}
-          value={formData.password}
-          onChange={handleInputChange}
-        />
-        {errors.password ? (
-          <p className="mt-1 text-sm text-red-600">{errors.password}</p>
-        ) : (
-          <p className="mt-1 text-sm text-gray-500">
-            Must be at least 8 characters with uppercase, lowercase, and number
-          </p>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-          Confirm password
-        </label>
-        <input
-          type="password"
-          id="confirmPassword"
-          name="confirmPassword"
-          required
-          className={`mt-1 block w-full border rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500 ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-            }`}
-          value={formData.confirmPassword}
-          onChange={handleInputChange}
-        />
-        {errors.confirmPassword && (
-          <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-start">
-          <input
-            id="agreeToTerms"
-            name="agreeToTerms"
-            type="checkbox"
-            required
-            className={`h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded mt-1 ${errors.agreeToTerms ? 'border-red-500' : ''
-              }`}
-            checked={formData.agreeToTerms}
-            onChange={handleInputChange}
-          />
-          <label htmlFor="agreeToTerms" className="ml-2 block text-sm text-gray-900">
-            I agree to the{' '}
-            <Link href="/terms" className="primary-text hover:text-red-700">
-              Terms of Service
-            </Link>{' '}
-            and{' '}
-            <Link href="/privacy" className="primary-text hover:text-red-700">
-              Privacy Policy
-            </Link>
-          </label>
-        </div>
-        {errors.agreeToTerms && (
-          <p className="text-sm text-red-600">{errors.agreeToTerms}</p>
-        )}
-
-        <div className="flex items-start">
-          <input
-            id="agreeToMarketing"
-            name="agreeToMarketing"
-            type="checkbox"
-            className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded mt-1"
-            checked={formData.agreeToMarketing}
-            onChange={handleInputChange}
-          />
-          <label htmlFor="agreeToMarketing" className="ml-2 block text-sm text-gray-900">
-            I agree to receive marketing communications from Larnacei
-          </label>
-        </div>
-      </div>
-
-      <div className="flex space-x-4">
-        <button
-          type="button"
-          onClick={() => setCurrentStep('user-type')}
-          className="flex-1 py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
-        >
-          Back
-        </button>
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="flex-1 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white primary-bg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {isLoading ? 'Creating account...' : 'Create account'}
-        </button>
-      </div>
-    </form>
-  );
-
-  const renderVerification = () => (
-    <div className="text-center space-y-6">
-      <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
-        <span className="material-icons text-green-600 text-2xl">email</span>
-      </div>
-      <h3 className="text-lg font-medium text-gray-900">Check your email and phone</h3>
-      <p className="text-gray-600">
-        We've sent verification codes to:
-      </p>
-      <div className="bg-gray-50 p-4 rounded-lg">
-        <p className="text-sm text-gray-600 mb-2">
-          <strong>Email:</strong> {formData.email}
-        </p>
-        <p className="text-sm text-gray-600">
-          <strong>Phone:</strong> +234 {formData.phone}
-        </p>
-      </div>
-      
-      {/* Development mode info */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-yellow-800 mb-2">Development Mode</h4>
-          <p className="text-sm text-yellow-700">
-            Check the server console for verification links and OTP codes.
-          </p>
-        </div>
-      )}
-      
-      <div className="space-y-4">
-        <p className="text-sm text-gray-500">
-          Please check your email and phone for verification codes. Enter the codes below to complete registration.
-        </p>
-        
-        {/* Email OTP Input */}
-        <div>
-          <label htmlFor="emailOtp" className="block text-sm font-medium text-gray-700 text-left">
-            Email Verification Code
-          </label>
-          <input
-            type="text"
-            id="emailOtp"
-            name="emailOtp"
-            placeholder="Enter code from email"
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500"
-            value={otpData.emailOtp}
-            onChange={(e) => setOtpData(prev => ({ ...prev, emailOtp: e.target.value }))}
-          />
-        </div>
-
-        {/* Phone OTP Input */}
-        <div>
-          <label htmlFor="phoneOtp" className="block text-sm font-medium text-gray-700 text-left">
-            SMS Verification Code
-          </label>
-          <input
-            type="text"
-            id="phoneOtp"
-            name="phoneOtp"
-            placeholder="Enter code from SMS"
-            className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-red-500 focus:border-red-500"
-            value={otpData.phoneOtp}
-            onChange={(e) => setOtpData(prev => ({ ...prev, phoneOtp: e.target.value }))}
-          />
-        </div>
-
-        <button
-          onClick={handleVerifyOTP}
-          disabled={isLoading || !otpData.emailOtp || !otpData.phoneOtp}
-          className="w-full py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white primary-bg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {isLoading ? 'Verifying...' : 'Verify Codes'}
-        </button>
-
-        <div className="flex flex-col space-y-2">
-          <button
-            onClick={() => {
-              // Resend verification email
-              fetch('/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  firstName: formData.firstName,
-                  lastName: formData.lastName,
-                  email: formData.email,
-                  phone: formData.phone,
-                  password: formData.password,
-                  accountType: userType === 'agent' ? 'AGENT' : userType === 'agency' ? 'AGENCY' : 'INDIVIDUAL',
-                }),
-              });
-            }}
-            className="text-sm text-red-600 hover:text-red-700 underline"
-          >
-            Resend verification email
-          </button>
-          <button
-            onClick={() => {
-              // Resend OTP
-              fetch('/api/sms/otp/send', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phoneNumber: formData.phone }),
-              });
-            }}
-            className="text-sm text-red-600 hover:text-red-700 underline"
-          >
-            Resend SMS code
-          </button>
-        </div>
-      </div>
-      <div className="pt-4">
-        <Link
-          href="/signin"
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white primary-bg hover:bg-red-700 transition-colors"
-        >
-          Continue to sign in
-        </Link>
-      </div>
-    </div>
-  );
-
-  const handleVerifyOTP = async () => {
-    setIsLoading(true);
-    setErrors({});
-
-    try {
-      // Verify email OTP
-      const emailResponse = await fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: otpData.emailOtp }),
-      });
-
-      // Verify phone OTP
-      const phoneResponse = await fetch('/api/sms/otp/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
-          phoneNumber: formData.phone,
-          otp: otpData.phoneOtp
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          password: formData.password,
+          accountType: formData.accountType,
         }),
       });
 
-      if (emailResponse.ok && phoneResponse.ok) {
-        // Both verifications successful
-        window.location.href = '/signin?verified=true';
-      } else {
-        setErrors({ api: 'Verification failed. Please check your codes and try again.' });
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error) {
+          setErrors({ general: data.error });
+        } else {
+          setErrors({ general: 'Registration failed. Please try again.' });
+        }
+        return;
       }
+
+      // Registration successful
+      setVerificationSent(true);
+
+      // Show verification instructions
+      alert('Registration successful! Please check your email and phone for verification codes.');
+
+      // Redirect to signin page after a delay
+      setTimeout(() => {
+        router.push('/signin');
+      }, 3000);
+
     } catch (error) {
-      setErrors({ api: 'Verification failed. Please try again.' });
+      console.error('Registration error:', error);
+      setErrors({ general: 'An unexpected error occurred. Please try again.' });
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="flex justify-center">
-          <Link href="/" className="flex items-center space-x-2">
-            <Image
-              src="/images/Larnacei_coloured.png"
-              alt="Larnacei Global Limited Logo"
-              width={48}
-              height={48}
-              className="h-12"
-            />
-          </Link>
-        </div>
-        <h2 className="mt-6 text-center text-3xl font-bold text-gray-900 heading-font">
-          Create your account
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Already have an account?{' '}
-          <Link href="/signin" className="font-medium primary-text hover:text-red-700 transition-colors">
-            Sign in here
-          </Link>
-        </p>
-      </div>
+  const handleInputChange = (field: keyof SignUpFormData, value: string | boolean) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {currentStep === 'user-type' && renderUserTypeSelection()}
-          {currentStep === 'basic-info' && renderBasicInfo()}
-          {currentStep === 'verification' && renderVerification()}
+    // Clear error for this field when user starts typing
+    if (errors[field as keyof SignUpError]) {
+      setErrors(prev => ({ ...prev, [field]: undefined }));
+    }
+  };
+
+  if (verificationSent) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="text-center">
+            <CheckCircle className="mx-auto h-12 w-12 text-green-600" />
+            <h2 className="mt-6 text-3xl font-bold text-gray-900">Registration Successful!</h2>
+            <p className="mt-2 text-sm text-gray-600">
+              Please check your email and phone for verification codes to complete your registration.
+            </p>
+          </div>
+          <div className="mt-8">
+            <Link
+              href="/signin"
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Go to Sign In
+            </Link>
+          </div>
         </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-bold text-gray-900">
+            Create your account
+          </h2>
+          <p className="mt-2 text-center text-sm text-gray-600">
+            Already have an account?{' '}
+            <Link href="/signin" className="font-medium text-blue-600 hover:text-blue-500">
+              Sign in here
+            </Link>
+          </p>
+        </div>
+
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          {errors.general && (
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="flex">
+                <XCircle className="h-5 w-5 text-red-400" />
+                <div className="ml-3">
+                  <p className="text-sm text-red-800">{errors.general}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Name Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
+                  First Name
+                </label>
+                <div className="mt-1 relative">
+                  <input
+                    id="firstName"
+                    name="firstName"
+                    type="text"
+                    required
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    className={`appearance-none relative block w-full px-3 py-2 border ${errors.firstName ? 'border-red-300' : 'border-gray-300'
+                      } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                    placeholder="First name"
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+                {errors.firstName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.firstName}</p>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-medium text-gray-700">
+                  Last Name
+                </label>
+                <div className="mt-1 relative">
+                  <input
+                    id="lastName"
+                    name="lastName"
+                    type="text"
+                    required
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    className={`appearance-none relative block w-full px-3 py-2 border ${errors.lastName ? 'border-red-300' : 'border-gray-300'
+                      } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                    placeholder="Last name"
+                  />
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                    <User className="h-5 w-5 text-gray-400" />
+                  </div>
+                </div>
+                {errors.lastName && (
+                  <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                Email Address
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className={`appearance-none relative block w-full px-3 py-2 border ${errors.email ? 'border-red-300' : 'border-gray-300'
+                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                  placeholder="Email address"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <Mail className="h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+              {errors.email && (
+                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+              )}
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                Phone Number
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  autoComplete="tel"
+                  required
+                  value={formData.phone}
+                  onChange={(e) => handleInputChange('phone', e.target.value)}
+                  className={`appearance-none relative block w-full px-3 py-2 border ${errors.phone ? 'border-red-300' : 'border-gray-300'
+                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                  placeholder="Phone number"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <Phone className="h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+              {errors.phone && (
+                <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+              )}
+            </div>
+
+            {/* Account Type */}
+            <div>
+              <label htmlFor="accountType" className="block text-sm font-medium text-gray-700">
+                Account Type
+              </label>
+              <div className="mt-1">
+                <select
+                  id="accountType"
+                  name="accountType"
+                  required
+                  value={formData.accountType}
+                  onChange={(e) => handleInputChange('accountType', e.target.value as 'individual' | 'agent' | 'agency')}
+                  className={`appearance-none relative block w-full px-3 py-2 border ${errors.accountType ? 'border-red-300' : 'border-gray-300'
+                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                >
+                  <option value="individual">Individual</option>
+                  <option value="agent">Real Estate Agent</option>
+                  <option value="agency">Real Estate Agency</option>
+                </select>
+              </div>
+              {errors.accountType && (
+                <p className="mt-1 text-sm text-red-600">{errors.accountType}</p>
+              )}
+            </div>
+
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                Password
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  className={`appearance-none relative block w-full px-3 py-2 border ${errors.password ? 'border-red-300' : 'border-gray-300'
+                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                  placeholder="Password"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              {errors.password && (
+                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+              )}
+            </div>
+
+            {/* Confirm Password */}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
+                Confirm Password
+              </label>
+              <div className="mt-1 relative">
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  className={`appearance-none relative block w-full px-3 py-2 border ${errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
+                    } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
+                  placeholder="Confirm password"
+                />
+                <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+              </div>
+              {errors.confirmPassword && (
+                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+              )}
+            </div>
+
+            {/* Terms and Conditions */}
+            <div className="flex items-center">
+              <input
+                id="agreeToTerms"
+                name="agreeToTerms"
+                type="checkbox"
+                required
+                checked={formData.agreeToTerms}
+                onChange={(e) => handleInputChange('agreeToTerms', e.target.checked)}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <label htmlFor="agreeToTerms" className="ml-2 block text-sm text-gray-900">
+                I agree to the{' '}
+                <Link href="/terms" className="text-blue-600 hover:text-blue-500">
+                  Terms and Conditions
+                </Link>{' '}
+                and{' '}
+                <Link href="/privacy" className="text-blue-600 hover:text-blue-500">
+                  Privacy Policy
+                </Link>
+              </label>
+            </div>
+            {errors.agreeToTerms && (
+              <p className="mt-1 text-sm text-red-600">{errors.agreeToTerms}</p>
+            )}
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? 'Creating account...' : 'Create account'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );

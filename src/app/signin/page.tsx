@@ -5,6 +5,21 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { signIn } from 'next-auth/react';
 
+interface SignInFormData {
+  email: string;
+  password: string;
+}
+
+interface SignInError {
+  message: string;
+  field?: string;
+}
+
+interface ApiError {
+  message: string;
+  details?: Array<{ message: string; field?: string }>;
+}
+
 export default function SignInPage() {
   const [formData, setFormData] = useState({
     email: '',
@@ -30,8 +45,8 @@ export default function SignInPage() {
       } else {
         setError(res?.error || 'Invalid email or password');
       }
-    } catch (err: any) {
-      setError(err.message || 'Sign in failed');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sign in failed');
     } finally {
       setIsLoading(false);
     }

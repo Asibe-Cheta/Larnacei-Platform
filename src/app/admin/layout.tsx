@@ -5,13 +5,13 @@ import { useSession } from 'next-auth/react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  LayoutDashboard, 
-  Home, 
-  Users, 
-  Shield, 
-  BarChart3, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Home,
+  Users,
+  Shield,
+  BarChart3,
+  Settings,
   FileText,
   DollarSign,
   AlertTriangle,
@@ -107,7 +107,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     <div className="min-h-screen flex bg-gray-50">
       {/* Mobile sidebar overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -115,9 +115,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
         style={{ width: 240, minWidth: 220, maxWidth: 240, padding: 16 }}
       >
         <div className="flex items-center justify-between h-16 border-b border-gray-200" style={{ paddingLeft: 0, paddingRight: 0 }}>
@@ -141,19 +140,18 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
         <nav className="mt-6">
           <div>
-            {adminNavigation.map((item, idx) => {
-              const isActive = pathname === item.href || 
-                             (item.href !== '/admin' && pathname.startsWith(item.href));
+            {adminNavigation.map((item) => {
+              const isActive = pathname === item.href ||
+                (item.href !== '/admin' && pathname.startsWith(item.href));
               const Icon = item.icon;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center h-11 px-4 py-2 rounded-md transition-colors text-sm font-medium ${
-                    isActive
+                  className={`flex items-center h-11 px-4 py-2 rounded-md transition-colors text-sm font-medium ${isActive
                       ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                  }`}
+                    }`}
                   style={{ marginBottom: 8, height: 44, padding: '8px 16px' }}
                   onClick={() => setSidebarOpen(false)}
                 >
