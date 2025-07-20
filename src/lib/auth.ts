@@ -42,6 +42,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error("User not found");
         }
 
+        // Check if email is verified
+        if (!user.isVerified) {
+          throw new Error("Please verify your email address before signing in. Check your email for a verification link.");
+        }
+
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password || ""
@@ -86,5 +91,6 @@ export const authOptions: NextAuthOptions = {
     signIn: "/signin",
     signUp: "/signup",
   },
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: process.env.NEXTAUTH_SECRET || "your-secret-key-here",
+  debug: process.env.NODE_ENV === "development",
 }; 

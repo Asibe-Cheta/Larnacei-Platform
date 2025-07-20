@@ -42,6 +42,11 @@ export const authOptions: NextAuthOptions = {
           throw new Error("User not found");
         }
 
+        // Check if email is verified
+        if (!user.isVerified) {
+          throw new Error("Please verify your email address before signing in. Check your email for a verification link.");
+        }
+
         // @ts-expect-error: password is present in our model
         const isPasswordValid = await bcrypt.compare(
           credentials.password,

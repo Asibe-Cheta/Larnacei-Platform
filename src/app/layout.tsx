@@ -21,15 +21,15 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://larnacei.com'),
+  metadataBase: new URL('https://properties.larnacei.com'),
   title: {
     default: "Larnacei Global Limited - Nigerian Property Marketplace",
     template: "%s | Larnacei Property Platform"
   },
   description: "Find your perfect property in Nigeria. From vacation stays to dream homes, land investments to rental properties. Your gateway to premium properties across Nigeria.",
   keywords: [
-    "Nigeria", "property", "real estate", "rentals", "land sales", 
-    "property sales", "short stays", "vacation rentals", "Lagos", 
+    "Nigeria", "property", "real estate", "rentals", "land sales",
+    "property sales", "short stays", "vacation rentals", "Lagos",
     "Abuja", "Port Harcourt", "Kano", "Ibadan", "property investment",
     "real estate Nigeria", "property marketplace", "rental properties",
     "land for sale", "commercial properties", "residential properties"
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_NG",
-    url: "https://larnacei.com",
+    url: "https://properties.larnacei.com",
     siteName: "Larnacei Property Platform",
     title: "Larnacei Global Limited - Nigerian Property Marketplace",
     description: "Find your perfect property in Nigeria. From vacation stays to dream homes, land investments to rental properties. Your gateway to premium properties across Nigeria.",
@@ -83,7 +83,7 @@ export const metadata: Metadata = {
     yahoo: "your-yahoo-verification-code",
   },
   alternates: {
-    canonical: "https://larnacei.com",
+    canonical: "https://properties.larnacei.com",
   },
 };
 
@@ -99,13 +99,18 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/icon?family=Material+Icons"
           rel="stylesheet"
         />
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/manifest.json" />
+        {/* Favicon Configuration with Cache Busting */}
+        <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=2" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/images/Larnacei_coloured.png?v=2" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/images/Larnacei_coloured.png?v=2" />
+        <link rel="manifest" href="/manifest.json?v=2" />
         <meta name="theme-color" content="#7C0302" />
         <meta name="msapplication-TileColor" content="#7C0302" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
-        
+
         {/* Structured Data for Organization */}
         <script
           type="application/ld+json"
@@ -115,7 +120,7 @@ export default function RootLayout({
               "@type": "RealEstateAgent",
               "name": "Larnacei Global Limited",
               "description": "Nigerian Property Marketplace",
-              "url": "https://larnacei.com",
+              "url": "https://properties.larnacei.com",
               "logo": "https://larnacei.com/images/Larnacei_coloured.png",
               "address": {
                 "@type": "PostalAddress",
