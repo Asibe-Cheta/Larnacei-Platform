@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import Image from 'next/image';
+import Link from 'next/link';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
 import PropertyImageGallery from '@/components/properties/PropertyImageGallery';
 import PropertyInfo from '@/components/properties/PropertyInfo';
-import OwnerProfile from '@/components/properties/OwnerProfile';
 import ContactForm from '@/components/properties/ContactForm';
 import SimilarProperties from '@/components/properties/SimilarProperties';
-import { Property, PropertyCategory, PropertyType } from '@prisma/client';
+import { Property, PropertyType } from '@prisma/client';
 
 interface PropertyWithDetails extends Property {
   owner: {
@@ -68,7 +67,7 @@ interface PropertyResponse {
 export default function PropertyDetailPage() {
   const params = useParams();
   const propertyId = params.id as string;
-  
+
   const [property, setProperty] = useState<PropertyWithDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -81,7 +80,7 @@ export default function PropertyDetailPage() {
         setLoading(true);
         const response = await fetch(`/api/properties/${propertyId}`);
         const data: PropertyResponse = await response.json();
-        
+
         if (data.success) {
           setProperty(data.data);
         } else {
@@ -143,19 +142,19 @@ export default function PropertyDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <nav className="mb-6">
           <ol className="flex items-center space-x-2 text-sm text-gray-600">
             <li>
-              <a href="/" className="hover:text-red-600">Home</a>
+              <Link href="/" className="hover:text-red-600">Home</Link>
             </li>
             <li>
               <span className="mx-2">/</span>
             </li>
             <li>
-              <a href="/properties" className="hover:text-red-600">Properties</a>
+              <Link href="/properties" className="hover:text-red-600">Properties</Link>
             </li>
             <li>
               <span className="mx-2">/</span>
@@ -188,8 +187,8 @@ export default function PropertyDetailPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Contact Form */}
-            <ContactForm 
-              propertyId={property.id} 
+            <ContactForm
+              propertyId={property.id}
               owner={property.owner}
               propertyTitle={property.title}
               propertyLocation={`${property.city}, ${property.state}`}
@@ -254,14 +253,14 @@ export default function PropertyDetailPage() {
         </div>
 
         {/* Similar Properties */}
-        <SimilarProperties 
+        <SimilarProperties
           currentPropertyId={property.id}
           category={property.category}
           type={property.type}
           location={property.city}
         />
       </main>
-      
+
       <Footer />
     </div>
   );

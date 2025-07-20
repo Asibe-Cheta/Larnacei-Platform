@@ -1,82 +1,85 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { userRegistrationSchema } from "@/lib/validations";
-import bcrypt from "bcryptjs";
-import { sendVerificationEmail } from "@/lib/email-service";
-import { sendOTP } from "@/lib/twilio-service";
+import { NextRequest, NextResponse } from 'next/server';
+import { hash } from 'bcryptjs';
+import prisma from '@/lib/prisma';
+import { sendVerificationEmail } from '@/lib/email-service';
+import { sendOTP } from '@/lib/twilio-service';
+import { userRegistrationSchema } from '@/lib/validations';
 
-/**
- * POST /api/auth/register
- * Register a new user
- */
+interface RegistrationRequest {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  accountType: 'BUYER' | 'SELLER' | 'AGENT';
+  role?: 'USER' | 'ADMIN';
+}
+
+interface RegistrationError {
+  message: string;
+  field?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    let body;
+    let body: RegistrationRequest;
     try {
       body = await request.json();
     } catch (jsonError) {
       console.error("JSON parsing error:", jsonError);
       return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid JSON in request body",
-        },
+        { error: 'Invalid JSON in request body' },
         { status: 400 }
       );
     }
-    
-    // Handle form data structure (firstName + lastName = name)
-    let registrationData = body;
-    if (body.firstName && body.lastName) {
-      registrationData = {
-        name: `${body.firstName} ${body.lastName}`.trim(),
-        email: body.email,
-        phone: body.phone,
-        password: body.password,
-        role: body.role || "SEEKER",
-        accountType: body.accountType || "INDIVIDUAL",
-      };
-    }
 
     // Validate request body
-    const validatedData = userRegistrationSchema.parse(registrationData);
+    const validationResult = userRegistrationSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errors: RegistrationError[] = validationResult.error.errors.map(err => ({
+        message: err.message,
+        field: err.path.join('.')
+      }));
+      return NextResponse.json(
+        { error: 'Validation failed', details: errors },
+        { status: 400 }
+      );
+    }
+
+    const { name, email, phone, password, accountType, role = 'USER' } = validationResult.data;
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
-          { email: validatedData.email },
-          { phone: validatedData.phone },
-        ],
-      },
+          { email: email.toLowerCase() },
+          { phone: phone }
+        ]
+      }
     });
 
     if (existingUser) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "User with this email or phone number already exists",
-        },
+        { error: 'User with this email or phone already exists' },
         { status: 409 }
       );
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(validatedData.password, 12);
+    const hashedPassword = await hash(password, 12);
 
     // Create user
     const user = await prisma.user.create({
       data: {
-        name: validatedData.name,
-        email: validatedData.email,
-        phone: validatedData.phone,
+        name,
+        email: email.toLowerCase(),
+        phone,
         password: hashedPassword,
-        role: validatedData.role,
-        accountType: validatedData.accountType,
-        // Set initial verification status
+        accountType,
+        role,
         isVerified: false,
-        verificationLevel: "NONE",
-        kycStatus: "PENDING",
+        verificationLevel: 'NONE',
+        kycStatus: 'PENDING',
+        contactPreference: 'EMAIL'
       },
       select: {
         id: true,
@@ -88,69 +91,49 @@ export async function POST(request: NextRequest) {
         isVerified: true,
         verificationLevel: true,
         kycStatus: true,
-        createdAt: true,
-      },
+        createdAt: true
+      }
     });
 
+    // Send verification email
     try {
-      // Send email verification
-      await sendVerificationEmail(user.email, user.name, user.id);
-      
-      // Send OTP to phone number
-      await sendOTP(user.phone);
-      
-      return NextResponse.json(
-        {
-          success: true,
-          message: "User registered successfully. Please check your email and phone for verification codes.",
-          data: user,
-        },
-        { status: 201 }
-      );
+      await sendVerificationEmail(email, user.id);
     } catch (emailError) {
-      console.error("Email/SMS sending error:", emailError);
-      
-      // User was created but email/SMS failed - still return success
-      // but with a warning
-      return NextResponse.json(
-        {
-          success: true,
-          message: "User registered successfully. Verification emails/SMS may be delayed.",
-          data: user,
-        },
-        { status: 201 }
-      );
-    }
-  } catch (error: any) {
-    console.error("User registration error:", error);
-    
-    if (error.name === "ZodError") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Validation error",
-          error: error.errors.map((e: any) => e.message).join(", "),
-        },
-        { status: 400 }
-      );
+      console.error('Error sending verification email:', emailError);
+      // Don't fail registration if email fails
     }
 
-    if (error.code === "P2002") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "User with this email or phone number already exists",
-        },
-        { status: 409 }
-      );
+    // Send OTP to phone
+    try {
+      await sendOTP(phone);
+    } catch (smsError) {
+      console.error('Error sending OTP:', smsError);
+      // Don't fail registration if SMS fails
     }
 
     return NextResponse.json(
       {
-        success: false,
-        message: "Failed to register user",
-        error: error.message,
+        message: 'User registered successfully',
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          role: user.role,
+          accountType: user.accountType,
+          isVerified: user.isVerified,
+          verificationLevel: user.verificationLevel,
+          kycStatus: user.kycStatus,
+          createdAt: user.createdAt
+        }
       },
+      { status: 201 }
+    );
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    return NextResponse.json(
+      { error: 'Failed to register user' },
       { status: 500 }
     );
   }

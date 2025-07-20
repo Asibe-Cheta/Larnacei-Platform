@@ -1,76 +1,87 @@
-import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 
-/**
- * POST /api/auth/verify-email
- * Verify user email address
- */
+interface VerifyEmailRequest {
+  token: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body: VerifyEmailRequest;
+    try {
+      body = await request.json();
+    } catch (jsonError) {
+      console.error("JSON parsing error:", jsonError);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
     const { token } = body;
 
     if (!token) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Verification token is required",
-        },
+        { error: 'Verification token is required' },
         { status: 400 }
       );
     }
 
-    // Find user by ID (token is the user ID)
-    const user = await prisma.user.findUnique({
-      where: { id: token },
+    // Find user by verification token
+    const user = await prisma.user.findFirst({
+      where: {
+        emailVerificationToken: token,
+        emailVerified: false
+      }
     });
 
     if (!user) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid verification token",
-        },
+        { error: 'Invalid or expired verification token' },
         { status: 400 }
       );
     }
 
-    if (user.isVerified) {
-      return NextResponse.json(
-        {
-          success: true,
-          message: "Email is already verified",
-        },
-        { status: 200 }
-      );
+    // Check if token is expired (24 hours)
+    const tokenCreatedAt = user.emailVerificationTokenCreatedAt;
+    if (tokenCreatedAt) {
+      const now = new Date();
+      const tokenAge = now.getTime() - tokenCreatedAt.getTime();
+      const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+      if (tokenAge > maxAge) {
+        return NextResponse.json(
+          { error: 'Verification token has expired' },
+          { status: 400 }
+        );
+      }
     }
 
     // Update user verification status
     await prisma.user.update({
-      where: { id: token },
+      where: { id: user.id },
       data: {
-        isVerified: true,
-        verificationLevel: "EMAIL_VERIFIED",
-        emailVerified: new Date(),
-      },
+        emailVerified: true,
+        emailVerificationToken: null,
+        emailVerificationTokenCreatedAt: null,
+        verificationLevel: 'EMAIL_VERIFIED'
+      }
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Email verified successfully",
-      },
-      { status: 200 }
-    );
-  } catch (error: any) {
-    console.error("Email verification error:", error);
+    return NextResponse.json({
+      message: 'Email verified successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        emailVerified: true,
+        verificationLevel: 'EMAIL_VERIFIED'
+      }
+    });
 
+  } catch (error) {
+    console.error('Email verification error:', error);
     return NextResponse.json(
-      {
-        success: false,
-        message: "Failed to verify email",
-        error: error.message,
-      },
+      { error: 'Failed to verify email' },
       { status: 500 }
     );
   }

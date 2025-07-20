@@ -1,295 +1,304 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { 
-  Home, 
-  Users, 
-  DollarSign, 
-  AlertTriangle, 
-  TrendingUp, 
+import Link from 'next/link';
+import {
+  Users,
+  Home,
   Eye,
+  MessageSquare,
+  DollarSign,
+  TrendingUp,
+  TrendingDown,
+  AlertTriangle,
   CheckCircle,
-  XCircle,
-  Clock,
-  MapPin,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownRight,
-  Shield,
-  BarChart3
+  Clock
 } from 'lucide-react';
-import useSWR from 'swr';
 
 interface DashboardStats {
-  pendingProperties: number;
-  newUsers: number;
+  totalUsers: number;
+  totalProperties: number;
+  totalViews: number;
   totalRevenue: number;
-  activeListings: number;
-  unresolvedReports: number;
-  pendingKYC: number;
+  pendingApprovals: number;
+  activeInquiries: number;
+  userGrowth: number;
+  propertyGrowth: number;
+  revenueGrowth: number;
+  viewGrowth: number;
 }
 
-interface RecentActivity {
-  id: string;
-  type: 'property_submitted' | 'user_registered' | 'payment_received' | 'report_filed' | 'kyc_submitted';
-  title: string;
-  description: string;
-  timestamp: string;
-  status?: 'pending' | 'approved' | 'rejected';
-  amount?: number;
-}
+export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
 
-export default function AdminDashboard() {
-  const { data: stats, isLoading, error } = useSWR('/api/admin/dashboard-stats', fetcher);
-
-  const getActivityIcon = (type: string) => {
-    switch (type) {
-      case 'property_submitted':
-        return <Home className="w-4 h-4" />;
-      case 'user_registered':
-        return <Users className="w-4 h-4" />;
-      case 'payment_received':
-        return <DollarSign className="w-4 h-4" />;
-      case 'report_filed':
-        return <AlertTriangle className="w-4 h-4" />;
-      case 'kyc_submitted':
-        return <CheckCircle className="w-4 h-4" />;
-      default:
-        return <Clock className="w-4 h-4" />;
+  const fetchDashboardStats = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch('/api/admin/dashboard-stats');
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard stats');
+      }
+      const data = await response.json();
+      setStats(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const getStatusColor = (status?: string) => {
-    switch (status) {
-      case 'approved':
-        return 'text-green-600 bg-green-100';
-      case 'rejected':
-        return 'text-red-600 bg-red-100';
-      case 'pending':
-        return 'text-yellow-600 bg-yellow-100';
-      default:
-        return 'text-gray-600 bg-gray-100';
-    }
+  const getGrowthColor = (growth: number) => {
+    return growth >= 0 ? 'text-green-600' : 'text-red-600';
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
+  const getGrowthIcon = (growth: number) => {
+    return growth >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />;
   };
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-700 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading dashboard...</p>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg shadow p-6">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );
   }
+
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="mt-2 text-red-600">Error loading dashboard stats.</p>
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Dashboard</h1>
+            <p className="text-gray-600">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">No Dashboard Data</h1>
+            <p className="text-gray-600">No dashboard data available.</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 w-full px-0">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="mt-1 text-gray-600">
-          Welcome back! Here's what's happening with the Larnacei platform today.
-        </p>
-      </div>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600 mt-2">Overview of platform performance and key metrics</p>
+        </div>
 
-      {/* Quick Stats (Real Data) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <AlertTriangle className="w-6 h-6 text-yellow-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending Properties</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pendingProperties}</p>
-              <p className="text-xs text-gray-500 mt-1">Awaiting approval</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Users</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalUsers.toLocaleString()}</p>
+                <div className="flex items-center mt-1">
+                  {getGrowthIcon(stats.userGrowth)}
+                  <span className={`text-sm font-medium ml-1 ${getGrowthColor(stats.userGrowth)}`}>
+                    {Math.abs(stats.userGrowth)}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Users className="w-6 h-6 text-blue-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">New Users (7 days)</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.newUsers}</p>
-              {/* You can add weekly growth here if you fetch it from the API */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Home className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Properties</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalProperties.toLocaleString()}</p>
+                <div className="flex items-center mt-1">
+                  {getGrowthIcon(stats.propertyGrowth)}
+                  <span className={`text-sm font-medium ml-1 ${getGrowthColor(stats.propertyGrowth)}`}>
+                    {Math.abs(stats.propertyGrowth)}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <DollarSign className="w-6 h-6 text-green-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Total Revenue (Month)</p>
-              <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.totalRevenue)}</p>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <Eye className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Views</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.totalViews.toLocaleString()}</p>
+                <div className="flex items-center mt-1">
+                  {getGrowthIcon(stats.viewGrowth)}
+                  <span className={`text-sm font-medium ml-1 ${getGrowthColor(stats.viewGrowth)}`}>
+                    {Math.abs(stats.viewGrowth)}%
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <Home className="w-6 h-6 text-purple-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Active Listings</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.activeListings}</p>
-              <p className="text-xs text-gray-500 mt-1">Approved properties</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Unresolved Reports</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.unresolvedReports}</p>
-              <p className="text-xs text-gray-500 mt-1">Require attention</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <div className="flex items-center">
-            <div className="p-2 bg-indigo-100 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-indigo-600" />
-            </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Pending KYC</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.pendingKYC}</p>
-              <p className="text-xs text-gray-500 mt-1">Awaiting verification</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Shield className="w-5 h-5 text-red-600 mr-3" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900">Review Properties</p>
-              <p className="text-sm text-gray-500">{stats.pendingProperties} pending</p>
-            </div>
-          </button>
-
-          <button className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <Users className="w-5 h-5 text-blue-600 mr-3" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900">Process KYC</p>
-              <p className="text-sm text-gray-500">{stats.pendingKYC} pending</p>
-            </div>
-          </button>
-
-          <button className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 mr-3" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900">Handle Reports</p>
-              <p className="text-sm text-gray-500">{stats.unresolvedReports} unresolved</p>
-            </div>
-          </button>
-
-          <button className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <BarChart3 className="w-5 h-5 text-green-600 mr-3" />
-            <div className="text-left">
-              <p className="font-medium text-gray-900">View Reports</p>
-              <p className="text-sm text-gray-500">Financial analytics</p>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Recent Activity */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-          <button className="text-sm text-red-600 hover:text-red-700 font-medium">
-            View all
-          </button>
-        </div>
-        
-        <div className="space-y-4">
-          {/* Recent activity data would be fetched and displayed here */}
-        </div>
-      </div>
-
-      {/* Performance Overview */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Revenue Overview</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">This Month</span>
-              <span className="text-lg font-bold text-gray-900">{formatCurrency(stats.totalRevenue)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Last Month</span>
-              <span className="text-lg font-bold text-gray-900">{formatCurrency(2200000)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Growth</span>
-              <div className="flex items-center text-green-600">
-                <ArrowUpRight className="w-4 h-4 mr-1" />
-                <span className="font-medium">+9.1%</span>
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <DollarSign className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+                <p className="text-2xl font-bold text-gray-900">₦{stats.totalRevenue.toLocaleString()}</p>
+                <div className="flex items-center mt-1">
+                  {getGrowthIcon(stats.revenueGrowth)}
+                  <span className={`text-sm font-medium ml-1 ${getGrowthColor(stats.revenueGrowth)}`}>
+                    {Math.abs(stats.revenueGrowth)}%
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Platform Stats */}
-        <div className="bg-white rounded-lg shadow-sm border p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Platform Statistics</h3>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Total Users</span>
-              <span className="text-lg font-bold text-gray-900">2,847</span>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <Link href="/admin/users" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <Users className="w-6 h-6 text-blue-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">User Management</h3>
+                <p className="text-sm text-gray-600">Manage user accounts and permissions</p>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Properties Listed</span>
-              <span className="text-lg font-bold text-gray-900">1,247</span>
+          </Link>
+
+          <Link href="/admin/properties" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <Home className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Property Management</h3>
+                <p className="text-sm text-gray-600">Review and manage property listings</p>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Successful Bookings</span>
-              <span className="text-lg font-bold text-gray-900">892</span>
+          </Link>
+
+          <Link href="/admin/moderation" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center">
+              <div className="p-2 bg-yellow-100 rounded-lg">
+                <AlertTriangle className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Content Moderation</h3>
+                <p className="text-sm text-gray-600">Review and moderate content</p>
+              </div>
             </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Average Rating</span>
-              <div className="flex items-center">
-                <span className="text-lg font-bold text-gray-900">4.8</span>
-                <span className="text-yellow-400 ml-1">★</span>
+          </Link>
+
+          <Link href="/admin/analytics" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-purple-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Analytics</h3>
+                <p className="text-sm text-gray-600">View detailed analytics and reports</p>
+              </div>
+            </div>
+          </Link>
+
+          <Link href="/admin/settings" className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+            <div className="flex items-center">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-gray-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Settings</h3>
+                <p className="text-sm text-gray-600">Configure platform settings</p>
+              </div>
+            </div>
+          </Link>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            <div className="flex items-center">
+              <div className="p-2 bg-red-100 rounded-lg">
+                <Clock className="w-6 h-6 text-red-600" />
+              </div>
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold text-gray-900">Pending Actions</h3>
+                <p className="text-sm text-gray-600">{stats.pendingApprovals} items require attention</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Users className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">New user registration</p>
+                  <p className="text-xs text-gray-500">2 minutes ago</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Home className="w-4 h-4 text-green-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">New property listed</p>
+                  <p className="text-xs text-gray-500">15 minutes ago</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-yellow-100 rounded-lg">
+                  <MessageSquare className="w-4 h-4 text-yellow-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">New inquiry received</p>
+                  <p className="text-xs text-gray-500">1 hour ago</p>
+                </div>
               </div>
             </div>
           </div>

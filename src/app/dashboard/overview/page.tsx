@@ -2,7 +2,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import Link from 'next/link';
-import Image from 'next/image';
+
 import React from 'react';
 
 export default async function OverviewPage() {
@@ -41,7 +41,7 @@ export default async function OverviewPage() {
       <h2 className="text-2xl font-bold mb-6" style={{ color: '#7C0302' }}>Overview</h2>
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        {stats.map((stat, index) => (
+        {stats.map((stat) => (
           <div key={stat.label} className="bg-white overflow-hidden shadow rounded-lg">
             <div className="p-5 flex items-center">
               <div className="flex-shrink-0">

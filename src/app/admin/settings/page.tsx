@@ -1,69 +1,50 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import useSWR from 'swr';
-import { 
-  Settings, 
-  DollarSign, 
-  Shield, 
-  Mail, 
+import { useState } from 'react';
+import {
   Save,
-  AlertTriangle,
+  Shield,
+  Mail,
+  Phone,
+  Globe,
+  Database,
+  Key,
   CheckCircle,
-  XCircle
+  XCircle,
+  DollarSign
 } from 'lucide-react';
 
-interface PlatformSettings {
-  fees: {
-    shortStayCommission: number;
-    longTermRentalCommission: number;
-    propertySaleCommission: number;
-    landedPropertyCommission: number;
-    listingFee: number;
-    featuredPropertyFee: number;
-    premiumAccountFee: number;
-  };
-  payment: {
-    supportedCurrencies: string[];
-    defaultCurrency: string;
-    minimumPayout: number;
-    paymentSchedule: string;
-    processingFee: number;
-  };
-  moderation: {
-    autoApproveTrustedUsers: boolean;
-    imageQualityThreshold: number;
-    spamDetectionEnabled: boolean;
-    priceValidationEnabled: boolean;
-    duplicateDetectionEnabled: boolean;
-  };
-  verification: {
-    requireKYC: boolean;
-    requirePhoneVerification: boolean;
-    requireEmailVerification: boolean;
-    documentTypes: string[];
-  };
-  notifications: {
-    emailNotifications: boolean;
-    smsNotifications: boolean;
-    pushNotifications: boolean;
-  };
+interface SettingsFormData {
+  siteName: string;
+  siteDescription: string;
+  contactEmail: string;
+  contactPhone: string;
+  supportEmail: string;
+  adminEmail: string;
+  maxFileSize: number;
+  allowedFileTypes: string[];
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPassword: string;
+  twilioAccountSid: string;
+  twilioAuthToken: string;
+  twilioPhoneNumber: string;
+  mailgunApiKey: string;
+  mailgunDomain: string;
+  paystackSecretKey: string;
+  paystackPublicKey: string;
+  googleMapsApiKey: string;
+  redisUrl: string;
+  databaseUrl: string;
+  jwtSecret: string;
+  sessionSecret: string;
 }
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
-
 export default function SystemSettingsPage() {
-  const { data: initialSettings, isLoading, error } = useSWR('/api/admin/settings', fetcher);
-  const [settings, setSettings] = useState<PlatformSettings | null>(null);
+  const [settings, setSettings] = useState<SettingsFormData | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'success' | 'error'>('idle');
-
-  // Initialize settings when data is loaded
-  useEffect(() => {
-    if (initialSettings) {
-      setSettings(initialSettings);
-    }
-  }, [initialSettings]);
 
   const handleSave = async () => {
     if (!settings) return;
@@ -98,454 +79,447 @@ export default function SystemSettingsPage() {
     }
   };
 
-  const updateSettings = (section: keyof PlatformSettings, field: string, value: any) => {
+  const updateSettings = (field: string, value: string | number | boolean | string[]) => {
     if (!settings) return;
 
     setSettings(prev => {
       if (!prev) return prev;
       return {
         ...prev,
-        [section]: {
-          ...prev[section],
-          [field]: value
-        }
+        [field]: value,
       };
     });
   };
 
-  if (isLoading || !settings || !settings.fees) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-700 mx-auto"></div>
-          <p className="mt-2 text-gray-600">Loading settings...</p>
-        </div>
-      </div>
-    );
-  }
+  const handleInputChange = (field: string, value: string) => {
+    updateSettings(field, value);
+  };
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <p className="mt-2 text-red-600">Error loading settings.</p>
-        </div>
-      </div>
-    );
+  const handleNumberChange = (field: string, value: string) => {
+    const numValue = parseInt(value) || 0;
+    updateSettings(field, numValue);
+  };
+
+  const handleArrayChange = (field: string, value: string) => {
+    const arrayValue = value.split(',').map(item => item.trim()).filter(item => item);
+    updateSettings(field, arrayValue);
+  };
+
+  const getArrayDisplay = (array: string[]) => {
+    return array.join(', ');
+  };
+
+  const getStatusIcon = () => {
+    switch (saveStatus) {
+      case 'success':
+        return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'error':
+        return <XCircle className="w-5 h-5 text-red-500" />;
+      default:
+        return null;
+    }
+  };
+
+  const getStatusText = () => {
+    switch (saveStatus) {
+      case 'success':
+        return 'Settings saved successfully!';
+      case 'error':
+        return 'Error saving settings. Please try again.';
+      default:
+        return '';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (saveStatus) {
+      case 'success':
+        return 'text-green-600';
+      case 'error':
+        return 'text-red-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  // Mock settings data for demonstration
+  const mockSettings: SettingsFormData = {
+    siteName: 'Larnacei Platform',
+    siteDescription: 'Premium property marketplace in Nigeria',
+    contactEmail: 'contact@larnacei.com',
+    contactPhone: '+234 801 234 5678',
+    supportEmail: 'support@larnacei.com',
+    adminEmail: 'admin@larnacei.com',
+    maxFileSize: 10485760, // 10MB
+    allowedFileTypes: ['jpg', 'jpeg', 'png', 'gif', 'pdf', 'doc', 'docx'],
+    smtpHost: 'smtp.gmail.com',
+    smtpPort: 587,
+    smtpUser: 'noreply@larnacei.com',
+    smtpPassword: '********',
+    twilioAccountSid: 'AC1234567890abcdef',
+    twilioAuthToken: '********',
+    twilioPhoneNumber: '+234 801 234 5678',
+    mailgunApiKey: 'key-1234567890abcdef',
+    mailgunDomain: 'mg.larnacei.com',
+    paystackSecretKey: 'sk_test_1234567890abcdef',
+    paystackPublicKey: 'pk_test_1234567890abcdef',
+    googleMapsApiKey: 'AIzaSyB1234567890abcdef',
+    redisUrl: 'redis://localhost:6379',
+    databaseUrl: 'postgresql://user:password@localhost:5432/larnacei',
+    jwtSecret: 'your-super-secret-jwt-key-here',
+    sessionSecret: 'your-super-secret-session-key-here',
+  };
+
+  // Initialize settings if not already set
+  if (!settings) {
+    setSettings(mockSettings);
+    return <div>Loading settings...</div>;
   }
 
   return (
-    <div className="space-y-6 w-full px-0">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">System Settings</h1>
-          <p className="mt-1 text-gray-600">
-            Configure platform rules, fees, and automated systems
-          </p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-4xl mx-auto p-6">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">System Settings</h1>
+          <p className="text-gray-600 mt-2">Configure platform settings and integrations</p>
         </div>
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="inline-flex items-center px-4 py-2 bg-red-700 text-white rounded-lg hover:bg-red-800 transition-colors disabled:opacity-50"
-        >
-          <Save className="w-4 h-4 mr-2" />
-          {saving ? 'Saving...' : 'Save Changes'}
-        </button>
-      </div>
 
-      {/* Save Status */}
-      {saveStatus === 'success' && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <CheckCircle className="w-5 h-5 text-green-600 mr-2" />
-            <span className="text-green-800 font-medium">Settings saved successfully!</span>
+        {/* Save Status */}
+        {saveStatus !== 'idle' && (
+          <div className="mb-6 p-4 bg-white rounded-lg shadow border-l-4 border-l-green-500">
+            <div className="flex items-center">
+              {getStatusIcon()}
+              <span className={`ml-2 font-medium ${getStatusColor()}`}>
+                {getStatusText()}
+              </span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {saveStatus === 'error' && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <XCircle className="w-5 h-5 text-red-600 mr-2" />
-            <span className="text-red-800 font-medium">Error saving settings. Please try again.</span>
-          </div>
-        </div>
-      )}
+        <form onSubmit={(e) => { e.preventDefault(); handleSave(); }} className="space-y-8">
+          {/* General Settings */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Globe className="w-5 h-5 mr-2" />
+              General Settings
+            </h2>
 
-      {/* Fee Structure */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex items-center mb-6">
-          <DollarSign className="w-6 h-6 text-green-600 mr-3" />
-          <h2 className="text-xl font-semibold text-gray-900">Fee Structure</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Commission Rates (%)</h3>
-            <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Short Stay Commission
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Site Name
                 </label>
                 <input
-                  type="number"
-                  value={settings.fees.shortStayCommission}
-                  onChange={(e) => updateSettings('fees', 'shortStayCommission', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  min="0"
-                  max="100"
-                  step="0.1"
+                  type="text"
+                  value={settings.siteName}
+                  onChange={(e) => handleInputChange('siteName', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Long Term Rental Commission
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contact Email
                 </label>
                 <input
-                  type="number"
-                  value={settings.fees.longTermRentalCommission}
-                  onChange={(e) => updateSettings('fees', 'longTermRentalCommission', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  min="0"
-                  max="100"
-                  step="0.1"
+                  type="email"
+                  value={settings.contactEmail}
+                  onChange={(e) => handleInputChange('contactEmail', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Property Sale Commission
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Contact Phone
                 </label>
                 <input
-                  type="number"
-                  value={settings.fees.propertySaleCommission}
-                  onChange={(e) => updateSettings('fees', 'propertySaleCommission', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  min="0"
-                  max="100"
-                  step="0.1"
+                  type="tel"
+                  value={settings.contactPhone}
+                  onChange={(e) => handleInputChange('contactPhone', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Landed Property Commission
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Support Email
                 </label>
                 <input
-                  type="number"
-                  value={settings.fees.landedPropertyCommission}
-                  onChange={(e) => updateSettings('fees', 'landedPropertyCommission', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  min="0"
-                  max="100"
-                  step="0.1"
+                  type="email"
+                  value={settings.supportEmail}
+                  onChange={(e) => handleInputChange('supportEmail', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Site Description
+                </label>
+                <textarea
+                  value={settings.siteDescription}
+                  onChange={(e) => handleInputChange('siteDescription', e.target.value)}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
           </div>
 
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Fees (₦)</h3>
-            <div className="space-y-4">
+          {/* Email Settings */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Mail className="w-5 h-5 mr-2" />
+              Email Configuration
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Listing Fee
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SMTP Host
                 </label>
                 <input
-                  type="number"
-                  value={settings.fees.listingFee}
-                  onChange={(e) => updateSettings('fees', 'listingFee', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  min="0"
-                  step="100"
+                  type="text"
+                  value={settings.smtpHost}
+                  onChange={(e) => handleInputChange('smtpHost', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Featured Property Fee
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SMTP Port
                 </label>
                 <input
                   type="number"
-                  value={settings.fees.featuredPropertyFee}
-                  onChange={(e) => updateSettings('fees', 'featuredPropertyFee', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  min="0"
-                  step="100"
+                  value={settings.smtpPort}
+                  onChange={(e) => handleNumberChange('smtpPort', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Premium Account Fee
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SMTP Username
                 </label>
                 <input
-                  type="number"
-                  value={settings.fees.premiumAccountFee}
-                  onChange={(e) => updateSettings('fees', 'premiumAccountFee', parseFloat(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  min="0"
-                  step="100"
+                  type="text"
+                  value={settings.smtpUser}
+                  onChange={(e) => handleInputChange('smtpUser', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  SMTP Password
+                </label>
+                <input
+                  type="password"
+                  value={settings.smtpPassword}
+                  onChange={(e) => handleInputChange('smtpPassword', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Payment Settings */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex items-center mb-6">
-          <DollarSign className="w-6 h-6 text-blue-600 mr-3" />
-          <h2 className="text-xl font-semibold text-gray-900">Payment Settings</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Default Currency
-            </label>
-            <select
-              value={settings.payment.defaultCurrency}
-              onChange={(e) => updateSettings('payment', 'defaultCurrency', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+          {/* SMS Settings */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Phone className="w-5 h-5 mr-2" />
+              SMS Configuration (Twilio)
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Account SID
+                </label>
+                <input
+                  type="text"
+                  value={settings.twilioAccountSid}
+                  onChange={(e) => handleInputChange('twilioAccountSid', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Auth Token
+                </label>
+                <input
+                  type="password"
+                  value={settings.twilioAuthToken}
+                  onChange={(e) => handleInputChange('twilioAuthToken', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={settings.twilioPhoneNumber}
+                  onChange={(e) => handleInputChange('twilioPhoneNumber', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Payment Settings */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <DollarSign className="w-5 h-5 mr-2" />
+              Payment Configuration (Paystack)
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Secret Key
+                </label>
+                <input
+                  type="password"
+                  value={settings.paystackSecretKey}
+                  onChange={(e) => handleInputChange('paystackSecretKey', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Public Key
+                </label>
+                <input
+                  type="text"
+                  value={settings.paystackPublicKey}
+                  onChange={(e) => handleInputChange('paystackPublicKey', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Security Settings */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Shield className="w-5 h-5 mr-2" />
+              Security Settings
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  JWT Secret
+                </label>
+                <input
+                  type="password"
+                  value={settings.jwtSecret}
+                  onChange={(e) => handleInputChange('jwtSecret', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Session Secret
+                </label>
+                <input
+                  type="password"
+                  value={settings.sessionSecret}
+                  onChange={(e) => handleInputChange('sessionSecret', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Database Settings */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Database className="w-5 h-5 mr-2" />
+              Database Configuration
+            </h2>
+
+            <div className="grid grid-cols-1 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Database URL
+                </label>
+                <input
+                  type="text"
+                  value={settings.databaseUrl}
+                  onChange={(e) => handleInputChange('databaseUrl', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Redis URL
+                </label>
+                <input
+                  type="text"
+                  value={settings.redisUrl}
+                  onChange={(e) => handleInputChange('redisUrl', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* File Upload Settings */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-xl font-semibold mb-4 flex items-center">
+              <Key className="w-5 h-5 mr-2" />
+              File Upload Settings
+            </h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Max File Size (bytes)
+                </label>
+                <input
+                  type="number"
+                  value={settings.maxFileSize}
+                  onChange={(e) => handleNumberChange('maxFileSize', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Allowed File Types (comma-separated)
+                </label>
+                <input
+                  type="text"
+                  value={getArrayDisplay(settings.allowedFileTypes)}
+                  onChange={(e) => handleArrayChange('allowedFileTypes', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Save Button */}
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
             >
-              <option value="NGN">NGN (Nigerian Naira)</option>
-              <option value="USD">USD (US Dollar)</option>
-              <option value="GBP">GBP (British Pound)</option>
-            </select>
+              <Save className="w-4 h-4" />
+              <span>{saving ? 'Saving...' : 'Save Settings'}</span>
+            </button>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Minimum Payout (₦)
-            </label>
-            <input
-              type="number"
-              value={settings.payment.minimumPayout}
-              onChange={(e) => updateSettings('payment', 'minimumPayout', parseFloat(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              min="0"
-              step="100"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Payment Schedule
-            </label>
-            <select
-              value={settings.payment.paymentSchedule}
-              onChange={(e) => updateSettings('payment', 'paymentSchedule', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-              <option value="monthly">Monthly</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Processing Fee (%)
-            </label>
-            <input
-              type="number"
-              value={settings.payment.processingFee}
-              onChange={(e) => updateSettings('payment', 'processingFee', parseFloat(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              min="0"
-              max="100"
-              step="0.1"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Moderation Settings */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex items-center mb-6">
-          <Shield className="w-6 h-6 text-purple-600 mr-3" />
-          <h2 className="text-xl font-semibold text-gray-900">Moderation Settings</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Auto-approve Trusted Users
-              </label>
-              <input
-                type="checkbox"
-                checked={settings.moderation.autoApproveTrustedUsers}
-                onChange={(e) => updateSettings('moderation', 'autoApproveTrustedUsers', e.target.checked)}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Spam Detection
-              </label>
-              <input
-                type="checkbox"
-                checked={settings.moderation.spamDetectionEnabled}
-                onChange={(e) => updateSettings('moderation', 'spamDetectionEnabled', e.target.checked)}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Price Validation
-              </label>
-              <input
-                type="checkbox"
-                checked={settings.moderation.priceValidationEnabled}
-                onChange={(e) => updateSettings('moderation', 'priceValidationEnabled', e.target.checked)}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Duplicate Detection
-              </label>
-              <input
-                type="checkbox"
-                checked={settings.moderation.duplicateDetectionEnabled}
-                onChange={(e) => updateSettings('moderation', 'duplicateDetectionEnabled', e.target.checked)}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Image Quality Threshold (%)
-            </label>
-            <input
-              type="number"
-              value={settings.moderation.imageQualityThreshold}
-              onChange={(e) => updateSettings('moderation', 'imageQualityThreshold', parseFloat(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-              min="0"
-              max="100"
-              step="1"
-            />
-            <p className="text-xs text-gray-500 mt-1">
-              Minimum image quality score for automatic approval
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Verification Settings */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex items-center mb-6">
-          <Shield className="w-6 h-6 text-green-600 mr-3" />
-          <h2 className="text-xl font-semibold text-gray-900">Verification Settings</h2>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Require KYC
-              </label>
-              <input
-                type="checkbox"
-                checked={settings.verification.requireKYC}
-                onChange={(e) => updateSettings('verification', 'requireKYC', e.target.checked)}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Require Phone Verification
-              </label>
-              <input
-                type="checkbox"
-                checked={settings.verification.requirePhoneVerification}
-                onChange={(e) => updateSettings('verification', 'requirePhoneVerification', e.target.checked)}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium text-gray-700">
-                Require Email Verification
-              </label>
-              <input
-                type="checkbox"
-                checked={settings.verification.requireEmailVerification}
-                onChange={(e) => updateSettings('verification', 'requireEmailVerification', e.target.checked)}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Accepted Document Types
-            </label>
-            <div className="space-y-2">
-              {['NIN', 'BVN', 'Driver License', 'Passport'].map((docType) => (
-                <div key={docType} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    checked={settings.verification.documentTypes.includes(docType)}
-                    onChange={(e) => {
-                      const newDocTypes = e.target.checked
-                        ? [...settings.verification.documentTypes, docType]
-                        : settings.verification.documentTypes.filter(type => type !== docType);
-                      updateSettings('verification', 'documentTypes', newDocTypes);
-                    }}
-                    className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-                  />
-                  <label className="ml-2 text-sm text-gray-700">{docType}</label>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Notification Settings */}
-      <div className="bg-white rounded-lg shadow-sm border p-6">
-        <div className="flex items-center mb-6">
-          <Mail className="w-6 h-6 text-orange-600 mr-3" />
-          <h2 className="text-xl font-semibold text-gray-900">Notification Settings</h2>
-        </div>
-        
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">
-              Email Notifications
-            </label>
-            <input
-              type="checkbox"
-              checked={settings.notifications.emailNotifications}
-              onChange={(e) => updateSettings('notifications', 'emailNotifications', e.target.checked)}
-              className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">
-              SMS Notifications
-            </label>
-            <input
-              type="checkbox"
-              checked={settings.notifications.smsNotifications}
-              onChange={(e) => updateSettings('notifications', 'smsNotifications', e.target.checked)}
-              className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">
-              Push Notifications
-            </label>
-            <input
-              type="checkbox"
-              checked={settings.notifications.pushNotifications}
-              onChange={(e) => updateSettings('notifications', 'pushNotifications', e.target.checked)}
-              className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-            />
-          </div>
-        </div>
+        </form>
       </div>
     </div>
   );

@@ -1,44 +1,93 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
-import { subDays, startOfMonth } from 'date-fns';
+import prisma from '@/lib/prisma';
 
-export async function GET(req: NextRequest) {
-  const session = await getServerSession(authOptions, req, {} as any);
-  if (!session || session.user.role !== 'admin') {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+interface DashboardStats {
+  pendingProperties: number;
+  newUsers: number;
+  totalRevenue: number;
+  activeListings: number;
+  unresolvedReports: number;
+  pendingKYC: number;
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session?.user || session.user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Get pending properties count
+    const pendingProperties = await prisma.property.count({
+      where: { status: 'PENDING' }
+    });
+
+    // Get new users count (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const newUsers = await prisma.user.count({
+      where: {
+        createdAt: {
+          gte: sevenDaysAgo
+        }
+      }
+    });
+
+    // Get total revenue (this month)
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const payments = await prisma.payment.findMany({
+      where: {
+        status: 'SUCCESSFUL',
+        createdAt: {
+          gte: startOfMonth
+        }
+      },
+      select: {
+        amount: true
+      }
+    });
+
+    const totalRevenue = payments.reduce((sum, payment) => sum + payment.amount, 0);
+
+    // Get active listings count
+    const activeListings = await prisma.property.count({
+      where: { status: 'ACTIVE' }
+    });
+
+    // Get unresolved reports count
+    const unresolvedReports = await prisma.report.count({
+      where: { status: 'PENDING' }
+    });
+
+    // Get pending KYC count
+    const pendingKYC = await prisma.user.count({
+      where: {
+        kycStatus: 'PENDING'
+      }
+    });
+
+    const stats: DashboardStats = {
+      pendingProperties,
+      newUsers,
+      totalRevenue,
+      activeListings,
+      unresolvedReports,
+      pendingKYC
+    };
+
+    return NextResponse.json(stats);
+  } catch (error) {
+    console.error('Error fetching dashboard stats:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
   }
-
-  // Platform-wide stats
-  const [
-    totalUsers,
-    pendingProperties,
-    activeListings,
-    totalRevenue,
-    newUsers,
-    unresolvedReports,
-    pendingKYC,
-    adminProperties
-  ] = await Promise.all([
-    prisma.user.count(),
-    prisma.property.count({ where: { moderationStatus: 'PENDING' } }),
-    prisma.property.count({ where: { isActive: true, moderationStatus: 'APPROVED' } }),
-    prisma.payment.aggregate({ _sum: { amount: true }, where: { status: 'SUCCESS', createdAt: { gte: startOfMonth(new Date()) } } }),
-    prisma.user.count({ where: { createdAt: { gte: subDays(new Date(), 7) } } }),
-    prisma.report.count({ where: { status: 'OPEN' } }),
-    prisma.user.count({ where: { kycStatus: { in: ['PENDING', 'IN_REVIEW'] } } }),
-    prisma.property.count({ where: { createdBy: { role: 'admin' } } }),
-  ]);
-
-  return NextResponse.json({
-    totalUsers,
-    pendingProperties,
-    activeListings,
-    totalRevenue: totalRevenue._sum.amount || 0,
-    newUsers,
-    unresolvedReports,
-    pendingKYC,
-    adminProperties,
-  });
 } 
