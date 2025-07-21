@@ -143,35 +143,60 @@ export async function POST(request: NextRequest) {
     console.log('✅ No existing user found, creating new user...');
 
     // Hash password
-    const hashedPassword = await hash(password, 12);
+    console.log('Hashing password...');
+    let hashedPassword;
+    try {
+      hashedPassword = await hash(password, 12);
+      console.log('✅ Password hashed successfully');
+    } catch (hashError) {
+      console.error('❌ Password hashing failed:', hashError);
+      throw new Error(`Password hashing failed: ${hashError instanceof Error ? hashError.message : 'Unknown error'}`);
+    }
 
     // Create user
-    const user = await prisma.user.create({
-      data: {
-        name: fullName,
-        email: email.toLowerCase(),
-        phone,
-        password: hashedPassword,
-        accountType: mappedAccountType,
-        role,
-        isVerified: false,
-        verificationLevel: 'NONE',
-        kycStatus: 'PENDING',
-        contactPreference: 'EMAIL'
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        accountType: true,
-        isVerified: true,
-        verificationLevel: true,
-        kycStatus: true,
-        createdAt: true
-      }
+    console.log('Creating user in database...');
+    console.log('User data:', {
+      name: fullName,
+      email: email.toLowerCase(),
+      phone,
+      accountType: mappedAccountType,
+      role,
+      passwordLength: hashedPassword.length
     });
+    
+    let user;
+    try {
+      user = await prisma.user.create({
+        data: {
+          name: fullName,
+          email: email.toLowerCase(),
+          phone,
+          password: hashedPassword,
+          accountType: mappedAccountType,
+          role,
+          isVerified: false,
+          verificationLevel: 'NONE',
+          kycStatus: 'PENDING',
+          contactPreference: 'EMAIL'
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          role: true,
+          accountType: true,
+          isVerified: true,
+          verificationLevel: true,
+          kycStatus: true,
+          createdAt: true
+        }
+      });
+      console.log('✅ User created successfully:', user.id);
+    } catch (createError) {
+      console.error('❌ User creation failed:', createError);
+      throw new Error(`User creation failed: ${createError instanceof Error ? createError.message : 'Unknown error'}`);
+    }
 
     console.log('✅ User created successfully:', user.id);
 
@@ -211,6 +236,8 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Registration error:', error);
+    console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('❌ Error name:', error instanceof Error ? error.name : 'Unknown error type');
     
     // Try to disconnect from database
     try {
@@ -219,8 +246,17 @@ export async function POST(request: NextRequest) {
       console.error('Error disconnecting from database:', disconnectError);
     }
     
+    // Return more detailed error information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
     return NextResponse.json(
-      { error: 'Failed to register user', details: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: 'Failed to register user', 
+        details: errorMessage,
+        stack: errorStack,
+        timestamp: new Date().toISOString()
+      },
       { status: 500, headers }
     );
   }
