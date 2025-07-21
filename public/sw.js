@@ -67,6 +67,39 @@ self.addEventListener('fetch', (event) => {
 
 // Handle API requests with cache-first strategy
 async function handleApiRequest(request) {
+  const url = new URL(request.url);
+  
+  // Skip caching for authentication and user-related APIs
+  if (url.pathname.startsWith('/api/auth/') || 
+      url.pathname.startsWith('/api/users/') ||
+      url.pathname.startsWith('/api/payments/') ||
+      url.pathname.startsWith('/api/bookings/') ||
+      url.pathname.startsWith('/api/conversations/') ||
+      url.pathname.startsWith('/api/inquiries/') ||
+      url.pathname.includes('register') ||
+      url.pathname.includes('login') ||
+      url.pathname.includes('test')) {
+    // Always go to network for these APIs
+    try {
+      const networkResponse = await fetch(request);
+      return networkResponse;
+    } catch (error) {
+      console.log('Network failed for auth API:', error);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Network error',
+          message: 'Please check your connection and try again'
+        }),
+        {
+          status: 503,
+          statusText: 'Service Unavailable',
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
+    }
+  }
+
+  // For other APIs, use cache-first strategy
   try {
     // Try network first
     const networkResponse = await fetch(request);
