@@ -1,4 +1,4 @@
-"use client";
+// This page needs server-side data, so it's a server component
 
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
