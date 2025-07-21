@@ -22,7 +22,7 @@ interface RegistrationError {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('🚀 Registration API called');
+  console.log('🚀 Registration API called - Fixed accountType mapping');
 
   // Add CORS headers
   const headers = {
