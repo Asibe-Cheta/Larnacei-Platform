@@ -22,10 +22,12 @@ interface RegistrationError {
 }
 
 export async function POST(request: NextRequest) {
+  console.log('Registration API called');
   try {
     let body: RegistrationRequest;
     try {
       body = await request.json();
+      console.log('Request body received:', { ...body, password: '[HIDDEN]' });
     } catch (jsonError) {
       console.error("JSON parsing error:", jsonError);
       return NextResponse.json(
@@ -35,8 +37,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate request body
+    console.log('Validating request body...');
     const validationResult = userRegistrationSchema.safeParse(body);
     if (!validationResult.success) {
+      console.log('Validation failed:', validationResult.error.errors);
       const errors: RegistrationError[] = validationResult.error.errors.map(err => ({
         message: err.message,
         field: err.path.join('.')
@@ -46,6 +50,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+    console.log('Validation passed');
 
     const { firstName, lastName, name, email, phone, password, accountType, role = 'USER' } = validationResult.data;
 
