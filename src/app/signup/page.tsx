@@ -13,6 +13,7 @@ import {
   CheckCircle,
   XCircle
 } from 'lucide-react';
+import React from 'react'; // Added missing import for React.useEffect
 
 interface SignUpFormData {
   firstName: string;
@@ -92,7 +93,7 @@ export default function SignUpPage() {
         /^[1-9]\d{9,14}$/, // 10-15 digits starting with 1-9
         /^0[1-9]\d{8,13}$/, // Local format starting with 0
       ];
-      
+
       if (!internationalPattern.test(cleanPhone) && !localPatterns.some(pattern => pattern.test(cleanPhone))) {
         newErrors.phone = 'Please enter a valid phone number (international format preferred)';
       }
@@ -156,7 +157,7 @@ export default function SignUpPage() {
         // Don't log password for security
       });
 
-      const response = await fetch('/api/auth/register', {
+      const response = await fetch('/api/auth/register?t=' + Date.now(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -213,7 +214,7 @@ export default function SignUpPage() {
         message: error.message,
         stack: error.stack
       });
-      
+
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         setErrors({ general: 'Network error. Please check your internet connection and try again.' });
       } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
@@ -234,6 +235,25 @@ export default function SignUpPage() {
       setErrors(prev => ({ ...prev, [field]: undefined }));
     }
   };
+
+  // Test API function
+  const testAPI = async () => {
+    try {
+      console.log('🧪 Testing API...');
+      const response = await fetch('/api/test?t=' + Date.now());
+      const data = await response.json();
+      console.log('🧪 API Test Result:', data);
+      return true;
+    } catch (error) {
+      console.error('🧪 API Test Failed:', error);
+      return false;
+    }
+  };
+
+  // Test API on component load
+  React.useEffect(() => {
+    testAPI();
+  }, []);
 
   if (verificationSent) {
     return (
