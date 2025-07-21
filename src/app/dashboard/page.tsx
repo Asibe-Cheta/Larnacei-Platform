@@ -1,8 +1,6 @@
-// This page needs server-side data, so it's a server component
+"use client";
 
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname, redirect } from 'next/navigation';
