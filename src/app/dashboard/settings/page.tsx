@@ -3,9 +3,6 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
 import { lgasByState } from '@/utils/nigeria-lga';
 
 const API_URL = "/api/users/profile";
