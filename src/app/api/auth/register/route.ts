@@ -37,6 +37,19 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Test database connection first
+    console.log('Testing database connection...');
+    try {
+      await prisma.$connect();
+      console.log('✅ Database connected successfully');
+    } catch (dbError) {
+      console.error('❌ Database connection failed:', dbError);
+      return NextResponse.json(
+        { error: 'Database connection failed. Please try again later.' },
+        { status: 503, headers }
+      );
+    }
+
     let body: RegistrationRequest;
     try {
       body = await request.json();
@@ -87,6 +100,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if user already exists
+    console.log('Checking for existing user...');
     const existingUser = await prisma.user.findFirst({
       where: {
         OR: [
@@ -97,11 +111,14 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingUser) {
+      console.log('❌ User already exists');
       return NextResponse.json(
         { error: 'User with this email or phone already exists' },
         { status: 409, headers }
       );
     }
+
+    console.log('✅ No existing user found, creating new user...');
 
     // Hash password
     const hashedPassword = await hash(password, 12);
@@ -134,21 +151,21 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Send verification email
-    try {
-      await sendVerificationEmail(email, user.id);
-    } catch (emailError) {
+    console.log('✅ User created successfully:', user.id);
+
+    // Send verification email (non-blocking)
+    console.log('Sending verification email...');
+    sendVerificationEmail(email, fullName, user.id).catch((emailError) => {
       console.error('Error sending verification email:', emailError);
       // Don't fail registration if email fails
-    }
+    });
 
-    // Send OTP to phone
-    try {
-      await sendOTP(phone);
-    } catch (smsError) {
+    // Send OTP to phone (non-blocking)
+    console.log('Sending OTP...');
+    sendOTP(phone).catch((smsError) => {
       console.error('Error sending OTP:', smsError);
       // Don't fail registration if SMS fails
-    }
+    });
 
     console.log('✅ User registered successfully:', user.id);
     return NextResponse.json(
@@ -172,6 +189,14 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Registration error:', error);
+    
+    // Try to disconnect from database
+    try {
+      await prisma.$disconnect();
+    } catch (disconnectError) {
+      console.error('Error disconnecting from database:', disconnectError);
+    }
+    
     return NextResponse.json(
       { error: 'Failed to register user', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500, headers }
