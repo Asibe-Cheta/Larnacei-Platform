@@ -1,4 +1,22 @@
-// Nigerian phone number validation
+// Worldwide phone number validation
+export const validateWorldwidePhone = (phone: string): boolean => {
+  const cleanPhone = phone.replace(/[^\d+]/g, "");
+  
+  // Check if it's already in international format
+  if (cleanPhone.startsWith('+') && /^\+[1-9]\d{1,14}$/.test(cleanPhone)) {
+    return true;
+  }
+  
+  // Check if it's a local format that can be converted
+  const localPatterns = [
+    /^[1-9]\d{9,14}$/, // 10-15 digits starting with 1-9
+    /^0[1-9]\d{8,13}$/, // Local format starting with 0
+  ];
+  
+  return localPatterns.some(pattern => pattern.test(cleanPhone));
+};
+
+// Nigerian phone number validation (kept for backward compatibility)
 export const validateNigerianPhone = (phone: string): boolean => {
   let cleaned = phone.trim();
   if (cleaned.startsWith('+')) cleaned = cleaned.slice(1);
@@ -17,7 +35,25 @@ export const validateNigerianPhone = (phone: string): boolean => {
   return false;
 };
 
-// Format Nigerian phone number to international format (+234XXXXXXXXXX)
+// Format worldwide phone number to international format
+export const formatWorldwidePhone = (phone: string): string => {
+  const cleanPhone = phone.replace(/[^\d+]/g, "");
+  
+  // If it already has +, return as is
+  if (cleanPhone.startsWith('+')) {
+    return cleanPhone;
+  }
+  
+  // If it starts with 0, remove the 0 (common local format)
+  if (cleanPhone.startsWith('0')) {
+    return cleanPhone.slice(1);
+  }
+  
+  // For other formats, assume it's a valid number
+  return cleanPhone;
+};
+
+// Format Nigerian phone number to international format (+234XXXXXXXXXX) (kept for backward compatibility)
 export const formatNigerianPhone = (phone: string): string => {
   let cleaned = phone.trim();
   if (cleaned.startsWith('+')) cleaned = cleaned.slice(1);

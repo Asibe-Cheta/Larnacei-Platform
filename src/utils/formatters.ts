@@ -99,10 +99,24 @@ export function formatRelativeTime(date: Date | string): string {
  * Format phone number for display
  */
 export function formatPhoneNumber(phone: string): string {
-  // Remove all non-digit characters
-  const cleanPhone = phone.replace(/\D/g, '');
+  // Remove all non-digit characters except +
+  const cleanPhone = phone.replace(/[^\d+]/g, '');
   
-  // Format Nigerian phone numbers
+  // If it's already in international format, format it nicely
+  if (cleanPhone.startsWith('+')) {
+    const countryCode = cleanPhone.slice(0, 3); // Assume 2-digit country code
+    const number = cleanPhone.slice(3);
+    
+    if (number.length === 10) {
+      return `${countryCode} ${number.slice(0, 3)} ${number.slice(3, 6)} ${number.slice(6)}`;
+    } else if (number.length === 9) {
+      return `${countryCode} ${number.slice(0, 3)} ${number.slice(3, 6)} ${number.slice(6)}`;
+    } else {
+      return cleanPhone; // Return as is if can't format nicely
+    }
+  }
+  
+  // Format Nigerian phone numbers (backward compatibility)
   if (cleanPhone.startsWith('234')) {
     const number = cleanPhone.slice(3);
     return `+234 ${number.slice(0, 3)} ${number.slice(3, 6)} ${number.slice(6)}`;

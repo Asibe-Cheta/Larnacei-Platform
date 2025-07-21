@@ -14,7 +14,36 @@ const MAX_SMS_PER_HOUR = 10;
 const MAX_SMS_PER_DAY = 50;
 const MIN_INTERVAL_BETWEEN_SMS = 60000; // 1 minute
 
-// Nigerian phone number validation and formatting
+// Worldwide phone number validation and formatting
+export const validateWorldwidePhone = (phoneNumber: string): { isValid: boolean; formatted: string; error?: string } => {
+  // Remove all non-digit characters except +
+  const cleanNumber = phoneNumber.replace(/[^\d+]/g, '');
+
+  // Check if it's already in international format
+  if (cleanNumber.startsWith('+') && /^\+[1-9]\d{1,14}$/.test(cleanNumber)) {
+    return { isValid: true, formatted: cleanNumber };
+  }
+
+  // Check if it's a local format that can be converted
+  const localPatterns = [
+    /^[1-9]\d{9,14}$/, // 10-15 digits starting with 1-9
+    /^0[1-9]\d{8,13}$/, // Local format starting with 0
+  ];
+
+  if (localPatterns.some(pattern => pattern.test(cleanNumber))) {
+    // For local formats, we'll need country code to convert properly
+    // For now, return as is and let Twilio handle the conversion
+    return { isValid: true, formatted: cleanNumber };
+  }
+
+  return {
+    isValid: false,
+    formatted: '',
+    error: 'Invalid phone number format. Please use international format (e.g., +1 234 567 8900)'
+  };
+};
+
+// Nigerian phone number validation and formatting (kept for backward compatibility)
 export const validateNigerianPhone = (phoneNumber: string): { isValid: boolean; formatted: string; error?: string } => {
   // Remove all non-digit characters
   const cleanNumber = phoneNumber.replace(/\D/g, '');
@@ -90,7 +119,7 @@ const checkSMSRateLimit = (phoneNumber: string): { allowed: boolean; waitTime?: 
 export const sendSMS = async (to: string, message: string): Promise<{ success: boolean; messageId?: string; error?: string }> => {
   try {
     // Validate and format phone number
-    const validation = validateNigerianPhone(to);
+    const validation = validateWorldwidePhone(to);
     if (!validation.isValid) {
       return { success: false, error: validation.error };
     }
@@ -176,26 +205,26 @@ export const verifyOTP = (phoneNumber: string, otp: string): boolean => {
 export const sendOTP = async (phoneNumber: string): Promise<{ success: boolean; otp?: string; error?: string }> => {
   try {
     const otp = generateOTP();
-    
+
     // Check if Twilio is configured
     if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_PHONE_NUMBER) {
       console.error('Twilio not configured: Missing TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, or TWILIO_PHONE_NUMBER');
-      
+
       // Development fallback
       if (process.env.NODE_ENV === 'development') {
         storeOTP(phoneNumber, otp, 10);
         console.log('📱 DEVELOPMENT MODE: OTP for', phoneNumber, 'is:', otp);
         return { success: true, otp };
       }
-      
+
       return { success: false, error: 'SMS service not configured' };
     }
 
     const message = `Your Larnacei verification code is: ${otp}. Valid for 10 minutes. Do not share this code with anyone.`;
-    
+
     try {
       const result = await sendSMS(phoneNumber, message);
-      
+
       if (result.success) {
         storeOTP(phoneNumber, otp, 10);
         return { success: true }; // Don't return OTP in production
@@ -207,12 +236,12 @@ export const sendOTP = async (phoneNumber: string): Promise<{ success: boolean; 
           console.log('❌ SMS failed (unverified number):', result.error);
           return { success: true, otp };
         }
-        
+
         return { success: false, error: result.error };
       }
     } catch (smsError) {
       console.error('SMS sending error:', smsError);
-      
+
       // Development fallback for any SMS error
       if (process.env.NODE_ENV === 'development') {
         storeOTP(phoneNumber, otp, 10);
@@ -220,10 +249,10 @@ export const sendOTP = async (phoneNumber: string): Promise<{ success: boolean; 
         console.log('❌ SMS error:', smsError);
         return { success: true, otp };
       }
-      
+
       return { success: false, error: 'Failed to send verification code' };
     }
-    
+
   } catch (error) {
     console.error('Failed to send OTP:', error);
     return { success: false, error: 'Failed to send verification code' };

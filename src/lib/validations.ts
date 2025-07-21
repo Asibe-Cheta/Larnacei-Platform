@@ -16,6 +16,51 @@ import {
 } from "@prisma/client";
 
 /**
+ * Worldwide phone number validation (supports international numbers from any country)
+ */
+export const worldwidePhoneSchema = z
+  .string()
+  .min(1, "Phone number is required")
+  .refine(
+    (phone) => {
+      // Remove all non-digit characters except +
+      const cleanPhone = phone.replace(/[^\d+]/g, "");
+
+      // Check if it's a valid international phone number
+      // Supports: +1234567890, +44123456789, +2348012345678, etc.
+      const internationalPattern = /^\+[1-9]\d{1,14}$/;
+
+      // Also support local formats that can be converted to international
+      const localPatterns = [
+        /^[1-9]\d{9,14}$/, // 10-15 digits starting with 1-9
+        /^0[1-9]\d{8,13}$/, // Local format starting with 0
+      ];
+
+      return internationalPattern.test(cleanPhone) || localPatterns.some(pattern => pattern.test(cleanPhone));
+    },
+    {
+      message: "Please enter a valid phone number",
+    }
+  )
+  .transform((phone) => {
+    // Remove all non-digit characters except +
+    const cleanPhone = phone.replace(/[^\d+]/g, "");
+
+    // If it already has +, return as is
+    if (cleanPhone.startsWith("+")) {
+      return cleanPhone;
+    }
+
+    // If it starts with 0, remove the 0 (common local format)
+    if (cleanPhone.startsWith("0")) {
+      return cleanPhone.slice(1);
+    }
+
+    // For other formats, assume it's a valid number
+    return cleanPhone;
+  });
+
+/**
  * Nigerian phone number validation (supports +234, 234, 0, and direct numbers)
  */
 export const nigerianPhoneSchema = z
@@ -76,7 +121,7 @@ export const nigerianCurrencySchema = z
 export const userRegistrationSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
   email: z.string().email("Invalid email address"),
-  phone: nigerianPhoneSchema,
+  phone: worldwidePhoneSchema,
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -225,7 +270,7 @@ export const propertyInquirySchema = z.object({
  */
 export const userProfileUpdateSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100).optional(),
-  phone: nigerianPhoneSchema.optional(),
+  phone: worldwidePhoneSchema.optional(),
   bio: z.string().max(500).optional(),
   location: z.string().max(200).optional(),
   experience: z.number().min(0).max(50).optional(),

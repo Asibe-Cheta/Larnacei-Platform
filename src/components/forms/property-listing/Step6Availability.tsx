@@ -39,21 +39,28 @@ export default function Step6Availability({ formData, updateFormData }: Step6Ava
   };
 
   const handlePhoneChange = (value: string) => {
-    // Format phone number as user types
-    let formatted = value.replace(/\D/g, '');
+    // Format phone number as user types - support worldwide numbers
+    let formatted = value.replace(/[^\d+]/g, '');
     
-    if (formatted.startsWith('234')) {
-      formatted = formatted.substring(3);
+    // If it already has +, keep it
+    if (formatted.startsWith('+')) {
+      updateFormData({ contactPhone: formatted });
+      return;
     }
     
-    if (formatted.length > 0) {
-      formatted = '+234' + formatted;
-    }
-    
+    // For local formats, just store as is
     updateFormData({ contactPhone: formatted });
   };
 
-  const isPhoneValid = formData.contactPhone ? validateNigerianPhone(formData.contactPhone) : true;
+  const isPhoneValid = formData.contactPhone ? (() => {
+    const cleanPhone = formData.contactPhone.replace(/[^\d+]/g, "");
+    const internationalPattern = /^\+[1-9]\d{1,14}$/;
+    const localPatterns = [
+      /^[1-9]\d{9,14}$/, // 10-15 digits starting with 1-9
+      /^0[1-9]\d{8,13}$/, // Local format starting with 0
+    ];
+    return internationalPattern.test(cleanPhone) || localPatterns.some(pattern => pattern.test(cleanPhone));
+  })() : true;
 
   return (
     <div className="space-y-8">
@@ -144,7 +151,7 @@ export default function Step6Availability({ formData, updateFormData }: Step6Ava
             id="contactPhone"
             value={formData.contactPhone}
             onChange={(e) => handlePhoneChange(e.target.value)}
-            placeholder="+234 801 234 5678"
+            placeholder="+1 234 567 8900 or +44 20 7946 0958"
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 ${
               formData.contactPhone && !isPhoneValid
                 ? 'border-red-500'
@@ -154,7 +161,7 @@ export default function Step6Availability({ formData, updateFormData }: Step6Ava
           />
           {formData.contactPhone && !isPhoneValid && (
             <p className="mt-1 text-sm text-red-600">
-              Please enter a valid Nigerian phone number
+              Please enter a valid phone number (international format preferred)
             </p>
           )}
           <p className="mt-1 text-sm text-gray-500">
