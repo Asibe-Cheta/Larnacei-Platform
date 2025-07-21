@@ -57,6 +57,14 @@ export default function SignUpPage() {
   const [verificationSent, setVerificationSent] = useState(false);
 
   const validateForm = (): boolean => {
+    console.log('🔍 validateForm called with data:', {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+      email: formData.email,
+      phone: formData.phone,
+      accountType: formData.accountType,
+      agreeToTerms: formData.agreeToTerms
+    });
     const newErrors: SignUpError = {};
 
     if (!formData.firstName.trim()) {
@@ -112,15 +120,20 @@ export default function SignUpPage() {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const isValid = Object.keys(newErrors).length === 0;
+    console.log('🔍 validateForm result:', { isValid, errors: newErrors });
+    return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
+    console.log('🚀 handleSubmit called!');
     e.preventDefault();
 
     if (!validateForm()) {
+      console.log('❌ Form validation failed');
       return;
     }
+    console.log('✅ Form validation passed');
 
     setIsLoading(true);
 
