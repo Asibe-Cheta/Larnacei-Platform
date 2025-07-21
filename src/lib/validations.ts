@@ -119,7 +119,9 @@ export const nigerianCurrencySchema = z
  * User registration schema
  */
 export const userRegistrationSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(100),
+  firstName: z.string().min(1, "First name is required").max(50).optional(),
+  lastName: z.string().min(1, "Last name is required").max(50).optional(),
+  name: z.string().min(2, "Name must be at least 2 characters").max(100).optional(),
   email: z.string().email("Invalid email address"),
   phone: worldwidePhoneSchema,
   password: z
@@ -130,7 +132,13 @@ export const userRegistrationSchema = z.object({
       "Password must contain at least one uppercase letter, one lowercase letter, and one number"
     ),
   role: z.nativeEnum(UserRole).default(UserRole.SEEKER),
-  accountType: z.nativeEnum(AccountType).default(AccountType.INDIVIDUAL),
+  accountType: z.enum(['individual', 'agent', 'agency', 'BUYER', 'SELLER', 'AGENT']).default('individual'),
+}).refine((data) => {
+  // Either firstName + lastName OR name must be provided
+  return (data.firstName && data.lastName) || data.name;
+}, {
+  message: "Either provide first name and last name, or a full name",
+  path: ["name"]
 });
 
 /**
