@@ -180,7 +180,13 @@ export default function SignUpPage() {
 
       if (!response.ok) {
         if (response.status === 503) {
-          setErrors({ general: 'Service temporarily unavailable. Please try again in a few minutes.' });
+          if (data.error && data.error.includes('Database')) {
+            setErrors({ general: 'Database connection issue. Please try again in a few minutes or contact support.' });
+          } else if (data.error && data.error.includes('configuration')) {
+            setErrors({ general: 'System configuration issue. Please contact support.' });
+          } else {
+            setErrors({ general: 'Service temporarily unavailable. Please try again in a few minutes.' });
+          }
         } else if (data.error) {
           setErrors({ general: data.error });
         } else if (data.details && Array.isArray(data.details)) {

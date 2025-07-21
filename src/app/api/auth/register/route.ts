@@ -37,6 +37,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Check if DATABASE_URL is configured
+    if (!process.env.DATABASE_URL) {
+      console.error('❌ DATABASE_URL environment variable is not set');
+      return NextResponse.json(
+        { error: 'Database configuration is missing. Please contact support.' },
+        { status: 503, headers }
+      );
+    }
+
     // Test database connection first
     console.log('Testing database connection...');
     try {
@@ -44,8 +53,21 @@ export async function POST(request: NextRequest) {
       console.log('✅ Database connected successfully');
     } catch (dbError) {
       console.error('❌ Database connection failed:', dbError);
+      
+      // Provide more specific error information
+      let errorMessage = 'Database connection failed. Please try again later.';
+      if (dbError instanceof Error) {
+        if (dbError.message.includes('ECONNREFUSED')) {
+          errorMessage = 'Database server is not accessible. Please try again later.';
+        } else if (dbError.message.includes('authentication')) {
+          errorMessage = 'Database authentication failed. Please contact support.';
+        } else if (dbError.message.includes('does not exist')) {
+          errorMessage = 'Database does not exist. Please contact support.';
+        }
+      }
+      
       return NextResponse.json(
-        { error: 'Database connection failed. Please try again later.' },
+        { error: errorMessage },
         { status: 503, headers }
       );
     }
