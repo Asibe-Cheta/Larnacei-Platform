@@ -125,6 +125,15 @@ export default function SignUpPage() {
     setIsLoading(true);
 
     try {
+      console.log('Sending registration request with data:', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        accountType: formData.accountType,
+        // Don't log password for security
+      });
+
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
@@ -140,7 +149,11 @@ export default function SignUpPage() {
         }),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (!response.ok) {
         if (data.error) {
@@ -173,7 +186,17 @@ export default function SignUpPage() {
 
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({ general: 'Network error. Please check your internet connection and try again.' });
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        setErrors({ general: 'Network error. Please check your internet connection and try again.' });
+      } else {
+        setErrors({ general: `Registration failed: ${error.message}` });
+      }
     } finally {
       setIsLoading(false);
     }
