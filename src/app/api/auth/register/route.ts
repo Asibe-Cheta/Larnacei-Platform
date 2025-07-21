@@ -105,20 +105,20 @@ export async function POST(request: NextRequest) {
     // Handle name field - use firstName + lastName if provided, otherwise use name
     const fullName = firstName && lastName ? `${firstName} ${lastName}` : name;
 
-    // Map account types
-    let mappedAccountType: 'BUYER' | 'SELLER' | 'AGENT';
+    // Map account types to match Prisma enum
+    let mappedAccountType: 'INDIVIDUAL' | 'AGENT' | 'AGENCY' | 'CORPORATE';
     switch (accountType) {
       case 'individual':
-        mappedAccountType = 'BUYER';
+        mappedAccountType = 'INDIVIDUAL';
         break;
       case 'agent':
         mappedAccountType = 'AGENT';
         break;
       case 'agency':
-        mappedAccountType = 'AGENT';
+        mappedAccountType = 'AGENCY';
         break;
       default:
-        mappedAccountType = accountType as 'BUYER' | 'SELLER' | 'AGENT';
+        mappedAccountType = 'INDIVIDUAL'; // Default to INDIVIDUAL
     }
 
     // Check if user already exists
