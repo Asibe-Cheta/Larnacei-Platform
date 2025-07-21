@@ -38,21 +38,21 @@ export default function Header() {
               className="h-10"
             />
           </Link>
-          
+
           <nav className="hidden md:flex space-x-6 items-center">
             <Link href="/" className="text-gray-700 hover:text-red-700 transition-colors">
               Home
             </Link>
-            <Link href="/short-stays" className="text-gray-700 hover:text-red-700 transition-colors">
+            <Link href="/properties/short-stays" className="text-gray-700 hover:text-red-700 transition-colors">
               Short Stays
             </Link>
-            <Link href="/rentals" className="text-gray-700 hover:text-red-700 transition-colors">
+            <Link href="/properties/long-term-rentals" className="text-gray-700 hover:text-red-700 transition-colors">
               Rentals
             </Link>
-            <Link href="/land-sales" className="text-gray-700 hover:text-red-700 transition-colors">
+            <Link href="/properties/landed-properties" className="text-gray-700 hover:text-red-700 transition-colors">
               Land Sales
             </Link>
-            <Link href="/property-sales" className="text-gray-700 hover:text-red-700 transition-colors">
+            <Link href="/properties/property-sales" className="text-gray-700 hover:text-red-700 transition-colors">
               Property Sales
             </Link>
             <Link href="/about" className="text-gray-700 hover:text-red-700 transition-colors">
@@ -62,7 +62,7 @@ export default function Header() {
               Contact
             </Link>
           </nav>
-          
+
           <div className="hidden md:flex items-center space-x-4">
             {status === 'authenticated' ? (
               <div className="relative group">
@@ -89,7 +89,7 @@ export default function Header() {
               </>
             )}
           </div>
-          
+
           <div className="md:hidden">
             <button
               className="text-gray-700 focus:outline-none"
@@ -111,7 +111,7 @@ export default function Header() {
             <span className="material-icons text-3xl">close</span>
           </button>
         </div>
-        
+
         <nav className="flex flex-col space-y-6 text-xl text-center">
           <Link
             href="/"
@@ -122,7 +122,7 @@ export default function Header() {
             Home
           </Link>
           <Link
-            href="/short-stays"
+            href="/properties/short-stays"
             className="hover:text-red-300 flex items-center justify-center transition-colors"
             onClick={closeMobileMenu}
           >
@@ -130,7 +130,7 @@ export default function Header() {
             Short Stays
           </Link>
           <Link
-            href="/rentals"
+            href="/properties/long-term-rentals"
             className="hover:text-red-300 flex items-center justify-center transition-colors"
             onClick={closeMobileMenu}
           >
@@ -138,7 +138,7 @@ export default function Header() {
             Rentals
           </Link>
           <Link
-            href="/land-sales"
+            href="/properties/landed-properties"
             className="hover:text-red-300 flex items-center justify-center transition-colors"
             onClick={closeMobileMenu}
           >
@@ -146,7 +146,7 @@ export default function Header() {
             Land Sales
           </Link>
           <Link
-            href="/property-sales"
+            href="/properties/property-sales"
             className="hover:text-red-300 flex items-center justify-center transition-colors"
             onClick={closeMobileMenu}
           >
@@ -169,7 +169,7 @@ export default function Header() {
             <span className="material-icons mr-2">contact_support</span>
             Contact
           </Link>
-          
+
           <hr className="border-gray-700 my-4" />
           {status === 'authenticated' ? (
             <>

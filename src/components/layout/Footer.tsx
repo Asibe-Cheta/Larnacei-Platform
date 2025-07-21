@@ -37,22 +37,22 @@ export default function Footer() {
             <h5 className="text-lg font-semibold mb-4">Property Categories</h5>
             <ul className="space-y-2">
               <li>
-                <Link href="/short-stays" className="text-gray-400 hover:text-red-400 transition-colors">
+                <Link href="/properties/short-stays" className="text-gray-400 hover:text-red-400 transition-colors">
                   Short Stays
                 </Link>
               </li>
               <li>
-                <Link href="/rentals" className="text-gray-400 hover:text-red-400 transition-colors">
+                <Link href="/properties/long-term-rentals" className="text-gray-400 hover:text-red-400 transition-colors">
                   Long-term Rentals
                 </Link>
               </li>
               <li>
-                <Link href="/land-sales" className="text-gray-400 hover:text-red-400 transition-colors">
+                <Link href="/properties/landed-properties" className="text-gray-400 hover:text-red-400 transition-colors">
                   Landed Properties
                 </Link>
               </li>
               <li>
-                <Link href="/property-sales" className="text-gray-400 hover:text-red-400 transition-colors">
+                <Link href="/properties/property-sales" className="text-gray-400 hover:text-red-400 transition-colors">
                   Property Sales
                 </Link>
               </li>
