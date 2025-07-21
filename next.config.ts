@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   experimental: {
-    disableServiceWorker: true,
+    optimizePackageImports: ['@mui/material', '@mui/icons-material', 'lucide-react'],
   },
   // Image optimization for Nigerian networks
   images: {
@@ -43,11 +43,6 @@ const nextConfig: NextConfig = {
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
-  },
-
-  // Bundle optimization
-  experimental: {
-    optimizePackageImports: ['@mui/material', '@mui/icons-material', 'lucide-react'],
   },
 
   // Turbopack configuration
