@@ -22,17 +22,30 @@ interface RegistrationError {
 }
 
 export async function POST(request: NextRequest) {
-  console.log('Registration API called');
+  console.log('🚀 Registration API called');
+
+  // Add CORS headers
+  const headers = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  // Handle preflight requests
+  if (request.method === 'OPTIONS') {
+    return new NextResponse(null, { status: 200, headers });
+  }
+
   try {
     let body: RegistrationRequest;
     try {
       body = await request.json();
       console.log('Request body received:', { ...body, password: '[HIDDEN]' });
     } catch (jsonError) {
-      console.error("JSON parsing error:", jsonError);
+      console.error("❌ JSON parsing error:", jsonError);
       return NextResponse.json(
         { error: 'Invalid JSON in request body' },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
 
@@ -47,7 +60,7 @@ export async function POST(request: NextRequest) {
       }));
       return NextResponse.json(
         { error: 'Validation failed', details: errors },
-        { status: 400 }
+        { status: 400, headers }
       );
     }
     console.log('Validation passed');
@@ -86,7 +99,7 @@ export async function POST(request: NextRequest) {
     if (existingUser) {
       return NextResponse.json(
         { error: 'User with this email or phone already exists' },
-        { status: 409 }
+        { status: 409, headers }
       );
     }
 
@@ -137,6 +150,7 @@ export async function POST(request: NextRequest) {
       // Don't fail registration if SMS fails
     }
 
+    console.log('✅ User registered successfully:', user.id);
     return NextResponse.json(
       {
         message: 'User registered successfully',
@@ -153,14 +167,14 @@ export async function POST(request: NextRequest) {
           createdAt: user.createdAt
         }
       },
-      { status: 201 }
+      { status: 201, headers }
     );
 
   } catch (error) {
-    console.error('Registration error:', error);
+    console.error('❌ Registration error:', error);
     return NextResponse.json(
-      { error: 'Failed to register user' },
-      { status: 500 }
+      { error: 'Failed to register user', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500, headers }
     );
   }
 } 
