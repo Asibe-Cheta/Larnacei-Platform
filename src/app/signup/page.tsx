@@ -218,17 +218,21 @@ export default function SignUpPage() {
     } catch (error) {
       console.error('❌ Registration error:', error);
       console.error('❌ Error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace'
       });
 
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
-        setErrors({ general: 'Network error. Please check your internet connection and try again.' });
-      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
-        setErrors({ general: 'Unable to connect to server. Please check your internet connection.' });
+      if (error instanceof Error) {
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          setErrors({ general: 'Network error. Please check your internet connection and try again.' });
+        } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          setErrors({ general: 'Unable to connect to server. Please check your internet connection.' });
+        } else {
+          setErrors({ general: `Registration failed: ${error.message}` });
+        }
       } else {
-        setErrors({ general: `Registration failed: ${error.message}` });
+        setErrors({ general: 'Registration failed. Please try again.' });
       }
     } finally {
       setIsLoading(false);
