@@ -5,7 +5,7 @@ import {
   sendViewingConfirmationSMS, 
   sendWelcomeSMS, 
   sendPropertyUpdateSMS,
-  validateNigerianPhone 
+  validateWorldwidePhone 
 } from '@/lib/twilio-service';
 
 export async function POST(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Validate phone number format
-    const validation = validateNigerianPhone(phoneNumber);
+    const validation = validateWorldwidePhone(phoneNumber);
     if (!validation.isValid) {
       return NextResponse.json(
         { error: validation.error },

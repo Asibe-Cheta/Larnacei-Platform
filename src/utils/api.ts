@@ -76,7 +76,52 @@ export function toNaira(kobo: number): number {
 }
 
 /**
- * Format Nigerian phone number to standard format
+ * Format worldwide phone number to standard format
+ * @param phone - Phone number in any format
+ * @returns Formatted phone number
+ */
+export function formatWorldwidePhone(phone: string): string {
+  // Remove all non-digit characters except +
+  const cleanPhone = phone.replace(/[^\d+]/g, "");
+  
+  // If it already has +, return as is
+  if (cleanPhone.startsWith("+")) {
+    return cleanPhone;
+  }
+  
+  // If it starts with 0, remove the 0 (common local format)
+  if (cleanPhone.startsWith("0")) {
+    return cleanPhone.slice(1);
+  }
+  
+  // For other formats, assume it's a valid number
+  return cleanPhone;
+}
+
+/**
+ * Validate worldwide phone number
+ * @param phone - Phone number to validate
+ * @returns True if valid phone number
+ */
+export function isValidWorldwidePhone(phone: string): boolean {
+  const cleanPhone = phone.replace(/[^\d+]/g, "");
+  
+  // Check if it's already in international format
+  if (cleanPhone.startsWith("+") && /^\+[1-9]\d{1,14}$/.test(cleanPhone)) {
+    return true;
+  }
+  
+  // Check if it's a local format that can be converted
+  const localPatterns = [
+    /^[1-9]\d{9,14}$/, // 10-15 digits starting with 1-9
+    /^0[1-9]\d{8,13}$/, // Local format starting with 0
+  ];
+  
+  return localPatterns.some(pattern => pattern.test(cleanPhone));
+}
+
+/**
+ * Format Nigerian phone number to standard format (kept for backward compatibility)
  * @param phone - Phone number in any format
  * @returns Formatted phone number
  */
@@ -97,7 +142,7 @@ export function formatNigerianPhone(phone: string): string {
 }
 
 /**
- * Validate Nigerian phone number
+ * Validate Nigerian phone number (kept for backward compatibility)
  * @param phone - Phone number to validate
  * @returns True if valid Nigerian phone number
  */

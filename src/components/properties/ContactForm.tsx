@@ -84,10 +84,16 @@ export default function ContactForm({ propertyId, owner, propertyTitle, property
       setError('Phone number is required');
       return false;
     }
-    // Nigerian phone number validation
-    const phoneRegex = /^(\+234|0)[789][01]\d{8}$/;
-    if (!phoneRegex.test(formData.phone.replace(/\s/g, ''))) {
-      setError('Please enter a valid Nigerian phone number');
+    // Worldwide phone number validation
+    const cleanPhone = formData.phone.replace(/[^\d+]/g, "");
+    const internationalPattern = /^\+[1-9]\d{1,14}$/;
+    const localPatterns = [
+      /^[1-9]\d{9,14}$/, // 10-15 digits starting with 1-9
+      /^0[1-9]\d{8,13}$/, // Local format starting with 0
+    ];
+    
+    if (!internationalPattern.test(cleanPhone) && !localPatterns.some(pattern => pattern.test(cleanPhone))) {
+      setError('Please enter a valid phone number (international format preferred)');
       return false;
     }
     if (!formData.message.trim()) {
@@ -309,10 +315,10 @@ ${formData.name || 'Property Seeker'}`;
             value={formData.phone}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-red-500 focus:border-red-500"
-            placeholder="+234 801 234 5678 or 0801 234 5678"
+            placeholder="+1 234 567 8900 or +44 20 7946 0958"
             required
           />
-          <p className="text-xs text-gray-500 mt-1">Enter a valid Nigerian phone number</p>
+          <p className="text-xs text-gray-500 mt-1">Enter a valid phone number (international format preferred)</p>
         </div>
 
         <div>

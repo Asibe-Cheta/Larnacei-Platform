@@ -75,8 +75,18 @@ export default function SignUpPage() {
 
     if (!formData.phone.trim()) {
       newErrors.phone = 'Phone number is required';
-    } else if (!/^\+?[1-9]\d{1,14}$/.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = 'Please enter a valid phone number';
+    } else {
+      // Worldwide phone number validation
+      const cleanPhone = formData.phone.replace(/[^\d+]/g, "");
+      const internationalPattern = /^\+[1-9]\d{1,14}$/;
+      const localPatterns = [
+        /^[1-9]\d{9,14}$/, // 10-15 digits starting with 1-9
+        /^0[1-9]\d{8,13}$/, // Local format starting with 0
+      ];
+      
+      if (!internationalPattern.test(cleanPhone) && !localPatterns.some(pattern => pattern.test(cleanPhone))) {
+        newErrors.phone = 'Please enter a valid phone number (international format preferred)';
+      }
     }
 
     if (!formData.password) {
@@ -317,7 +327,7 @@ export default function SignUpPage() {
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   className={`appearance-none relative block w-full px-3 py-2 border ${errors.phone ? 'border-red-300' : 'border-gray-300'
                     } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm`}
-                  placeholder="Phone number"
+                  placeholder="+1 234 567 8900 or +44 20 7946 0958"
                 />
                 <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
                   <Phone className="h-5 w-5 text-gray-400" />
@@ -326,6 +336,9 @@ export default function SignUpPage() {
               {errors.phone && (
                 <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
               )}
+              <p className="mt-1 text-xs text-gray-500">
+                Enter your phone number in international format (e.g., +1 234 567 8900)
+              </p>
             </div>
 
             {/* Account Type */}

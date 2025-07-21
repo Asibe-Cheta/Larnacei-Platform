@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sendOTP } from '@/lib/twilio-service';
+import { sendOTP, validateWorldwidePhone } from '@/lib/twilio-service';
 import { z } from 'zod';
 
 interface SendOTPRequest {
@@ -43,12 +43,28 @@ export async function POST(request: NextRequest) {
 
     const { phone } = validationResult.data;
 
+    // Validate phone number format
+    const phoneValidation = validateWorldwidePhone(phone);
+    if (!phoneValidation.isValid) {
+      return NextResponse.json(
+        { error: phoneValidation.error },
+        { status: 400 }
+      );
+    }
+
     // Send OTP
-    await sendOTP(phone);
+    const result = await sendOTP(phoneValidation.formatted);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { error: result.error },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({
       message: 'OTP sent successfully',
-      phone: phone
+      phone: phoneValidation.formatted
     });
 
   } catch (error) {
