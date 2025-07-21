@@ -38,6 +38,7 @@ interface SignUpError {
 }
 
 export default function SignUpPage() {
+  console.log('📄 SignUpPage component loaded');
   const router = useRouter();
   const [formData, setFormData] = useState<SignUpFormData>({
     firstName: '',
@@ -127,6 +128,7 @@ export default function SignUpPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     console.log('🚀 handleSubmit called!');
+    console.log('Form event:', e);
     e.preventDefault();
 
     if (!validateForm()) {
@@ -508,6 +510,7 @@ export default function SignUpPage() {
             <button
               type="submit"
               disabled={isLoading}
+              onClick={() => console.log('🔘 Submit button clicked!')}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Creating account...' : 'Create account'}
