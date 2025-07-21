@@ -12,7 +12,9 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-
+  experimental: {
+    disableServiceWorker: true,
+  },
   // Image optimization for Nigerian networks
   images: {
     remotePatterns: [

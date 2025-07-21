@@ -137,10 +137,17 @@ export default function SignUpPage() {
     }
     console.log('✅ Form validation passed');
 
+    // Check network connectivity
+    if (!navigator.onLine) {
+      console.log('❌ No internet connection detected');
+      setErrors({ general: 'No internet connection. Please check your network and try again.' });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      console.log('Sending registration request with data:', {
+      console.log('📤 Sending registration request with data:', {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -164,11 +171,11 @@ export default function SignUpPage() {
         }),
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()));
 
       const data = await response.json();
-      console.log('Response data:', data);
+      console.log('📥 Response data:', data);
 
       if (!response.ok) {
         if (data.error) {
@@ -200,8 +207,8 @@ export default function SignUpPage() {
       }, 3000);
 
     } catch (error) {
-      console.error('Registration error:', error);
-      console.error('Error details:', {
+      console.error('❌ Registration error:', error);
+      console.error('❌ Error details:', {
         name: error.name,
         message: error.message,
         stack: error.stack
@@ -209,6 +216,8 @@ export default function SignUpPage() {
       
       if (error.name === 'TypeError' && error.message.includes('fetch')) {
         setErrors({ general: 'Network error. Please check your internet connection and try again.' });
+      } else if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+        setErrors({ general: 'Unable to connect to server. Please check your internet connection.' });
       } else {
         setErrors({ general: `Registration failed: ${error.message}` });
       }
