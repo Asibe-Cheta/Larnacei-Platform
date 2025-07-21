@@ -179,7 +179,9 @@ export default function SignUpPage() {
       console.log('📥 Response data:', data);
 
       if (!response.ok) {
-        if (data.error) {
+        if (response.status === 503) {
+          setErrors({ general: 'Service temporarily unavailable. Please try again in a few minutes.' });
+        } else if (data.error) {
           setErrors({ general: data.error });
         } else if (data.details && Array.isArray(data.details)) {
           // Handle validation errors
@@ -250,9 +252,39 @@ export default function SignUpPage() {
     }
   };
 
+  // Test Database function
+  const testDatabase = async () => {
+    try {
+      console.log('🧪 Testing Database...');
+      const response = await fetch('/api/test-db?t=' + Date.now());
+      const data = await response.json();
+      console.log('🧪 Database Test Result:', data);
+      return true;
+    } catch (error) {
+      console.error('🧪 Database Test Failed:', error);
+      return false;
+    }
+  };
+
+  // Test Environment function
+  const testEnvironment = async () => {
+    try {
+      console.log('🧪 Testing Environment...');
+      const response = await fetch('/api/debug/env?t=' + Date.now());
+      const data = await response.json();
+      console.log('🧪 Environment Test Result:', data);
+      return true;
+    } catch (error) {
+      console.error('🧪 Environment Test Failed:', error);
+      return false;
+    }
+  };
+
   // Test API on component load
   React.useEffect(() => {
     testAPI();
+    testDatabase();
+    testEnvironment();
   }, []);
 
   if (verificationSent) {
