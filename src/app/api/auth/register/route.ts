@@ -6,11 +6,13 @@ import { sendOTP } from '@/lib/twilio-service';
 import { userRegistrationSchema } from '@/lib/validations';
 
 interface RegistrationRequest {
-  name: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
   email: string;
   phone: string;
   password: string;
-  accountType: 'BUYER' | 'SELLER' | 'AGENT';
+  accountType: 'individual' | 'agent' | 'agency' | 'BUYER' | 'SELLER' | 'AGENT';
   role?: 'USER' | 'ADMIN';
 }
 
@@ -45,7 +47,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { name, email, phone, password, accountType, role = 'USER' } = validationResult.data;
+    const { firstName, lastName, name, email, phone, password, accountType, role = 'USER' } = validationResult.data;
+
+    // Handle name field - use firstName + lastName if provided, otherwise use name
+    const fullName = firstName && lastName ? `${firstName} ${lastName}` : name;
+
+    // Map account types
+    let mappedAccountType: 'BUYER' | 'SELLER' | 'AGENT';
+    switch (accountType) {
+      case 'individual':
+        mappedAccountType = 'BUYER';
+        break;
+      case 'agent':
+        mappedAccountType = 'AGENT';
+        break;
+      case 'agency':
+        mappedAccountType = 'AGENT';
+        break;
+      default:
+        mappedAccountType = accountType as 'BUYER' | 'SELLER' | 'AGENT';
+    }
 
     // Check if user already exists
     const existingUser = await prisma.user.findFirst({
@@ -70,11 +91,11 @@ export async function POST(request: NextRequest) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        name,
+        name: fullName,
         email: email.toLowerCase(),
         phone,
         password: hashedPassword,
-        accountType,
+        accountType: mappedAccountType,
         role,
         isVerified: false,
         verificationLevel: 'NONE',

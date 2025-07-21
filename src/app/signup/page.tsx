@@ -145,6 +145,15 @@ export default function SignUpPage() {
       if (!response.ok) {
         if (data.error) {
           setErrors({ general: data.error });
+        } else if (data.details && Array.isArray(data.details)) {
+          // Handle validation errors
+          const fieldErrors: SignUpError = {};
+          data.details.forEach((error: any) => {
+            if (error.field) {
+              fieldErrors[error.field as keyof SignUpError] = error.message;
+            }
+          });
+          setErrors(fieldErrors);
         } else {
           setErrors({ general: 'Registration failed. Please try again.' });
         }
@@ -164,7 +173,7 @@ export default function SignUpPage() {
 
     } catch (error) {
       console.error('Registration error:', error);
-      setErrors({ general: 'An unexpected error occurred. Please try again.' });
+      setErrors({ general: 'Network error. Please check your internet connection and try again.' });
     } finally {
       setIsLoading(false);
     }
