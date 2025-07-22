@@ -203,19 +203,29 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ User created successfully:', user.id);
 
-    // Send verification email (non-blocking)
+    // Send verification email
     console.log('Sending verification email...');
-    sendVerificationEmail(email, fullName, user.id).catch((emailError) => {
-      console.error('Error sending verification email:', emailError);
+    try {
+      await sendVerificationEmail(email, fullName, user.id);
+      console.log('✅ Verification email sent successfully');
+    } catch (emailError) {
+      console.error('❌ Error sending verification email:', emailError);
       // Don't fail registration if email fails
-    });
+    }
 
-    // Send OTP to phone (non-blocking)
+    // Send OTP to phone
     console.log('Sending OTP...');
-    sendOTP(phone).catch((smsError) => {
-      console.error('Error sending OTP:', smsError);
+    try {
+      const otpResult = await sendOTP(phone);
+      if (otpResult.success) {
+        console.log('✅ OTP sent successfully');
+      } else {
+        console.error('❌ Error sending OTP:', otpResult.error);
+      }
+    } catch (smsError) {
+      console.error('❌ Error sending OTP:', smsError);
       // Don't fail registration if SMS fails
-    });
+    }
 
     console.log('✅ User registered successfully:', user.id);
     return NextResponse.json(
@@ -236,7 +246,7 @@ export async function POST(request: NextRequest) {
         verification: {
           emailToken: user.id, // Use user ID as email verification token
           phone: user.phone,
-          verificationUrl: `/verify?phone=${encodeURIComponent(user.phone)}`
+          verificationUrl: `/verify?phone=${encodeURIComponent(user.phone)}&token=${user.id}`
         }
       },
       { status: 201, headers }

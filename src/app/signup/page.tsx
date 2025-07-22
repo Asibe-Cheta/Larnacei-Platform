@@ -207,13 +207,14 @@ export default function SignUpPage() {
       // Registration successful
       setVerificationSent(true);
 
-      // Show verification instructions
-      alert('Registration successful! Please check your email and phone for verification codes.');
-
-      // Redirect to signin page after a delay
-      setTimeout(() => {
+      // Redirect to verification page with user's phone number
+      if (data.verification && data.verification.phone) {
+        const verificationUrl = `/verify?phone=${encodeURIComponent(data.verification.phone)}&token=${data.verification.emailToken}`;
+        router.push(verificationUrl);
+      } else {
+        // Fallback to signin page
         router.push('/signin');
-      }, 3000);
+      }
 
     } catch (error) {
       console.error('❌ Registration error:', error);
