@@ -13,7 +13,7 @@ interface RegistrationRequest {
   phone: string;
   password: string;
   accountType: 'individual' | 'agent' | 'agency' | 'BUYER' | 'SELLER' | 'AGENT';
-  role?: 'USER' | 'ADMIN';
+  role?: 'SEEKER' | 'OWNER' | 'AGENT' | 'ADMIN';
 }
 
 interface RegistrationError {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       console.log('✅ Database connected successfully');
     } catch (dbError) {
       console.error('❌ Database connection failed:', dbError);
-      
+
       // Provide more specific error information
       let errorMessage = 'Database connection failed. Please try again later.';
       if (dbError instanceof Error) {
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
           errorMessage = 'Database does not exist. Please contact support.';
         }
       }
-      
+
       return NextResponse.json(
         { error: errorMessage },
         { status: 503, headers }
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
     console.log('Validation passed');
 
-    const { firstName, lastName, name, email, phone, password, accountType, role = 'USER' } = validationResult.data;
+    const { firstName, lastName, name, email, phone, password, accountType, role = 'SEEKER' } = validationResult.data;
 
     // Handle name field - use firstName + lastName if provided, otherwise use name
     const fullName = firstName && lastName ? `${firstName} ${lastName}` : name;
@@ -109,9 +109,12 @@ export async function POST(request: NextRequest) {
     let mappedAccountType: 'INDIVIDUAL' | 'AGENT' | 'AGENCY' | 'CORPORATE';
     switch (accountType) {
       case 'individual':
+      case 'BUYER':
+      case 'SELLER':
         mappedAccountType = 'INDIVIDUAL';
         break;
       case 'agent':
+      case 'AGENT':
         mappedAccountType = 'AGENT';
         break;
       case 'agency':
@@ -163,7 +166,7 @@ export async function POST(request: NextRequest) {
       role,
       passwordLength: hashedPassword.length
     });
-    
+
     let user;
     try {
       user = await prisma.user.create({
@@ -238,21 +241,21 @@ export async function POST(request: NextRequest) {
     console.error('❌ Registration error:', error);
     console.error('❌ Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     console.error('❌ Error name:', error instanceof Error ? error.name : 'Unknown error type');
-    
+
     // Try to disconnect from database
     try {
       await prisma.$disconnect();
     } catch (disconnectError) {
       console.error('Error disconnecting from database:', disconnectError);
     }
-    
+
     // Return more detailed error information
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
-    
+
     return NextResponse.json(
-      { 
-        error: 'Failed to register user', 
+      {
+        error: 'Failed to register user',
         details: errorMessage,
         stack: errorStack,
         timestamp: new Date().toISOString()
