@@ -220,7 +220,7 @@ export async function POST(request: NextRequest) {
     console.log('✅ User registered successfully:', user.id);
     return NextResponse.json(
       {
-        message: 'User registered successfully',
+        message: 'User registered successfully. Please verify your email and phone number.',
         user: {
           id: user.id,
           name: user.name,
@@ -232,6 +232,11 @@ export async function POST(request: NextRequest) {
           verificationLevel: user.verificationLevel,
           kycStatus: user.kycStatus,
           createdAt: user.createdAt
+        },
+        verification: {
+          emailToken: user.id, // Use user ID as email verification token
+          phone: user.phone,
+          verificationUrl: `/verify?phone=${encodeURIComponent(user.phone)}`
         }
       },
       { status: 201, headers }

@@ -1,24 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-interface VerifyEmailRequest {
-  token: string;
-}
-
 export async function POST(request: NextRequest) {
   try {
-    let body: VerifyEmailRequest;
-    try {
-      body = await request.json();
-    } catch (jsonError) {
-      console.error("JSON parsing error:", jsonError);
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      );
-    }
-
-    const { token } = body;
+    const { token } = await request.json();
 
     if (!token) {
       return NextResponse.json(
@@ -30,8 +15,8 @@ export async function POST(request: NextRequest) {
     // Find user by verification token
     const user = await prisma.user.findFirst({
       where: {
-        emailVerificationToken: token,
-        emailVerified: false
+        id: token,
+        isVerified: false
       }
     });
 
@@ -42,28 +27,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if token is expired (24 hours)
-    const tokenCreatedAt = user.emailVerificationTokenCreatedAt;
-    if (tokenCreatedAt) {
-      const now = new Date();
-      const tokenAge = now.getTime() - tokenCreatedAt.getTime();
-      const maxAge = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-
-      if (tokenAge > maxAge) {
-        return NextResponse.json(
-          { error: 'Verification token has expired' },
-          { status: 400 }
-        );
-      }
-    }
-
     // Update user verification status
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        emailVerified: true,
-        emailVerificationToken: null,
-        emailVerificationTokenCreatedAt: null,
+        isVerified: true,
         verificationLevel: 'EMAIL_VERIFIED'
       }
     });
@@ -73,7 +41,7 @@ export async function POST(request: NextRequest) {
       user: {
         id: user.id,
         email: user.email,
-        emailVerified: true,
+        isVerified: true,
         verificationLevel: 'EMAIL_VERIFIED'
       }
     });
@@ -81,7 +49,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Email verification error:', error);
     return NextResponse.json(
-      { error: 'Failed to verify email' },
+      { error: 'Email verification failed' },
       { status: 500 }
     );
   }
