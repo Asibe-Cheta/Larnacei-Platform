@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify OTP with Twilio
-    const verificationResult = await verifyOTP(phone, otp);
+    const verificationResult = verifyOTP(phone, otp);
 
-    if (!verificationResult.success) {
+    if (!verificationResult) {
       return NextResponse.json(
         { error: 'Invalid OTP code' },
         { status: 400 }

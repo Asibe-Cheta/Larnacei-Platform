@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     },
     services: {
       email: {
-        mailgun: !!(process.env.MAILGUN_API_KEY && process.env.MAILGUN_DOMAIN),
+        sendgrid: !!(process.env.SENDGRID_API_KEY),
         smtp: !!(process.env.SMTP_HOST && process.env.SMTP_USER)
       },
       sms: {

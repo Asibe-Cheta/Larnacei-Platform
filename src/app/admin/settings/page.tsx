@@ -30,8 +30,9 @@ interface SettingsFormData {
   twilioAccountSid: string;
   twilioAuthToken: string;
   twilioPhoneNumber: string;
-  mailgunApiKey: string;
-  mailgunDomain: string;
+  sendgridApiKey: string;
+  sendgridFromEmail: string;
+  sendgridFromName: string;
   paystackSecretKey: string;
   paystackPublicKey: string;
   googleMapsApiKey: string;

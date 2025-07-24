@@ -2,21 +2,17 @@
 
 ## Overview
 
-This document outlines the integration of real Mailgun and Twilio services for production-ready email and SMS functionality in the Larnacei Property Platform.
+This document outlines the integration of real SendGrid and Twilio services for production-ready email and SMS functionality in the Larnacei Property Platform.
 
 ## 🔧 Environment Variables Setup
 
 Add these environment variables to your `.env.local` file:
 
 ```env
-# Mailgun Configuration
-MAILGUN_API_KEY=
-MAILGUN_DOMAIN=mail.larnaceiglobal.com
-MAILGUN_WEBHOOK_SECRET=
-MAILGUN_SMTP_SERVER=smtp.eu.mailgun.org
-MAILGUN_SMTP_PORT=587
-MAILGUN_SMTP_USERNAME=
-MAILGUN_SMTP_PASSWORD=
+# SendGrid Configuration
+SENDGRID_API_KEY=SG.zHarZ3ipTUKAxMZJMQuxg.j-t-1kIVW-dBE1tx8t7rBNtOyiHMB-Uy43iwHVGQP1g
+SENDGRID_FROM_EMAIL=info@larnaceiglobal.com
+SENDGRID_FROM_NAME=Larnacei Property Platform
 
 # Twilio Configuration
 TWILIO_ACCOUNT_SID=
@@ -30,15 +26,15 @@ SMTP_USER=your-email@gmail.com
 SMTP_PASS=your-app-password
 ```
 
-## 📧 Mailgun Email Service
+## 📧 SendGrid Email Service
 
 ### Features
 
-- **Real Email Delivery**: Sends emails via Mailgun API
+- **Real Email Delivery**: Sends emails via SendGrid API
 - **Professional Templates**: Larnacei-branded email templates with #7C0302 colors
-- **Rate Limiting**: Prevents spam with hourly and daily limits
-- **Webhook Support**: Tracks delivery, bounce, and complaint events
-- **Fallback System**: Falls back to nodemailer if Mailgun fails
+- **Rate Limiting**: Prevents spam with hourly and daily limits (100 emails/day free plan)
+- **Tracking Support**: Tracks delivery, opens, and clicks
+- **Fallback System**: Falls back to nodemailer if SendGrid fails
 
 ### Email Types Supported
 
@@ -52,7 +48,7 @@ SMTP_PASS=your-app-password
 ### Usage Example
 
 ```typescript
-import { sendInquiryNotification } from "@/lib/mailgun-service";
+import { sendInquiryNotification } from "@/lib/sendgrid-service";
 
 await sendInquiryNotification({
   to: "owner@example.com",
@@ -125,7 +121,7 @@ if (isValid) {
 
 ### Email Endpoints
 
-All email functionality is handled through the existing email service with automatic Mailgun integration.
+All email functionality is handled through the existing email service with automatic SendGrid integration.
 
 ### SMS Endpoints
 
@@ -171,17 +167,17 @@ Content-Type: application/json
 
 ### Webhook Endpoints
 
-#### Mailgun Webhook
+#### SendGrid Event Webhook
 
 ```http
-POST /api/webhooks/mailgun
+POST /api/webhooks/sendgrid
 ```
 
 Handles email delivery events:
 
 - `delivered` - Email successfully delivered
 - `bounced` - Email bounced
-- `complained` - Email marked as spam
+- `spam_report` - Email marked as spam
 - `opened` - Email opened
 - `clicked` - Link in email clicked
 - `unsubscribed` - User unsubscribed
@@ -225,10 +221,10 @@ Handles SMS delivery events:
 ### Email Statistics
 
 ```typescript
-import { getEmailStats } from "@/lib/mailgun-service";
+import { getEmailStats } from "@/lib/sendgrid-service";
 
 const stats = await getEmailStats();
-// Returns delivery, bounce, and complaint statistics
+// Returns delivery, bounce, and complaint statistics (limited on free plan)
 ```
 
 ### SMS Statistics
@@ -254,22 +250,22 @@ const status = await trackSMSDelivery("message_sid");
 ### 1. Environment Setup
 
 - Add all required environment variables
-- Ensure Mailgun domain is verified
+- Ensure SendGrid sender email is verified
 - Verify Twilio phone number
 
 ### 2. Webhook Configuration
 
-#### Mailgun Webhooks
+#### SendGrid Webhooks
 
-Configure these webhook URLs in your Mailgun dashboard:
+Configure these webhook URLs in your SendGrid dashboard:
 
-- `https://yourdomain.com/api/webhooks/mailgun`
+- `https://yourdomain.com/api/webhooks/sendgrid`
 
 Events to track:
 
 - `delivered`
 - `bounced`
-- `complained`
+- `spam_report`
 - `opened`
 - `clicked`
 - `unsubscribed`
@@ -323,9 +319,9 @@ console.log(result.success ? "OTP sent" : result.error);
 
 #### Email Not Sending
 
-1. Check Mailgun API key and domain
+1. Check SendGrid API key and sender email
 2. Verify SMTP credentials for fallback
-3. Check rate limits
+3. Check rate limits (100 emails/day free plan)
 4. Review webhook configuration
 
 #### SMS Not Sending
@@ -365,16 +361,16 @@ console.log(result.success ? "OTP sent" : result.error);
 - Template-based messages for consistency
 - Delivery tracking for reliability
 
-## 🔄 Migration from Mock Services
+## 🔄 Migration from Mailgun to SendGrid
 
 The integration maintains backward compatibility with existing code:
 
-1. **Email Service**: Automatically uses Mailgun with nodemailer fallback
-2. **SMS Service**: New Twilio integration with existing WhatsApp functionality
-3. **API Endpoints**: New endpoints for SMS functionality
-4. **Webhooks**: New webhook endpoints for delivery tracking
+1. **Email Service**: Automatically uses SendGrid with nodemailer fallback
+2. **SMS Service**: Twilio integration with existing WhatsApp functionality
+3. **API Endpoints**: All existing endpoints continue to work
+4. **Webhooks**: Updated webhook endpoints for SendGrid delivery tracking
 
-All existing functionality continues to work while gaining real service capabilities.
+All existing functionality continues to work while using SendGrid for improved reliability.
 
 ## 📞 Support
 
