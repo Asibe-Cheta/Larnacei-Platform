@@ -1,17 +1,21 @@
-import formData from 'form-data';
-import Mailgun from 'mailgun.js';
+import sgMail from '@sendgrid/mail';
 
-// Initialize Mailgun client
-const mailgun = new Mailgun(formData);
-const mg = mailgun.client({
-  username: 'api',
-  key: process.env.MAILGUN_API_KEY || '',
-});
+// Initialize SendGrid
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'info@larnaceiglobal.com';
+const SENDGRID_FROM_NAME = process.env.SENDGRID_FROM_NAME || 'Larnacei Property Platform';
 
-const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || 'mail.larnaceiglobal.com';
-const MAILGUN_WEBHOOK_SECRET = process.env.MAILGUN_WEBHOOK_SECRET || '';
+// Configure SendGrid
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+}
 
-// Email templates with Larnacei branding
+// Rate limiting configuration
+const emailRateLimits = new Map<string, { count: number; resetTime: number }>();
+const MAX_EMAILS_PER_HOUR = 50;
+const MAX_EMAILS_PER_DAY = 100; // Free plan limit
+
+// Email templates with Larnacei branding (#7C0302 colors)
 const createEmailTemplate = (content: string, title: string) => `
 <!DOCTYPE html>
 <html lang="en">
@@ -118,29 +122,98 @@ const createEmailTemplate = (content: string, title: string) => `
             ${content}
         </div>
         <div class="footer">
-            <p>&copy; 2024 Larnacei. All rights reserved.</p>
-            <p>This email was sent from Larnacei's secure notification system.</p>
+            <p>&copy; 2024 Larnacei Global Limited. All rights reserved.</p>
+            <p>This email was sent from a notification-only address that cannot accept incoming email.</p>
         </div>
     </div>
 </body>
 </html>
 `;
 
-// Rate limiting configuration
-const emailRateLimits = new Map<string, { count: number; resetTime: number }>();
-const MAX_EMAILS_PER_HOUR = 50;
-const MAX_EMAILS_PER_DAY = 500;
+// Rate limiting functions
+const checkRateLimit = (identifier: string): boolean => {
+  const now = Date.now();
+  const limit = emailRateLimits.get(identifier);
 
-interface EmailData {
+  if (!limit) {
+    emailRateLimits.set(identifier, { count: 1, resetTime: now + 3600000 }); // 1 hour
+    return true;
+  }
+
+  if (now > limit.resetTime) {
+    emailRateLimits.set(identifier, { count: 1, resetTime: now + 3600000 });
+    return true;
+  }
+
+  if (limit.count >= MAX_EMAILS_PER_HOUR) {
+    return false;
+  }
+
+  limit.count++;
+  return true;
+};
+
+// Main email sending function with error handling and retry logic
+export const sendEmail = async (data: {
   to: string;
   subject: string;
   html: string;
   text?: string;
   from?: string;
   replyTo?: string;
-  tracking?: boolean;
-}
+}): Promise<boolean> => {
+  try {
+    // Check rate limits
+    const identifier = data.to.split('@')[0]; // Use email prefix as identifier
+    if (!checkRateLimit(identifier)) {
+      console.error(`Rate limit exceeded for ${data.to}`);
+      return false;
+    }
 
+    const msg = {
+      to: data.to,
+      from: data.from || `${SENDGRID_FROM_NAME} <${SENDGRID_FROM_EMAIL}>`,
+      subject: data.subject,
+      html: data.html,
+      text: data.text || data.html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
+      replyTo: data.replyTo || SENDGRID_FROM_EMAIL,
+      trackingSettings: {
+        clickTracking: {
+          enable: true,
+          enableText: true
+        },
+        openTracking: {
+          enable: true
+        }
+      },
+      categories: ['larnacei-notification'],
+      customArgs: {
+        emailType: 'transactional'
+      }
+    };
+
+    const response = await sgMail.send(msg);
+
+    console.log(`Email sent successfully to ${data.to}`, response);
+    return true;
+  } catch (error) {
+    console.error('Failed to send email via SendGrid:', error);
+
+    // Log detailed error information
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        recipient: data.to,
+        subject: data.subject
+      });
+    }
+
+    return false;
+  }
+};
+
+// Interface definitions
 interface InquiryNotificationData {
   to: string;
   propertyTitle: string;
@@ -196,87 +269,6 @@ interface ViewingConfirmationData {
   directions?: string;
 }
 
-interface WelcomeEmailData {
-  to: string;
-  userName: string;
-  verificationUrl?: string;
-}
-
-interface PasswordResetData {
-  to: string;
-  userName: string;
-  resetUrl: string;
-  expiryHours: number;
-}
-
-// Rate limiting functions
-const checkRateLimit = (identifier: string): boolean => {
-  const now = Date.now();
-  const limit = emailRateLimits.get(identifier);
-  
-  if (!limit) {
-    emailRateLimits.set(identifier, { count: 1, resetTime: now + 3600000 }); // 1 hour
-    return true;
-  }
-  
-  if (now > limit.resetTime) {
-    emailRateLimits.set(identifier, { count: 1, resetTime: now + 3600000 });
-    return true;
-  }
-  
-  if (limit.count >= MAX_EMAILS_PER_HOUR) {
-    return false;
-  }
-  
-  limit.count++;
-  return true;
-};
-
-// Main email sending function with error handling and retry logic
-export const sendEmail = async (data: EmailData): Promise<boolean> => {
-  try {
-    // Check rate limits
-    const identifier = data.to.split('@')[0]; // Use email prefix as identifier
-    if (!checkRateLimit(identifier)) {
-      console.error(`Rate limit exceeded for ${data.to}`);
-      return false;
-    }
-
-    const messageData = {
-      from: data.from || `Larnacei <noreply@${MAILGUN_DOMAIN}>`,
-      to: data.to,
-      subject: data.subject,
-      html: data.html,
-      text: data.text || data.html.replace(/<[^>]*>/g, ''), // Strip HTML for text version
-      'h:Reply-To': data.replyTo || `support@${MAILGUN_DOMAIN}`,
-      'o:tracking': data.tracking !== false ? 'yes' : 'no',
-      'o:tracking-clicks': 'htmlonly',
-      'o:tracking-opens': 'yes',
-      'o:tag': 'larnacei-notification',
-      'v:email-type': 'transactional'
-    };
-
-    const response = await mg.messages.create(MAILGUN_DOMAIN, messageData);
-    
-    console.log(`Email sent successfully to ${data.to}`, response);
-    return true;
-  } catch (error) {
-    console.error('Failed to send email via Mailgun:', error);
-    
-    // Log detailed error information
-    if (error instanceof Error) {
-      console.error('Error details:', {
-        message: error.message,
-        stack: error.stack,
-        recipient: data.to,
-        subject: data.subject
-      });
-    }
-    
-    return false;
-  }
-};
-
 // Inquiry notification email
 export const sendInquiryNotification = async (data: InquiryNotificationData): Promise<boolean> => {
   const content = `
@@ -313,34 +305,22 @@ export const sendInquiryNotification = async (data: InquiryNotificationData): Pr
         <p>${data.message.replace(/\n/g, '<br>')}</p>
     </div>
 
-    ${data.requestViewing && data.viewingDate && data.viewingTime ? `
+    ${data.requestViewing && data.viewingDate ? `
     <div class="info-box">
         <h3>Viewing Request</h3>
-        <p><strong>Date:</strong> ${new Date(data.viewingDate).toLocaleDateString()}</p>
+        <p><strong>Date:</strong> ${data.viewingDate}</p>
         <p><strong>Time:</strong> ${data.viewingTime}</p>
     </div>
     ` : ''}
 
     <div style="text-align: center; margin-top: 30px;">
-        <a href="mailto:${data.inquirerEmail}" class="btn">Reply via Email</a>
-        ${data.preferredContact === 'WHATSAPP' ? `<a href="https://wa.me/${data.inquirerPhone.replace(/\D/g, '')}" class="btn btn-outline">Reply via WhatsApp</a>` : ''}
-        <a href="tel:${data.inquirerPhone}" class="btn btn-outline">Call Inquirer</a>
-    </div>
-
-    <div style="margin-top: 30px; padding: 15px; background-color: #e8f5e8; border-radius: 6px;">
-        <p><strong>💡 Quick Tips:</strong></p>
-        <ul>
-            <li>Respond within 24 hours to maintain good ratings</li>
-            <li>Be professional and courteous in all communications</li>
-            <li>Provide detailed information about the property</li>
-            <li>Follow up with viewing arrangements if requested</li>
-        </ul>
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/inquiries" class="btn">View All Inquiries</a>
     </div>
   `;
 
   return await sendEmail({
     to: data.to,
-    subject: `New Inquiry: ${data.propertyTitle} - ${data.inquirerName}`,
+    subject: `New Inquiry: ${data.propertyTitle}`,
     html: createEmailTemplate(content, 'New Property Inquiry'),
     tracking: true
   });
@@ -353,7 +333,7 @@ export const sendInquiryConfirmation = async (data: InquiryConfirmationData): Pr
     
     <p>Dear <span class="highlight">${data.inquirerName}</span>,</p>
     
-    <p>Thank you for your interest in our property. Your inquiry has been successfully sent to the property owner.</p>
+    <p>Thank you for your interest in our property. We have received your inquiry and will get back to you shortly.</p>
 
     <div class="property-details">
         <h3>Property Details</h3>
@@ -369,19 +349,18 @@ export const sendInquiryConfirmation = async (data: InquiryConfirmationData): Pr
         <p><strong>Email:</strong> ${data.ownerEmail}</p>
     </div>
 
-    <div style="text-align: center; margin-top: 30px;">
-        <a href="mailto:${data.ownerEmail}" class="btn">Contact Owner</a>
-        <a href="tel:${data.ownerPhone}" class="btn btn-outline">Call Owner</a>
-    </div>
-
-    <div style="margin-top: 30px; padding: 15px; background-color: #fff3cd; border-radius: 6px;">
-        <p><strong>📞 Next Steps:</strong></p>
+    <div class="info-box">
+        <h3>What's Next?</h3>
         <ul>
             <li>The property owner will contact you within 24 hours</li>
-            <li>You can also reach out directly using the contact information above</li>
-            <li>Prepare any questions you may have about the property</li>
-            <li>If you requested a viewing, the owner will confirm the details</li>
+            <li>You can schedule a viewing if interested</li>
+            <li>Feel free to ask any questions about the property</li>
+            <li>Check your dashboard for updates on your inquiry</li>
         </ul>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/inquiries" class="btn">View My Inquiries</a>
     </div>
   `;
 
@@ -426,11 +405,11 @@ export const sendMessageNotification = async (data: MessageNotificationData): Pr
 // Viewing confirmation email
 export const sendViewingConfirmation = async (data: ViewingConfirmationData): Promise<boolean> => {
   const content = `
-    <h2>Viewing Appointment Confirmed</h2>
+    <h2>Property Viewing Confirmed</h2>
     
     <p>Dear <span class="highlight">${data.inquirerName}</span>,</p>
     
-    <p>Your viewing appointment has been confirmed. Please find the details below:</p>
+    <p>Your property viewing has been confirmed. Here are the details:</p>
 
     <div class="property-details">
         <h3>Property Details</h3>
@@ -438,42 +417,38 @@ export const sendViewingConfirmation = async (data: ViewingConfirmationData): Pr
         <p><strong>Location:</strong> ${data.propertyLocation}</p>
     </div>
 
-    <div class="info-box">
-        <h3>Viewing Appointment</h3>
-        <p><strong>Date:</strong> ${new Date(data.viewingDate).toLocaleDateString()}</p>
+    <div class="contact-info">
+        <h3>Viewing Details</h3>
+        <p><strong>Date:</strong> ${data.viewingDate}</p>
         <p><strong>Time:</strong> ${data.viewingTime}</p>
-        ${data.directions ? `<p><strong>Directions:</strong> ${data.directions}</p>` : ''}
     </div>
 
-    <div class="contact-info">
+    <div class="info-box">
         <h3>Property Owner Contact</h3>
         <p><strong>Name:</strong> ${data.ownerName}</p>
         <p><strong>Phone:</strong> ${data.ownerPhone}</p>
         <p><strong>Email:</strong> ${data.ownerEmail}</p>
     </div>
 
+    ${data.directions ? `
+    <div class="info-box">
+        <h3>Directions</h3>
+        <p>${data.directions}</p>
+    </div>
+    ` : ''}
+
+    <div class="info-box">
+        <h3>Important Notes</h3>
+        <ul>
+            <li>Please arrive 5 minutes before the scheduled time</li>
+            <li>Bring a valid ID for verification</li>
+            <li>Contact the owner if you need to reschedule</li>
+            <li>Take photos and notes during the viewing</li>
+        </ul>
+    </div>
+
     <div style="text-align: center; margin-top: 30px;">
-        <a href="tel:${data.ownerPhone}" class="btn">Call Owner</a>
-        <a href="mailto:${data.ownerEmail}" class="btn btn-outline">Email Owner</a>
-    </div>
-
-    <div style="margin-top: 30px; padding: 15px; background-color: #e8f5e8; border-radius: 6px;">
-        <p><strong>📋 What to Bring:</strong></p>
-        <ul>
-            <li>Valid ID (Driver's License, National ID, or Passport)</li>
-            <li>Proof of income or financial capability</li>
-            <li>List of questions about the property</li>
-            <li>Camera for photos (if permitted)</li>
-        </ul>
-    </div>
-
-    <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-radius: 6px;">
-        <p><strong>⚠️ Important Notes:</strong></p>
-        <ul>
-            <li>Please arrive 5-10 minutes before the scheduled time</li>
-            <li>If you need to reschedule, contact the owner at least 24 hours in advance</li>
-            <li>Follow all COVID-19 safety protocols if applicable</li>
-        </ul>
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/dashboard/inquiries" class="btn">View My Inquiries</a>
     </div>
   `;
 
@@ -485,8 +460,8 @@ export const sendViewingConfirmation = async (data: ViewingConfirmationData): Pr
   });
 };
 
-// Welcome email
-export const sendWelcomeEmail = async (data: WelcomeEmailData): Promise<boolean> => {
+// Welcome email function
+export const sendWelcomeEmail = async (data: { to: string; userName: string; verificationUrl?: string }): Promise<boolean> => {
   const content = `
     <h2>Welcome to Larnacei!</h2>
     
@@ -509,21 +484,15 @@ export const sendWelcomeEmail = async (data: WelcomeEmailData): Promise<boolean>
     <div style="text-align: center; margin-top: 30px;">
         <a href="${data.verificationUrl}" class="btn">Verify Your Email</a>
     </div>
+    
+    <div class="info-box">
+        <p><strong>⚠️ Important:</strong> Please verify your email address to unlock all features and receive important notifications.</p>
+    </div>
     ` : ''}
 
-    <div style="margin-top: 30px; padding: 15px; background-color: #e8f5e8; border-radius: 6px;">
-        <p><strong>🚀 Getting Started:</strong></p>
-        <ul>
-            <li>Complete your profile to get better property matches</li>
-            <li>Set up your property preferences</li>
-            <li>Save your favorite properties</li>
-            <li>Enable notifications for new listings</li>
-        </ul>
-    </div>
-
-    <div style="margin-top: 20px; padding: 15px; background-color: #fff3cd; border-radius: 6px;">
-        <p><strong>📞 Need Help?</strong></p>
-        <p>Our support team is available 24/7 to assist you. Contact us at support@larnaceiglobal.com or call +234-XXX-XXX-XXXX.</p>
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/properties" class="btn">Start Browsing Properties</a>
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/list-property" class="btn btn-outline">List Your Property</a>
     </div>
   `;
 
@@ -535,8 +504,8 @@ export const sendWelcomeEmail = async (data: WelcomeEmailData): Promise<boolean>
   });
 };
 
-// Password reset email
-export const sendPasswordResetEmail = async (data: PasswordResetData): Promise<boolean> => {
+// Password reset email function
+export const sendPasswordResetEmail = async (data: { to: string; userName: string; resetUrl: string; expiryHours: number }): Promise<boolean> => {
   const content = `
     <h2>Password Reset Request</h2>
     
@@ -576,11 +545,52 @@ export const sendPasswordResetEmail = async (data: PasswordResetData): Promise<b
   });
 };
 
-// Webhook verification function
-export const verifyMailgunWebhook = (timestamp: string, token: string, signature: string): boolean => {
-  const crypto = require('crypto');
-  const encodedToken = crypto.createHmac('sha256', MAILGUN_WEBHOOK_SECRET).update(token).digest('hex');
-  return encodedToken === signature;
+// Email verification function
+export const sendVerificationEmail = async (email: string, userName: string, userId: string): Promise<boolean> => {
+  const verificationUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/verify-email?token=${userId}`;
+
+  const content = `
+    <h2>Welcome to Larnacei!</h2>
+    
+    <p>Hi ${userName},</p>
+    
+    <p>Thank you for registering with Larnacei - Nigeria's Premier Property Marketplace!</p>
+    
+    <div class="info-box">
+        <h3>Verify Your Email Address</h3>
+        <p>To complete your registration and start using our platform, please verify your email address by clicking the button below:</p>
+        
+        <div style="text-align: center; margin: 20px 0;">
+            <a href="${verificationUrl}" class="btn">Verify Email Address</a>
+        </div>
+        
+        <p style="font-size: 14px; color: #666;">
+            If the button doesn't work, copy and paste this link into your browser:<br>
+            <a href="${verificationUrl}" style="color: #7C0302;">${verificationUrl}</a>
+        </p>
+    </div>
+
+    <div class="info-box">
+        <h3>Why Verify Your Email?</h3>
+        <ul>
+            <li>Unlock all platform features</li>
+            <li>Receive important notifications</li>
+            <li>Connect with property owners</li>
+            <li>Get updates on your inquiries</li>
+        </ul>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/properties" class="btn">Start Browsing Properties</a>
+    </div>
+  `;
+
+  return await sendEmail({
+    to: email,
+    subject: 'Verify Your Email - Larnacei Property Platform',
+    html: createEmailTemplate(content, 'Email Verification'),
+    tracking: true
+  });
 };
 
 // Email delivery status tracking
@@ -588,7 +598,7 @@ export const trackEmailDelivery = async (messageId: string, status: string): Pro
   try {
     // Here you would typically update your database with the delivery status
     console.log(`Email delivery status for ${messageId}: ${status}`);
-    
+
     // You could also send this to your analytics service
     // await analytics.track('email_delivery', { messageId, status });
   } catch (error) {
@@ -596,17 +606,42 @@ export const trackEmailDelivery = async (messageId: string, status: string): Pro
   }
 };
 
-// Get email statistics
+// Get email statistics (SendGrid doesn't provide this directly, but you can implement it)
 export const getEmailStats = async (): Promise<any> => {
   try {
-    const stats = await mg.stats.get(MAILGUN_DOMAIN, {
-      event: ['delivered', 'bounced', 'complained'],
-      duration: '30d'
-    });
-    
-    return stats;
+    // SendGrid doesn't provide stats in the same way as Mailgun
+    // You would need to implement your own tracking
+    console.log('Email stats not available with SendGrid free plan');
+    return null;
   } catch (error) {
     console.error('Failed to get email stats:', error);
     return null;
   }
+};
+
+// Test email function for development
+export const sendTestEmail = async (to: string): Promise<boolean> => {
+  const content = `
+    <h2>Test Email from Larnacei</h2>
+    
+    <p>This is a test email to verify that SendGrid is working correctly.</p>
+    
+    <div class="info-box">
+        <h3>Test Details</h3>
+        <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+        <p><strong>Environment:</strong> ${process.env.NODE_ENV}</p>
+        <p><strong>SendGrid API:</strong> ${SENDGRID_API_KEY ? 'Configured' : 'Not Configured'}</p>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <a href="${process.env.NEXTAUTH_URL || 'http://localhost:3000'}" class="btn">Visit Larnacei</a>
+    </div>
+  `;
+
+  return await sendEmail({
+    to,
+    subject: 'Test Email - Larnacei Property Platform',
+    html: createEmailTemplate(content, 'Test Email'),
+    tracking: false
+  });
 }; 

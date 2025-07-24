@@ -1,22 +1,20 @@
-// Import the new Mailgun service functions
+// Import the new SendGrid service functions
 import {
-  sendInquiryNotification as sendInquiryNotificationMailgun,
-  sendInquiryConfirmation as sendInquiryConfirmationMailgun,
-  sendMessageNotification as sendMessageNotificationMailgun,
-  sendViewingConfirmation as sendViewingConfirmationMailgun,
-  sendWelcomeEmail as sendWelcomeEmailMailgun,
-  sendPasswordResetEmail as sendPasswordResetEmailMailgun
-} from './mailgun-service';
+  sendInquiryNotification as sendInquiryNotificationSendGrid,
+  sendInquiryConfirmation as sendInquiryConfirmationSendGrid,
+  sendMessageNotification as sendMessageNotificationSendGrid,
+  sendViewingConfirmation as sendViewingConfirmationSendGrid,
+  sendWelcomeEmail as sendWelcomeEmailSendGrid,
+  sendPasswordResetEmail as sendPasswordResetEmailSendGrid,
+  sendVerificationEmail as sendVerificationEmailSendGrid
+} from './sendgrid-service';
 
-// Fallback to nodemailer if Mailgun is not configured
+// Fallback to nodemailer if SendGrid is not configured
 import nodemailer from 'nodemailer';
-import Mailgun from 'mailgun.js';
-import formData from 'form-data';
 
-// Mailgun configuration
-const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY;
-const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN;
-const MAILGUN_REGION = process.env.MAILGUN_REGION || 'us';
+// SendGrid configuration
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
+const SENDGRID_FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || 'info@larnaceiglobal.com';
 
 // Nodemailer configuration
 const SMTP_HOST = process.env.SMTP_HOST;
@@ -207,11 +205,11 @@ const createEmailTemplate = (content: string, title: string) => `
 
 export const sendInquiryNotification = async (data: InquiryNotificationData) => {
   try {
-    // Try Mailgun first
-    if (process.env.MAILGUN_API_KEY) {
-      const success = await sendInquiryNotificationMailgun(data);
+    // Try SendGrid first
+    if (process.env.SENDGRID_API_KEY) {
+      const success = await sendInquiryNotificationSendGrid(data);
       if (success) {
-        console.log('Inquiry notification email sent via Mailgun');
+        console.log('Inquiry notification email sent via SendGrid');
         return;
       }
     }
@@ -292,11 +290,11 @@ export const sendInquiryNotification = async (data: InquiryNotificationData) => 
 
 export const sendInquiryConfirmation = async (data: InquiryConfirmationData) => {
   try {
-    // Try Mailgun first
-    if (process.env.MAILGUN_API_KEY) {
-      const success = await sendInquiryConfirmationMailgun(data);
+    // Try SendGrid first
+    if (process.env.SENDGRID_API_KEY) {
+      const success = await sendInquiryConfirmationSendGrid(data);
       if (success) {
-        console.log('Inquiry confirmation email sent via Mailgun');
+        console.log('Inquiry confirmation email sent via SendGrid');
         return;
       }
     }
@@ -355,11 +353,11 @@ export const sendInquiryConfirmation = async (data: InquiryConfirmationData) => 
 
 export const sendMessageNotification = async (data: MessageNotificationData) => {
   try {
-    // Try Mailgun first
-    if (process.env.MAILGUN_API_KEY) {
-      const success = await sendMessageNotificationMailgun(data);
+    // Try SendGrid first
+    if (process.env.SENDGRID_API_KEY) {
+      const success = await sendMessageNotificationSendGrid(data);
       if (success) {
-        console.log('Message notification email sent via Mailgun');
+        console.log('Message notification email sent via SendGrid');
         return;
       }
     }
@@ -401,11 +399,11 @@ export const sendMessageNotification = async (data: MessageNotificationData) => 
 
 export const sendViewingConfirmation = async (data: ViewingConfirmationData) => {
   try {
-    // Try Mailgun first
-    if (process.env.MAILGUN_API_KEY) {
-      const success = await sendViewingConfirmationMailgun(data);
+    // Try SendGrid first
+    if (process.env.SENDGRID_API_KEY) {
+      const success = await sendViewingConfirmationSendGrid(data);
       if (success) {
-        console.log('Viewing confirmation email sent via Mailgun');
+        console.log('Viewing confirmation email sent via SendGrid');
         return;
       }
     }
@@ -480,11 +478,11 @@ export const sendViewingConfirmation = async (data: ViewingConfirmationData) => 
 // Welcome email function
 export const sendWelcomeEmail = async (data: { to: string; userName: string; verificationUrl?: string }) => {
   try {
-    // Try Mailgun first
-    if (process.env.MAILGUN_API_KEY) {
-      const success = await sendWelcomeEmailMailgun(data);
+    // Try SendGrid first
+    if (process.env.SENDGRID_API_KEY) {
+      const success = await sendWelcomeEmailSendGrid(data);
       if (success) {
-        console.log('Welcome email sent via Mailgun');
+        console.log('Welcome email sent via SendGrid');
         return;
       }
     }
@@ -547,11 +545,11 @@ export const sendWelcomeEmail = async (data: { to: string; userName: string; ver
 // Password reset email function
 export const sendPasswordResetEmail = async (data: { to: string; userName: string; resetUrl: string; expiryHours: number }) => {
   try {
-    // Try Mailgun first
-    if (process.env.MAILGUN_API_KEY) {
-      const success = await sendPasswordResetEmailMailgun(data);
+    // Try SendGrid first
+    if (process.env.SENDGRID_API_KEY) {
+      const success = await sendPasswordResetEmailSendGrid(data);
       if (success) {
-        console.log('Password reset email sent via Mailgun');
+        console.log('Password reset email sent via SendGrid');
         return;
       }
     }
@@ -606,16 +604,12 @@ export const sendVerificationEmail = async (email: string, userName: string, use
   try {
     const verificationUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/verify-email?token=${userId}`;
     
-    // Try Mailgun first
-    if (MAILGUN_API_KEY && MAILGUN_DOMAIN) {
-      const success = await sendWelcomeEmailMailgun({
-        to: email,
-        userName: userName,
-        verificationUrl: verificationUrl
-      });
+    // Try SendGrid first
+    if (SENDGRID_API_KEY) {
+      const success = await sendVerificationEmailSendGrid(email, userName, userId);
       
       if (success) {
-        console.log('Verification email sent via Mailgun');
+        console.log('Verification email sent via SendGrid');
         return;
       }
     }
