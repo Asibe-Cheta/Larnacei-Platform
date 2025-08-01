@@ -283,12 +283,7 @@ export const userProfileUpdateSchema = z.object({
   location: z.string().max(200).optional(),
   experience: z.number().min(0).max(50).optional(),
   specialization: z.array(z.string()).max(10).optional(),
-  streetAddress: z.string().max(200).optional(),
-  city: z.string().max(100).optional(),
-  state: z.string().max(100).optional(),
-  lga: z.string().max(100).optional(),
-  businessName: z.string().max(100).optional(),
-  cacNumber: z.string().max(50).optional(),
+  // Address and professional fields removed - they don't exist in the User model
   socialLinks: z.object({
     linkedin: z.string().url().optional(),
     instagram: z.string().url().optional(),
@@ -297,8 +292,17 @@ export const userProfileUpdateSchema = z.object({
   }).partial().optional(),
   contactPreference: z.nativeEnum(ContactPreference).optional(),
   availabilityHours: z.record(z.any()).optional(),
-  // Remove fields that don't exist in the database schema
-  // emailNotifications, smsNotifications, profileVisibility, showContactInfo are not in the User model
+  // Note: The following fields are not in the User model and should not be sent to the database:
+  // - emailNotifications (nested object)
+  // - smsNotifications (boolean)
+  // - profileVisibility (boolean) 
+  // - showContactInfo (boolean)
+  // - streetAddress (string)
+  // - city (string)
+  // - state (string)
+  // - lga (string)
+  // - businessName (string)
+  // - cacNumber (string)
 });
 
 /**

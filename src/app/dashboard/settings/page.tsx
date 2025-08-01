@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { lgasByState } from '@/utils/nigeria-lga';
+// LGA utility removed - address section no longer exists
 
 const API_URL = "/api/users/profile";
 
@@ -19,27 +19,7 @@ export default function SettingsPage() {
   });
   const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
   const [personalInfoStatus, setPersonalInfoStatus] = useState<null | { type: "success" | "error"; message: string }>(null);
-  const [address, setAddress] = useState({
-    streetAddress: "",
-    city: "",
-    state: "",
-    lga: "",
-    location: "",
-  });
-  const [addressStatus, setAddressStatus] = useState<null | { type: "success" | "error"; message: string }>(null);
-  const [professional, setProfessional] = useState({
-    businessName: "",
-    experience: "",
-    specialization: "",
-    cacNumber: "",
-    socialLinks: {
-      linkedin: "",
-      instagram: "",
-      twitter: "",
-      website: "",
-    },
-  });
-  const [professionalStatus, setProfessionalStatus] = useState<null | { type: "success" | "error"; message: string }>(null);
+  // Address and professional fields removed - they don't exist in the User model
   const [preferences, setPreferences] = useState({
     contactPreference: "EMAIL",
     // Remove nested emailNotifications object - these fields don't exist in the database
@@ -81,25 +61,7 @@ export default function SettingsPage() {
             bio: data.data.bio || "",
             image: data.data.image || "",
           });
-          setAddress({
-            streetAddress: data.data.streetAddress || "",
-            city: data.data.city || "",
-            state: data.data.state || "",
-            lga: data.data.lga || "",
-            location: data.data.location || "",
-          });
-          setProfessional({
-            businessName: data.data.businessName || "",
-            experience: data.data.experience?.toString() || "",
-            specialization: Array.isArray(data.data.specialization) ? data.data.specialization.join(", ") : "",
-            cacNumber: data.data.cacNumber || "",
-            socialLinks: {
-              linkedin: data.data.socialLinks?.linkedin || "",
-              instagram: data.data.socialLinks?.instagram || "",
-              twitter: data.data.socialLinks?.twitter || "",
-              website: data.data.socialLinks?.website || "",
-            },
-          });
+          // Address and professional data removed - these fields don't exist in the User model
           setPreferences({
             contactPreference: data.data.contactPreference || "EMAIL",
             // Remove emailNotifications since these fields don't exist in the database
@@ -156,73 +118,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setAddress((prev) => ({ ...prev, [name]: value, ...(name === "state" ? { lga: "" } : {}) }));
-  };
-
-  const handleAddressSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAddressStatus(null);
-    try {
-      const res = await fetch(API_URL, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          streetAddress: address.streetAddress,
-          city: address.city,
-          state: address.state,
-          lga: address.lga,
-          location: address.location,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setAddressStatus({ type: "success", message: "Address updated successfully." });
-        setUser((prev: any) => ({ ...prev, ...data.data }));
-      } else {
-        setAddressStatus({ type: "error", message: data.error || data.message });
-      }
-    } catch (err: any) {
-      setAddressStatus({ type: "error", message: err.message || "Failed to update." });
-    }
-  };
-
-  const handleProfessionalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    if (name in professional.socialLinks) {
-      setProfessional((prev) => ({ ...prev, socialLinks: { ...prev.socialLinks, [name]: value } }));
-    } else {
-      setProfessional((prev) => ({ ...prev, [name]: value }));
-    }
-  };
-
-  const handleProfessionalSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProfessionalStatus(null);
-    try {
-      const res = await fetch(API_URL, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          businessName: professional.businessName,
-          experience: professional.experience ? parseInt(professional.experience) : undefined,
-          specialization: professional.specialization.split(",").map((s) => s.trim()).filter(Boolean),
-          cacNumber: professional.cacNumber,
-          socialLinks: professional.socialLinks,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setProfessionalStatus({ type: "success", message: "Professional info updated successfully." });
-        setUser((prev: any) => ({ ...prev, ...data.data }));
-      } else {
-        setProfessionalStatus({ type: "error", message: data.error || data.message });
-      }
-    } catch (err: any) {
-      setProfessionalStatus({ type: "error", message: err.message || "Failed to update." });
-    }
-  };
+  // Address and professional handlers removed - these fields don't exist in the User model
 
   const handlePreferencesChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -344,9 +240,7 @@ export default function SettingsPage() {
   if (loading) return <div className="text-center py-10 text-[#7C0302]">Loading...</div>;
   if (!user) return <div className="text-center py-10 text-[#7C0302]">You must be signed in to view your settings.</div>;
 
-  const states = Object.keys(lgasByState);
-  const lgas = address.state ? lgasByState[address.state] || [] : [];
-  const isProfessional = user.accountType === 'AGENT' || user.accountType === 'AGENCY' || user.accountType === 'CORPORATE';
+  // Address and professional sections removed - these fields don't exist in the User model
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-8 bg-white rounded shadow-md mt-6 mb-12">
@@ -449,90 +343,7 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* 3. LOCATION & ADDRESS */}
-      <section className="mb-10">
-        <h3 className="text-lg font-semibold mb-2" style={{ color: "#7C0302" }}>Location & Address</h3>
-        <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleAddressSave}>
-          <div className="flex flex-col">
-            <label className="font-medium">Street Address</label>
-            <input name="streetAddress" type="text" value={address.streetAddress} onChange={handleAddressChange} className="input input-bordered" />
-          </div>
-          <div className="flex flex-col">
-            <label className="font-medium">City</label>
-            <input name="city" type="text" value={address.city} onChange={handleAddressChange} className="input input-bordered" />
-          </div>
-          <div className="flex flex-col">
-            <label className="font-medium">State</label>
-            <select name="state" value={address.state} onChange={handleAddressChange} className="input input-bordered">
-              <option value="">Select State</option>
-              {states.map((state) => (
-                <option key={state} value={state}>{state}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col">
-            <label className="font-medium">Local Government Area (LGA)</label>
-            <select name="lga" value={address.lga} onChange={handleAddressChange} className="input input-bordered">
-              <option value="">Select LGA</option>
-              {lgas.map((lga) => (
-                <option key={lga} value={lga}>{lga}</option>
-              ))}
-            </select>
-          </div>
-          <div className="col-span-1 sm:col-span-2 flex flex-col">
-            <label className="font-medium">Preferred Contact Address</label>
-            <input name="location" type="text" value={address.location} onChange={handleAddressChange} className="input input-bordered" />
-          </div>
-          <div className="col-span-1 sm:col-span-2 flex justify-end">
-            <button type="submit" className="btn" style={{ background: "#7C0302", color: "white" }}>Save Address</button>
-          </div>
-          {addressStatus && (
-            <div className={`col-span-1 sm:col-span-2 text-sm mt-2 ${addressStatus.type === "success" ? "text-green-600" : "text-[#7C0302]"}`}>
-              {addressStatus.message}
-            </div>
-          )}
-        </form>
-      </section>
-
-      {/* 4. PROFESSIONAL INFO (conditional) */}
-      {isProfessional && (
-        <section className="mb-10">
-          <h3 className="text-lg font-semibold mb-2" style={{ color: "#7C0302" }}>Professional Info</h3>
-          <form className="grid grid-cols-1 sm:grid-cols-2 gap-4" onSubmit={handleProfessionalSave}>
-            <div className="flex flex-col">
-              <label className="font-medium">Business Name</label>
-              <input name="businessName" type="text" value={professional.businessName} onChange={handleProfessionalChange} className="input input-bordered" />
-            </div>
-            <div className="flex flex-col">
-              <label className="font-medium">Years of Experience</label>
-              <input name="experience" type="number" min={0} max={100} value={professional.experience} onChange={handleProfessionalChange} className="input input-bordered" />
-            </div>
-            <div className="flex flex-col">
-              <label className="font-medium">Specialization Areas</label>
-              <input name="specialization" type="text" value={professional.specialization} onChange={handleProfessionalChange} className="input input-bordered" placeholder="e.g. Residential, Commercial, Land" />
-            </div>
-            <div className="flex flex-col">
-              <label className="font-medium">Professional License/CAC Number</label>
-              <input name="cacNumber" type="text" value={professional.cacNumber} onChange={handleProfessionalChange} className="input input-bordered" />
-            </div>
-            <div className="flex flex-col">
-              <label className="font-medium">Social Media Links</label>
-              <input name="linkedin" type="text" value={professional.socialLinks.linkedin} onChange={handleProfessionalChange} className="input input-bordered mb-1" placeholder="LinkedIn" />
-              <input name="instagram" type="text" value={professional.socialLinks.instagram} onChange={handleProfessionalChange} className="input input-bordered mb-1" placeholder="Instagram" />
-              <input name="twitter" type="text" value={professional.socialLinks.twitter} onChange={handleProfessionalChange} className="input input-bordered mb-1" placeholder="Twitter" />
-              <input name="website" type="text" value={professional.socialLinks.website} onChange={handleProfessionalChange} className="input input-bordered mb-1" placeholder="Website" />
-            </div>
-            <div className="col-span-1 sm:col-span-2 flex justify-end">
-              <button type="submit" className="btn" style={{ background: "#7C0302", color: "white" }}>Save Professional Info</button>
-            </div>
-            {professionalStatus && (
-              <div className={`col-span-1 sm:col-span-2 text-sm mt-2 ${professionalStatus.type === "success" ? "text-green-600" : "text-[#7C0302]"}`}>
-                {professionalStatus.message}
-              </div>
-            )}
-          </form>
-        </section>
-      )}
+      {/* Address and professional sections removed - these fields don't exist in the User model */}
 
       {/* 5. COMMUNICATION PREFERENCES */}
       <section className="mb-10">
