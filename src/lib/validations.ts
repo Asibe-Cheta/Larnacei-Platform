@@ -297,14 +297,8 @@ export const userProfileUpdateSchema = z.object({
   }).partial().optional(),
   contactPreference: z.nativeEnum(ContactPreference).optional(),
   availabilityHours: z.record(z.any()).optional(),
-  emailNotifications: z.object({
-    inquiries: z.boolean().optional(),
-    updates: z.boolean().optional(),
-    marketing: z.boolean().optional(),
-  }).partial().optional(),
-  smsNotifications: z.boolean().optional(),
-  profileVisibility: z.boolean().optional(),
-  showContactInfo: z.boolean().optional(),
+  // Remove fields that don't exist in the database schema
+  // emailNotifications, smsNotifications, profileVisibility, showContactInfo are not in the User model
 });
 
 /**

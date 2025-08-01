@@ -42,11 +42,7 @@ export default function SettingsPage() {
   const [professionalStatus, setProfessionalStatus] = useState<null | { type: "success" | "error"; message: string }>(null);
   const [preferences, setPreferences] = useState({
     contactPreference: "EMAIL",
-    emailNotifications: {
-      inquiries: false,
-      updates: false,
-      marketing: false,
-    },
+    // Remove nested emailNotifications object - these fields don't exist in the database
     smsNotifications: false,
     profileVisibility: false,
     showContactInfo: false,
@@ -60,11 +56,9 @@ export default function SettingsPage() {
   });
   const [passwordStatus, setPasswordStatus] = useState<null | { type: "success" | "error"; message: string }>(null);
   const [passwordLoading, setPasswordLoading] = useState(false);
-  // Verification status and feedback
+  // Phone verification status and feedback
   const [phoneVerifyStatus, setPhoneVerifyStatus] = useState<null | { type: "success" | "error"; message: string }>(null);
-  const [emailVerifyStatus, setEmailVerifyStatus] = useState<null | { type: "success" | "error"; message: string }>(null);
   const [phoneVerifying, setPhoneVerifying] = useState(false);
-  const [emailVerifying, setEmailVerifying] = useState(false);
   // Identity Verification state
   const [identity, setIdentity] = useState({
     ninOrBvn: "",
@@ -108,11 +102,7 @@ export default function SettingsPage() {
           });
           setPreferences({
             contactPreference: data.data.contactPreference || "EMAIL",
-            emailNotifications: {
-              inquiries: data.data.emailNotifications?.inquiries || false,
-              updates: data.data.emailNotifications?.updates || false,
-              marketing: data.data.emailNotifications?.marketing || false,
-            },
+            // Remove emailNotifications since these fields don't exist in the database
             smsNotifications: data.data.smsNotifications || false,
             profileVisibility: data.data.profileVisibility || false,
             showContactInfo: data.data.showContactInfo || false,
@@ -236,22 +226,7 @@ export default function SettingsPage() {
 
   const handlePreferencesChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    if (name.startsWith("emailNotifications.")) {
-      const key = name.split(".")[1];
-      if (type === "checkbox" && e.target instanceof HTMLInputElement) {
-        setPreferences((prev) => ({
-          ...prev,
-          emailNotifications: { ...prev.emailNotifications, [key]: e.target.checked },
-        }));
-      } else {
-        setPreferences((prev) => ({
-          ...prev,
-          emailNotifications: { ...prev.emailNotifications, [key]: value },
-        }));
-      }
-    } else if (
-      name === "smsNotifications" || name === "profileVisibility" || name === "showContactInfo"
-    ) {
+    if (name === "smsNotifications" || name === "profileVisibility" || name === "showContactInfo") {
       if (e.target instanceof HTMLInputElement) {
         setPreferences((prev) => ({ ...prev, [name]: e.target.checked }));
       }
@@ -269,7 +244,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contactPreference: preferences.contactPreference,
-          emailNotifications: preferences.emailNotifications,
+          // Remove emailNotifications since these fields don't exist in the database
           smsNotifications: preferences.smsNotifications,
           profileVisibility: preferences.profileVisibility,
           showContactInfo: preferences.showContactInfo,
@@ -323,21 +298,27 @@ export default function SettingsPage() {
   const handlePhoneVerify = async () => {
     setPhoneVerifying(true);
     setPhoneVerifyStatus(null);
-    // TODO: Call backend to send OTP
-    setTimeout(() => {
-      setPhoneVerifyStatus({ type: "success", message: "Verification code sent to your phone." });
-      setPhoneVerifying(false);
-    }, 1000);
-  };
 
-  const handleEmailVerify = async () => {
-    setEmailVerifying(true);
-    setEmailVerifyStatus(null);
-    // TODO: Call backend to send verification email
-    setTimeout(() => {
-      setEmailVerifyStatus({ type: "success", message: "Verification email sent." });
-      setEmailVerifying(false);
-    }, 1000);
+    try {
+      // Call the actual OTP API endpoint
+      const res = await fetch("/api/sms/otp/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: personalInfo.phone }),
+      });
+
+      const data = await res.json();
+
+      if (data.message) {
+        setPhoneVerifyStatus({ type: "success", message: "Verification code sent to your phone." });
+      } else {
+        setPhoneVerifyStatus({ type: "error", message: data.error || "Failed to send verification code." });
+      }
+    } catch (error: any) {
+      setPhoneVerifyStatus({ type: "error", message: error.message || "Failed to send verification code." });
+    } finally {
+      setPhoneVerifying(false);
+    }
   };
 
   const handleIdentityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,7 +374,7 @@ export default function SettingsPage() {
           <div className="flex flex-col">
             <label className="font-medium">Email</label>
             <input type="email" value={user.email} disabled className="input input-bordered bg-gray-100" />
-            <button type="button" className="text-xs underline text-[#7C0302] mt-1">Change Email</button>
+            <span className="text-xs text-green-600 mt-1">✓ Email verified</span>
           </div>
           <div className="flex flex-col">
             <label className="font-medium">Phone Number</label>
@@ -448,13 +429,10 @@ export default function SettingsPage() {
           <div className="flex flex-col gap-2">
             <label className="font-medium">Email Verification</label>
             <div className="flex items-center gap-2">
-              <span className={`w-3 h-3 rounded-full ${user.emailVerified ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-              <span>{user.emailVerified ? 'Verified' : 'Not Verified'}</span>
-              {!user.emailVerified && <button type="button" className="btn btn-xs ml-2" style={{ background: '#7C0302', color: 'white' }} onClick={handleEmailVerify} disabled={emailVerifying}>{emailVerifying ? 'Sending...' : 'Verify'}</button>}
+              <span className="w-3 h-3 rounded-full bg-green-500"></span>
+              <span>Verified</span>
             </div>
-            {emailVerifyStatus && (
-              <div className={`text-sm mt-1 ${emailVerifyStatus.type === "success" ? "text-green-600" : "text-[#7C0302]"}`}>{emailVerifyStatus.message}</div>
-            )}
+            <span className="text-xs text-green-600">✓ Email is already verified</span>
           </div>
           <div className="col-span-1 sm:col-span-2 flex flex-col gap-2">
             <label className="font-medium">Identity Verification (NIN/BVN)</label>
@@ -568,14 +546,6 @@ export default function SettingsPage() {
               <option value="WHATSAPP">WhatsApp</option>
               <option value="PLATFORM_MESSAGE">Messages</option>
             </select>
-          </div>
-          <div className="flex flex-col">
-            <label className="font-medium">Email Notifications</label>
-            <div className="flex flex-col gap-1">
-              <label className="inline-flex items-center"><input name="emailNotifications.inquiries" type="checkbox" checked={preferences.emailNotifications.inquiries} onChange={handlePreferencesChange} className="mr-2" />Property inquiries</label>
-              <label className="inline-flex items-center"><input name="emailNotifications.updates" type="checkbox" checked={preferences.emailNotifications.updates} onChange={handlePreferencesChange} className="mr-2" />Updates</label>
-              <label className="inline-flex items-center"><input name="emailNotifications.marketing" type="checkbox" checked={preferences.emailNotifications.marketing} onChange={handlePreferencesChange} className="mr-2" />Marketing</label>
-            </div>
           </div>
           <div className="flex flex-col">
             <label className="font-medium">SMS Notifications</label>

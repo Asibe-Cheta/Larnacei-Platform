@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
     );
   } catch (error: any) {
     console.error("Profile fetch error:", error);
-    
+
     return NextResponse.json(
       {
         success: false,
@@ -128,18 +128,9 @@ export async function PUT(request: NextRequest) {
         socialLinks: validatedData.socialLinks ? validatedData.socialLinks : undefined,
         // If specialization is present as a string, convert to array
         specialization: validatedData.specialization,
-        // Notification and privacy fields
-        emailNotifications: validatedData.emailNotifications,
-        smsNotifications: validatedData.smsNotifications,
-        profileVisibility: validatedData.profileVisibility,
-        showContactInfo: validatedData.showContactInfo,
-        // Address and professional info
-        streetAddress: validatedData.streetAddress,
-        city: validatedData.city,
-        state: validatedData.state,
-        lga: validatedData.lga,
-        businessName: validatedData.businessName,
-        cacNumber: validatedData.cacNumber,
+        // Address and professional info - only include if they exist in the schema
+        // Note: emailNotifications, smsNotifications, profileVisibility, showContactInfo, 
+        // streetAddress, city, state, lga, businessName, cacNumber are not in the User model
       },
       select: {
         id: true,
@@ -160,16 +151,7 @@ export async function PUT(request: NextRequest) {
         contactPreference: true,
         availabilityHours: true,
         updatedAt: true,
-        streetAddress: true,
-        city: true,
-        state: true,
-        lga: true,
-        businessName: true,
-        cacNumber: true,
-        emailNotifications: true,
-        smsNotifications: true,
-        profileVisibility: true,
-        showContactInfo: true,
+        // Remove fields that don't exist in the User model
       },
     });
 
@@ -183,7 +165,7 @@ export async function PUT(request: NextRequest) {
     );
   } catch (error: any) {
     console.error("Profile update error:", error);
-    
+
     if (error.name === "ZodError") {
       return NextResponse.json(
         {
