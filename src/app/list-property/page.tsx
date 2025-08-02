@@ -200,7 +200,19 @@ export default function ListPropertyPage() {
 
       if (!response.ok) {
         const errorMessage = result?.message || result?.error || rawText || `Server error (${response.status})`;
-        setError(`Failed to list property: ${errorMessage}`);
+
+        // Handle detailed validation errors
+        if (response.status === 400 && result?.details) {
+          const validationErrors = result.details.map((error: any) => {
+            const field = error.path?.join('.') || 'unknown';
+            return `${field}: ${error.message}`;
+          });
+          setValidationErrors(validationErrors);
+          setError('Please fix the validation errors below');
+        } else {
+          setError(`Failed to list property: ${errorMessage}`);
+        }
+
         setIsSubmitting(false);
         return;
       }
@@ -292,8 +304,8 @@ export default function ListPropertyPage() {
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
                 <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${currentStep >= step.id
-                    ? 'primary-bg border-red-600 text-white'
-                    : 'bg-white border-gray-300 text-gray-500'
+                  ? 'primary-bg border-red-600 text-white'
+                  : 'bg-white border-gray-300 text-gray-500'
                   }`}>
                   {currentStep > step.id ? (
                     <span className="material-icons text-sm">check</span>

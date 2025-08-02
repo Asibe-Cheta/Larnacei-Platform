@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
     try {
       body = await request.json();
       console.log('Request body parsed successfully');
+      console.log('Request body:', JSON.stringify(body, null, 2));
     } catch (parseError) {
       console.error('JSON parsing error:', parseError);
       return NextResponse.json(
@@ -45,8 +46,31 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Validating request data...');
-    const validatedData = propertyCreationSchema.parse(body);
-    console.log('Data validation passed');
+    let validatedData;
+    try {
+      validatedData = propertyCreationSchema.parse(body);
+      console.log('Data validation passed');
+      console.log('Validated data:', JSON.stringify(validatedData, null, 2));
+    } catch (validationError: any) {
+      console.log('Validation error details:', validationError);
+      console.log('Validation error issues:', validationError.issues);
+
+      // Return detailed validation error messages
+      const errorMessages = validationError.issues?.map((issue: any) => {
+        const field = issue.path.join('.');
+        return `${field}: ${issue.message}`;
+      }) || [validationError.message];
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Validation error",
+          error: errorMessages.join(', '),
+          details: validationError.issues || [],
+        },
+        { status: 400 }
+      );
+    }
 
     // Create property with owner
     console.log('Creating property in database...');

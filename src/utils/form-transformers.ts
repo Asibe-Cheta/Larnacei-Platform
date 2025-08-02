@@ -9,6 +9,8 @@ export function transformFormDataToApi(
   imageUrls: string[] = [],
   videoUrls: string[] = []
 ): PropertyCreationData {
+  console.log('Original form data:', formData);
+
   // Map category from frontend to API format
   const categoryMap: Record<string, string> = {
     'SHORT_STAYS': 'SHORT_STAY',
@@ -32,9 +34,9 @@ export function transformFormDataToApi(
     'VILLA': 'VILLA',
     'LAND': 'LAND',
     'COMMERCIAL': 'COMMERCIAL',
-    'OFFICE': 'COMMERCIAL',
-    'SHOP': 'COMMERCIAL',
-    'WAREHOUSE': 'COMMERCIAL'
+    'OFFICE': 'COMMERCIAL', // Map to COMMERCIAL since OFFICE doesn't exist in enum
+    'SHOP': 'COMMERCIAL',   // Map to COMMERCIAL since SHOP doesn't exist in enum
+    'WAREHOUSE': 'COMMERCIAL' // Map to COMMERCIAL since WAREHOUSE doesn't exist in enum
   };
 
   // Map furnishing status
@@ -80,63 +82,120 @@ export function transformFormDataToApi(
     inspectionType = 'VIRTUAL_ONLY';
   }
 
-  return {
+  // Handle date formatting for availableFrom
+  let availableFrom: Date | undefined;
+  if (formData.availableFrom) {
+    try {
+      // Handle different date formats
+      if (typeof formData.availableFrom === 'string') {
+        // If it's already a date string, parse it
+        availableFrom = new Date(formData.availableFrom);
+      } else if (formData.availableFrom instanceof Date) {
+        availableFrom = formData.availableFrom;
+      }
+    } catch (error) {
+      console.warn('Invalid date format for availableFrom:', formData.availableFrom);
+      availableFrom = undefined;
+    }
+  }
+
+  // Ensure numeric fields are numbers
+  const bedrooms = typeof formData.bedrooms === 'number' ? formData.bedrooms :
+    typeof formData.bedrooms === 'string' ? parseInt(formData.bedrooms) || undefined : undefined;
+
+  const bathrooms = typeof formData.bathrooms === 'number' ? formData.bathrooms :
+    typeof formData.bathrooms === 'string' ? parseInt(formData.bathrooms) || undefined : undefined;
+
+  const toilets = typeof formData.toilets === 'number' ? formData.toilets :
+    typeof formData.toilets === 'string' ? parseInt(formData.toilets) || undefined : undefined;
+
+  const parkingSpaces = typeof formData.parkingSpaces === 'number' ? formData.parkingSpaces :
+    typeof formData.parkingSpaces === 'string' ? parseInt(formData.parkingSpaces) || 0 : 0;
+
+  const yearBuilt = typeof formData.yearBuilt === 'number' ? formData.yearBuilt :
+    typeof formData.yearBuilt === 'string' ? parseInt(formData.yearBuilt) || undefined : undefined;
+
+  const floorLevel = typeof formData.floorLevel === 'number' ? formData.floorLevel :
+    typeof formData.floorLevel === 'string' ? parseInt(formData.floorLevel) || undefined : undefined;
+
+  const totalFloors = typeof formData.totalFloors === 'number' ? formData.totalFloors :
+    typeof formData.totalFloors === 'string' ? parseInt(formData.totalFloors) || undefined : undefined;
+
+  // Handle area calculations
+  const area = typeof formData.area === 'number' ? formData.area :
+    typeof formData.area === 'string' ? parseFloat(formData.area) || undefined : undefined;
+
+  const sizeInSqm = formData.areaUnit === 'sqm' ? area :
+    formData.areaUnit === 'sqft' ? (area || 0) * 0.0929 :
+      formData.areaUnit === 'acres' ? (area || 0) * 4046.86 :
+        area;
+
+  const sizeInHectares = formData.areaUnit === 'acres' ? (area || 0) * 0.404686 :
+    formData.areaUnit === 'sqm' ? (area || 0) / 10000 :
+      formData.areaUnit === 'sqft' ? (area || 0) * 0.0929 / 10000 :
+        undefined;
+
+  // Handle coordinates
+  const latitude = typeof formData.latitude === 'number' ? formData.latitude :
+    typeof formData.latitude === 'string' ? parseFloat(formData.latitude) || undefined : undefined;
+
+  const longitude = typeof formData.longitude === 'number' ? formData.longitude :
+    typeof formData.longitude === 'string' ? parseFloat(formData.longitude) || undefined : undefined;
+
+  const transformedData = {
     // Basic Info
-    title: formData.title,
-    description: formData.description,
-    type: typeMap[formData.type] as any,
-    category: categoryMap[formData.category] as any,
-    purpose: purposeMap[formData.category] as any,
+    title: formData.title || '',
+    description: formData.description || '',
+    type: typeMap[formData.type] as any || 'HOUSE',
+    category: categoryMap[formData.category] as any || 'PROPERTY_SALE',
+    purpose: purposeMap[formData.category] as any || 'FOR_SALE',
 
     // Location
-    location: formData.address,
-    state: formData.state,
-    city: formData.city,
-    lga: formData.lga,
-    streetAddress: formData.address,
-    landmark: formData.landmark,
-    latitude: formData.latitude,
-    longitude: formData.longitude,
+    location: formData.address || '',
+    state: formData.state || '',
+    city: formData.city || '',
+    lga: formData.lga || '',
+    streetAddress: formData.address || '',
+    landmark: formData.landmark || '',
+    latitude,
+    longitude,
 
     // Details
     price: priceInKobo,
     currency: 'NGN',
-    isNegotiable: formData.isNegotiable || false,
-    bedrooms: formData.bedrooms,
-    bathrooms: formData.bathrooms,
-    toilets: formData.toilets,
-    sizeInSqm: formData.areaUnit === 'sqm' ? formData.area : 
-               formData.areaUnit === 'sqft' ? (formData.area || 0) * 0.0929 : 
-               formData.areaUnit === 'acres' ? (formData.area || 0) * 4046.86 : 
-               formData.area,
-    sizeInHectares: formData.areaUnit === 'acres' ? (formData.area || 0) * 0.404686 : 
-                    formData.areaUnit === 'sqm' ? (formData.area || 0) / 10000 : 
-                    formData.areaUnit === 'sqft' ? (formData.area || 0) * 0.0929 / 10000 : 
-                    undefined,
-    parkingSpaces: formData.parkingSpaces || 0,
-    yearBuilt: formData.yearBuilt,
-    floorLevel: formData.floorLevel,
-    totalFloors: formData.totalFloors,
-    features: features,
-    furnishingStatus: furnishingMap[formData.furnishingStatus] as any,
-    condition: conditionMap[formData.condition] as any,
+    isNegotiable: Boolean(formData.isNegotiable),
+    bedrooms,
+    bathrooms,
+    toilets,
+    sizeInSqm,
+    sizeInHectares,
+    parkingSpaces,
+    yearBuilt,
+    floorLevel,
+    totalFloors,
+    features: features.length > 0 ? features : ['Basic amenities'],
+    furnishingStatus: furnishingMap[formData.furnishingStatus] as any || 'UNFURNISHED',
+    condition: conditionMap[formData.condition] as any || 'NEW',
 
     // Media
-    images: imageUrls,
+    images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400x300?text=Property+Image'],
     videos: videoUrls,
-    virtualTourUrl: formData.virtualTourUrl,
-    floorPlanUrl: formData.floorPlanUrl,
+    virtualTourUrl: formData.virtualTourUrl || '',
+    floorPlanUrl: formData.floorPlanUrl || '',
 
     // Legal
-    titleDocuments: titleDocuments,
+    titleDocuments: Object.keys(titleDocuments).length > 0 ? titleDocuments : { titleDeed: true },
     ownershipType: formData.ownershipType || 'PERSONAL',
     legalStatus: formData.legalStatus || 'CLEAR',
 
     // Availability
     availabilityStatus: formData.isAvailable ? 'AVAILABLE' : 'OCCUPIED',
-    availableFrom: formData.availableFrom ? new Date(formData.availableFrom) : undefined,
-    inspectionType: inspectionType as any,
+    availableFrom,
+    inspectionType: inspectionType as any || 'BY_APPOINTMENT',
   };
+
+  console.log('Transformed data:', transformedData);
+  return transformedData;
 }
 
 /**
@@ -181,9 +240,9 @@ export function validateFormData(formData: any): { isValid: boolean; errors: str
   }
 
   // Step 5: Legal
-  const hasAnyDocument = formData.hasTitleDeed || formData.hasSurveyPlan || 
-                        formData.hasBuildingApproval || formData.hasCertificateOfOccupancy ||
-                        formData.hasDeedOfAssignment || formData.hasPowerOfAttorney;
+  const hasAnyDocument = formData.hasTitleDeed || formData.hasSurveyPlan ||
+    formData.hasBuildingApproval || formData.hasCertificateOfOccupancy ||
+    formData.hasDeedOfAssignment || formData.hasPowerOfAttorney;
   if (!hasAnyDocument) {
     errors.push('At least one legal document type must be selected');
   }
@@ -262,9 +321,9 @@ export function getStepValidationStatus(step: number, formData: any): { isValid:
       break;
 
     case 5:
-      const hasAnyDocument = formData.hasTitleDeed || formData.hasSurveyPlan || 
-                            formData.hasBuildingApproval || formData.hasCertificateOfOccupancy ||
-                            formData.hasDeedOfAssignment || formData.hasPowerOfAttorney;
+      const hasAnyDocument = formData.hasTitleDeed || formData.hasSurveyPlan ||
+        formData.hasBuildingApproval || formData.hasCertificateOfOccupancy ||
+        formData.hasDeedOfAssignment || formData.hasPowerOfAttorney;
       if (!hasAnyDocument) {
         errors.push('At least one legal document type must be selected');
       }
