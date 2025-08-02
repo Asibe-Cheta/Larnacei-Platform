@@ -90,6 +90,7 @@ export default function ListPropertyPage() {
     country: 'Nigeria',
     areaUnit: 'sqm',
     amenities: [],
+    condition: '',
     images: [],
     videos: [],
     hasTitleDeed: false,

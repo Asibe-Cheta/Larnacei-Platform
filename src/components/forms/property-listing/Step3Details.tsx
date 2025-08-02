@@ -37,6 +37,7 @@ export default function Step3Details({ formData, updateFormData }: Step3DetailsP
   const [customAmenity, setCustomAmenity] = useState('');
 
   const handleInputChange = (field: keyof PropertyListingData, value: any) => {
+    console.log(`Updating ${field} to:`, value);
     updateFormData({ [field]: value });
   };
 

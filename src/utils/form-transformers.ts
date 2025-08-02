@@ -10,6 +10,8 @@ export function transformFormDataToApi(
   videoUrls: string[] = []
 ): PropertyCreationData {
   console.log('Original form data:', formData);
+  console.log('Condition field value:', formData.condition);
+  console.log('Condition field type:', typeof formData.condition);
 
   // Map category from frontend to API format
   const categoryMap: Record<string, string> = {
@@ -179,7 +181,7 @@ export function transformFormDataToApi(
     totalFloors,
     features: features.length > 0 ? features : ['Basic amenities'],
     furnishingStatus: furnishingMap[formData.furnishingStatus] as any || 'UNFURNISHED',
-    condition: formData.condition ? conditionMap[formData.condition] as any : 'NEW',
+    condition: formData.condition && formData.condition !== '' && formData.condition !== 'undefined' ? conditionMap[formData.condition] as any : 'NEW',
 
     // Media
     images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400x300?text=Property+Image'],
