@@ -41,6 +41,7 @@ interface PropertyListingData {
   amenities: string[];
   yearBuilt?: number;
   parkingSpaces?: number;
+  condition?: string;
 
   // Step 4: Media
   images: File[];

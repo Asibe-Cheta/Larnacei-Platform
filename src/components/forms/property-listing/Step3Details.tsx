@@ -10,6 +10,7 @@ interface PropertyListingData {
   amenities: string[];
   yearBuilt?: number;
   parkingSpaces?: number;
+  condition?: string;
 }
 
 interface Step3DetailsProps {
@@ -44,7 +45,7 @@ export default function Step3Details({ formData, updateFormData }: Step3DetailsP
     const updatedAmenities = currentAmenities.includes(amenity)
       ? currentAmenities.filter(a => a !== amenity)
       : [...currentAmenities, amenity];
-    
+
     updateFormData({ amenities: updatedAmenities });
   };
 
@@ -178,12 +179,33 @@ export default function Step3Details({ formData, updateFormData }: Step3DetailsP
         />
       </div>
 
+      {/* Property Condition */}
+      <div>
+        <label htmlFor="condition" className="block text-sm font-medium text-gray-700 mb-2">
+          Property Condition *
+        </label>
+        <select
+          id="condition"
+          value={formData.condition || ''}
+          onChange={(e) => handleInputChange('condition', e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+          required
+        >
+          <option value="">Select Condition</option>
+          <option value="NEW">New</option>
+          <option value="OLD">Old</option>
+          <option value="RENOVATED">Renovated</option>
+          <option value="UNDER_CONSTRUCTION">Under Construction</option>
+          <option value="NEEDS_RENOVATION">Needs Renovation</option>
+        </select>
+      </div>
+
       {/* Amenities */}
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-4">
           Amenities & Features
         </label>
-        
+
         {/* Selected Amenities */}
         {formData.amenities.length > 0 && (
           <div className="mb-4">

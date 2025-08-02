@@ -179,7 +179,7 @@ export function transformFormDataToApi(
     totalFloors,
     features: features.length > 0 ? features : ['Basic amenities'],
     furnishingStatus: furnishingMap[formData.furnishingStatus] as any || 'UNFURNISHED',
-    condition: conditionMap[formData.condition] as any || 'NEW',
+    condition: formData.condition ? conditionMap[formData.condition] as any : 'NEW',
 
     // Media
     images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400x300?text=Property+Image'],
@@ -236,6 +236,9 @@ export function validateFormData(formData: any): { isValid: boolean; errors: str
   // Step 3: Details
   if (!formData.amenities || formData.amenities.length === 0) {
     errors.push('At least one feature/amenity is required');
+  }
+  if (!formData.condition) {
+    errors.push('Property condition is required');
   }
 
   // Step 4: Media
@@ -315,6 +318,9 @@ export function getStepValidationStatus(step: number, formData: any): { isValid:
     case 3:
       if (!formData.amenities || formData.amenities.length === 0) {
         errors.push('At least one feature/amenity is required');
+      }
+      if (!formData.condition) {
+        errors.push('Property condition is required');
       }
       break;
 
