@@ -7,11 +7,20 @@ export default function ServiceWorkerRegistration() {
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
       const registerSW = async () => {
         try {
+          // Check if service worker is already registered
+          const existingRegistration = await navigator.serviceWorker.getRegistration();
+
+          if (existingRegistration) {
+            console.log('Service Worker already registered:', existingRegistration);
+            return;
+          }
+
           const registration = await navigator.serviceWorker.register('/sw.js', {
             scope: '/',
+            updateViaCache: 'none', // Always check for updates
           });
 
-          console.log('SW registered: ', registration);
+          console.log('Service Worker registered successfully:', registration);
 
           // Handle updates
           registration.addEventListener('updatefound', () => {
@@ -36,7 +45,12 @@ export default function ServiceWorkerRegistration() {
           });
 
         } catch (error) {
-          console.error('SW registration failed: ', error);
+          console.error('Service Worker registration failed:', error);
+
+          // Don't show error to user if it's just a network issue
+          if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+            console.log('Service Worker registration skipped due to network issues');
+          }
         }
       };
 

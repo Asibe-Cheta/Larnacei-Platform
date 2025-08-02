@@ -142,6 +142,13 @@ export default function ListPropertyPage() {
       return;
     }
 
+    // Check network connectivity
+    if (!navigator.onLine) {
+      setError('No internet connection. Please check your network and try again.');
+      setIsSubmitting(false);
+      return;
+    }
+
     // Simulate image upload (replace with real upload logic)
     const imageUrls = formData.images.map((file: File) =>
       typeof file === 'string' ? file : URL.createObjectURL(file)
@@ -154,20 +161,28 @@ export default function ListPropertyPage() {
     const apiData = transformFormDataToApi(formData, imageUrls, videoUrls);
 
     try {
+      console.log('Submitting property data:', apiData);
+
       // Custom fetch to handle non-JSON responses
       const response = await fetch('/api/properties', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache'
+        },
         body: JSON.stringify(apiData),
       });
 
       const contentType = response.headers.get('content-type');
       let result: any = null;
       let rawText: string | null = null;
+
       // Log status and contentType for debugging
       console.log('API response status:', response.status, 'content-type:', contentType);
+
       if (contentType && contentType.includes('application/json')) {
         result = await response.json();
+        console.log('API response JSON:', result);
       } else {
         rawText = await response.text();
         console.log('API response text:', rawText);
@@ -184,13 +199,14 @@ export default function ListPropertyPage() {
       }
 
       if (!response.ok) {
-        setError(result?.message || rawText || 'Failed to list property');
+        const errorMessage = result?.message || result?.error || rawText || `Server error (${response.status})`;
+        setError(`Failed to list property: ${errorMessage}`);
         setIsSubmitting(false);
         return;
       }
 
       if (result?.success) {
-        setSuccess('Property listed successfully!');
+        setSuccess('Property listed successfully! Redirecting to dashboard...');
         setTimeout(() => {
           router.push('/dashboard');
         }, 1500);
@@ -199,15 +215,23 @@ export default function ListPropertyPage() {
       }
     } catch (err: any) {
       console.error('Property listing error:', err);
-      const msg = err.message || '';
-      if (/not authenticated|unauthorized/i.test(msg)) {
-        setShowAuthPrompt(true);
-        setError('You need to be signed in to list a property. Please sign in or register to continue.');
-        setTimeout(() => {
-          router.push('/signin');
-        }, 3500);
+
+      // Handle specific error types
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setError('Network error. Please check your internet connection and try again.');
+      } else if (err.name === 'SyntaxError') {
+        setError('Invalid response from server. Please try again.');
       } else {
-        setError(msg || 'Failed to list property');
+        const msg = err.message || '';
+        if (/not authenticated|unauthorized/i.test(msg)) {
+          setShowAuthPrompt(true);
+          setError('You need to be signed in to list a property. Please sign in or register to continue.');
+          setTimeout(() => {
+            router.push('/signin');
+          }, 3500);
+        } else {
+          setError(`Failed to list property: ${msg}`);
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -267,11 +291,10 @@ export default function ListPropertyPage() {
           <div className="flex items-center justify-between">
             {steps.map((step, index) => (
               <div key={step.id} className="flex items-center">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${
-                  currentStep >= step.id
+                <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 ${currentStep >= step.id
                     ? 'primary-bg border-red-600 text-white'
                     : 'bg-white border-gray-300 text-gray-500'
-                }`}>
+                  }`}>
                   {currentStep > step.id ? (
                     <span className="material-icons text-sm">check</span>
                   ) : (
@@ -279,17 +302,15 @@ export default function ListPropertyPage() {
                   )}
                 </div>
                 <div className="ml-3">
-                  <p className={`text-sm font-medium ${
-                    currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'
-                  }`}>
+                  <p className={`text-sm font-medium ${currentStep >= step.id ? 'text-gray-900' : 'text-gray-500'
+                    }`}>
                     {step.title}
                   </p>
                   <p className="text-xs text-gray-400">{step.description}</p>
                 </div>
                 {index < steps.length - 1 && (
-                  <div className={`w-16 h-0.5 mx-4 ${
-                    currentStep > step.id ? 'bg-red-600' : 'bg-gray-300'
-                  }`} />
+                  <div className={`w-16 h-0.5 mx-4 ${currentStep > step.id ? 'bg-red-600' : 'bg-gray-300'
+                    }`} />
                 )}
               </div>
             ))}

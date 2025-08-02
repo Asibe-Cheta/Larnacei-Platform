@@ -2,11 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { 
-  propertyCreationSchema, 
+import {
+  propertyCreationSchema,
   propertySearchSchema,
   apiResponseSchema,
-  paginatedResponseSchema 
+  paginatedResponseSchema
 } from "@/lib/validations";
 import { UserRole } from "@prisma/client";
 import { cacheManager } from "@/lib/redis";
@@ -17,9 +17,14 @@ import { cacheManager } from "@/lib/redis";
  */
 export async function POST(request: NextRequest) {
   try {
+    console.log('Property creation request received');
+
     // Check authentication
     const session = await getServerSession(authOptions);
+    console.log('Session:', session ? 'Found' : 'Not found');
+
     if (!session?.user?.id) {
+      console.log('Authentication failed - no session or user ID');
       return NextResponse.json(
         { success: false, message: "Authentication required" },
         { status: 401 }
@@ -27,18 +32,32 @@ export async function POST(request: NextRequest) {
     }
 
     // Parse and validate request body
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+      console.log('Request body parsed successfully');
+    } catch (parseError) {
+      console.error('JSON parsing error:', parseError);
+      return NextResponse.json(
+        { success: false, message: "Invalid JSON in request body" },
+        { status: 400 }
+      );
+    }
+
+    console.log('Validating request data...');
     const validatedData = propertyCreationSchema.parse(body);
+    console.log('Data validation passed');
 
     // Create property with owner
+    console.log('Creating property in database...');
     const property = await prisma.property.create({
       data: {
         ...validatedData,
         ownerId: session.user.id,
         // Set initial status based on user role
         isActive: session.user.role === UserRole.ADMIN || session.user.role === UserRole.SUPER_ADMIN,
-        moderationStatus: session.user.role === UserRole.ADMIN || session.user.role === UserRole.SUPER_ADMIN 
-          ? "APPROVED" 
+        moderationStatus: session.user.role === UserRole.ADMIN || session.user.role === UserRole.SUPER_ADMIN
+          ? "APPROVED"
           : "PENDING",
       },
       include: {
@@ -55,8 +74,11 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log('Property created successfully, ID:', property.id);
+
     // Create property images
     if (validatedData.images && validatedData.images.length > 0) {
+      console.log('Creating property images...');
       await prisma.propertyImage.createMany({
         data: validatedData.images.map((url, index) => ({
           url,
@@ -66,10 +88,12 @@ export async function POST(request: NextRequest) {
           propertyId: property.id,
         })),
       });
+      console.log('Property images created');
     }
 
     // Create property videos
     if (validatedData.videos && validatedData.videos.length > 0) {
+      console.log('Creating property videos...');
       await prisma.propertyVideo.createMany({
         data: validatedData.videos.map((url, index) => ({
           url,
@@ -77,11 +101,18 @@ export async function POST(request: NextRequest) {
           propertyId: property.id,
         })),
       });
+      console.log('Property videos created');
     }
 
     // Clear property caches when new property is created
-    await cacheManager.clearPropertyCaches();
+    try {
+      await cacheManager.clearPropertyCaches();
+      console.log('Property caches cleared');
+    } catch (cacheError) {
+      console.warn('Failed to clear property caches:', cacheError);
+    }
 
+    console.log('Property creation completed successfully');
     return NextResponse.json(
       {
         success: true,
@@ -92,8 +123,9 @@ export async function POST(request: NextRequest) {
     );
   } catch (error: any) {
     console.error("Property creation error:", error);
-    
+
     if (error.name === "ZodError") {
+      console.log('Validation error:', error.errors);
       return NextResponse.json(
         {
           success: false,
@@ -102,6 +134,40 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Handle Prisma errors
+    if (error.code) {
+      console.log('Prisma error code:', error.code);
+      switch (error.code) {
+        case 'P2002':
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Property with this information already exists",
+              error: "Duplicate property",
+            },
+            { status: 409 }
+          );
+        case 'P2003':
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Invalid reference data",
+              error: "Foreign key constraint failed",
+            },
+            { status: 400 }
+          );
+        default:
+          return NextResponse.json(
+            {
+              success: false,
+              message: "Database error occurred",
+              error: error.message,
+            },
+            { status: 500 }
+          );
+      }
     }
 
     return NextResponse.json(
@@ -122,7 +188,7 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    
+
     // Parse and validate query parameters
     const queryParams = {
       query: searchParams.get("query") || undefined,
@@ -148,7 +214,7 @@ export async function GET(request: NextRequest) {
 
     // Generate cache key based on search parameters
     const cacheKey = `search:${JSON.stringify(validatedParams)}`;
-    
+
     // Try to get cached results first
     const cachedResults = await cacheManager.getSearchResults(cacheKey);
     if (cachedResults) {
@@ -260,7 +326,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(response, { status: 200 });
   } catch (error: any) {
     console.error("Property fetch error:", error);
-    
+
     if (error.name === "ZodError") {
       return NextResponse.json(
         {

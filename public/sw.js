@@ -12,15 +12,6 @@ const STATIC_FILES = [
   '/favicon.ico',
 ];
 
-// API endpoints to cache
-const API_CACHE = [
-  '/api/properties',
-  '/api/properties/property-sales',
-  '/api/properties/long-term-rentals',
-  '/api/properties/short-stays',
-  '/api/properties/landed-properties',
-];
-
 // Install event - cache static files
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -52,7 +43,7 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Handle API requests
+  // Handle API requests - always go to network first
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(handleApiRequest(request));
     return;
@@ -65,98 +56,71 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
-// Handle API requests with cache-first strategy
+// Handle API requests with network-first strategy
 async function handleApiRequest(request) {
   const url = new URL(request.url);
-  
-  // Skip caching for authentication and user-related APIs
-  if (url.pathname.startsWith('/api/auth/') || 
-      url.pathname.startsWith('/api/users/') ||
-      url.pathname.startsWith('/api/payments/') ||
-      url.pathname.startsWith('/api/bookings/') ||
-      url.pathname.startsWith('/api/conversations/') ||
-      url.pathname.startsWith('/api/inquiries/') ||
-      url.pathname.includes('register') ||
-      url.pathname.includes('login') ||
-      url.pathname.includes('test')) {
-    // Always go to network for these APIs
-    try {
-      const networkResponse = await fetch(request);
-      return networkResponse;
-    } catch (error) {
-      console.log('Network failed for auth API:', error);
-      return new Response(
-        JSON.stringify({ 
-          error: 'Network error',
-          message: 'Please check your connection and try again'
-        }),
-        {
-          status: 503,
-          statusText: 'Service Unavailable',
-          headers: { 'Content-Type': 'application/json' }
-        }
-      );
-    }
-  }
 
-  // For other APIs, use cache-first strategy
+  // For all API requests, try network first
   try {
-    // Try network first
     const networkResponse = await fetch(request);
-    
-    if (networkResponse.ok) {
-      // Cache the response
+
+    // If successful, cache the response for GET requests
+    if (networkResponse.ok && request.method === 'GET') {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, networkResponse.clone());
-      return networkResponse;
     }
+
+    return networkResponse;
   } catch (error) {
-    console.log('Network failed, trying cache:', error);
-  }
+    console.log('Network failed for API:', error);
 
-  // Fallback to cache
-  const cachedResponse = await caches.match(request);
-  if (cachedResponse) {
-    return cachedResponse;
-  }
-
-  // Return offline response
-  return new Response(
-    JSON.stringify({ 
-      error: 'No internet connection',
-      message: 'Please check your connection and try again'
-    }),
-    {
-      status: 503,
-      statusText: 'Service Unavailable',
-      headers: { 'Content-Type': 'application/json' }
+    // For GET requests, try cache as fallback
+    if (request.method === 'GET') {
+      const cachedResponse = await caches.match(request);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
     }
-  );
+
+    // Return a proper error response instead of 503
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: 'Network error',
+        message: 'Please check your connection and try again'
+      }),
+      {
+        status: 500,
+        statusText: 'Internal Server Error',
+        headers: { 'Content-Type': 'application/json' }
+      }
+    );
+  }
 }
 
 // Handle static requests with cache-first strategy
 async function handleStaticRequest(request) {
   const cachedResponse = await caches.match(request);
-  
+
   if (cachedResponse) {
     return cachedResponse;
   }
 
   try {
     const networkResponse = await fetch(request);
-    
+
     if (networkResponse.ok) {
       const cache = await caches.open(DYNAMIC_CACHE);
       cache.put(request, networkResponse.clone());
     }
-    
+
     return networkResponse;
   } catch (error) {
     // Return offline page for navigation requests
     if (request.destination === 'document') {
       return caches.match('/');
     }
-    
+
     throw error;
   }
 }
