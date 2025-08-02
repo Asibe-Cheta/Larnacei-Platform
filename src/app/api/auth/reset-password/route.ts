@@ -14,11 +14,14 @@ export async function POST(request: NextRequest) {
     const { token, password } = resetPasswordSchema.parse(body);
 
     // Find user with valid reset token
+    // Use UTC time for comparison to avoid timezone issues
+    const currentTime = new Date();
+
     const user = await prisma.user.findFirst({
       where: {
         resetToken: token,
         resetTokenExpiry: {
-          gt: new Date(),
+          gt: currentTime,
         },
       },
     });

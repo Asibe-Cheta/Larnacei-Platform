@@ -14,18 +14,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Find user with valid reset token
+    // Use UTC time for comparison to avoid timezone issues
+    const currentTime = new Date();
+
     const user = await prisma.user.findFirst({
       where: {
         resetToken: token,
         resetTokenExpiry: {
-          gt: new Date(),
+          gt: currentTime,
         },
       },
       select: {
         id: true,
         email: true,
         name: true,
-        firstName: true,
       },
     });
 
@@ -41,7 +43,7 @@ export async function GET(request: NextRequest) {
       user: {
         id: user.id,
         email: user.email,
-        name: user.name || user.firstName || 'User',
+        name: user.name || 'User',
       }
     });
 
