@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Validating request data...');
+
     let validatedData;
     try {
       validatedData = propertyCreationSchema.parse(body);
@@ -60,6 +61,8 @@ export async function POST(request: NextRequest) {
         const field = issue.path.join('.');
         return `${field}: ${issue.message}`;
       }) || [validationError.message];
+
+
 
       return NextResponse.json(
         {

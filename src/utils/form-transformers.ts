@@ -27,16 +27,20 @@ export function transformFormDataToApi(
     'PROPERTY_SALES': 'FOR_SALE'
   };
 
-  // Map property types
+  // Map property types - only use valid enum values
   const typeMap: Record<string, string> = {
     'APARTMENT': 'APARTMENT',
     'HOUSE': 'HOUSE',
     'VILLA': 'VILLA',
     'LAND': 'LAND',
     'COMMERCIAL': 'COMMERCIAL',
-    'OFFICE': 'COMMERCIAL', // Map to COMMERCIAL since OFFICE doesn't exist in enum
-    'SHOP': 'COMMERCIAL',   // Map to COMMERCIAL since SHOP doesn't exist in enum
-    'WAREHOUSE': 'COMMERCIAL' // Map to COMMERCIAL since WAREHOUSE doesn't exist in enum
+    'DUPLEX': 'DUPLEX',
+    'STUDIO': 'STUDIO',
+    'PENTHOUSE': 'PENTHOUSE',
+    // Map invalid types to valid ones
+    'OFFICE': 'COMMERCIAL',
+    'SHOP': 'COMMERCIAL',
+    'WAREHOUSE': 'COMMERCIAL'
   };
 
   // Map furnishing status
@@ -46,7 +50,7 @@ export function transformFormDataToApi(
     'UNFURNISHED': 'UNFURNISHED'
   };
 
-  // Map condition
+  // Map condition - ensure all values are valid enum values
   const conditionMap: Record<string, string> = {
     'NEW': 'NEW',
     'OLD': 'OLD',
