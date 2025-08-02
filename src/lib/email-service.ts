@@ -545,14 +545,42 @@ export const sendWelcomeEmail = async (data: { to: string; userName: string; ver
 // Password reset email function
 export const sendPasswordResetEmail = async (data: { to: string; userName: string; resetUrl: string; expiryHours: number }) => {
   try {
-    // Try SendGrid first
+    console.log('sendPasswordResetEmail called with:', {
+      to: data.to,
+      userName: data.userName,
+      resetUrl: data.resetUrl,
+      expiryHours: data.expiryHours
+    });
+
+    // Development fallback - log the reset link instead of sending email
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔗 DEVELOPMENT MODE: Password reset link:', data.resetUrl);
+      console.log('📧 Would send password reset email to:', data.to);
+      console.log('👤 User name:', data.userName);
+      return true;
+    }
+
+    // Check if SendGrid is configured
     if (process.env.SENDGRID_API_KEY) {
+      console.log('SendGrid API key found, attempting SendGrid email...');
       const success = await sendPasswordResetEmailSendGrid(data);
       if (success) {
         console.log('Password reset email sent via SendGrid');
-        return;
+        return true;
+      } else {
+        console.log('SendGrid email failed, falling back to nodemailer');
       }
+    } else {
+      console.log('SendGrid API key not found, using nodemailer');
     }
+
+    // Check if nodemailer is configured
+    if (!process.env.SMTP_USER || !process.env.SMTP_HOST) {
+      console.error('Nodemailer not configured - missing SMTP_USER or SMTP_HOST');
+      return false;
+    }
+
+    console.log('Attempting to send email via nodemailer...');
 
     // Fallback to nodemailer
     const content = `
@@ -593,10 +621,28 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
       html: createEmailTemplate(content, 'Password Reset'),
     };
 
+    console.log('Sending email with options:', {
+      from: mailOptions.from,
+      to: mailOptions.to,
+      subject: mailOptions.subject
+    });
+
     await transporter.sendMail(mailOptions);
     console.log('Password reset email sent via nodemailer');
+    return true;
   } catch (error) {
     console.error('Failed to send password reset email:', error);
+
+    // Log detailed error information
+    if (error instanceof Error) {
+      console.error('Email error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+    }
+
+    return false;
   }
 };
 
