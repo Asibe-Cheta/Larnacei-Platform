@@ -9,9 +9,9 @@ export function transformFormDataToApi(
   imageUrls: string[] = [],
   videoUrls: string[] = []
 ): PropertyCreationData {
-  console.log('Original form data:', formData);
-  console.log('Condition field value:', formData.condition);
-  console.log('Condition field type:', typeof formData.condition);
+  // console.log('Original form data:', formData);
+  // console.log('Condition field value:', formData.condition);
+  // console.log('Condition field type:', typeof formData.condition);
 
   // Map category from frontend to API format
   const categoryMap: Record<string, string> = {
@@ -181,7 +181,7 @@ export function transformFormDataToApi(
     totalFloors,
     features: features.length > 0 ? features : ['Basic amenities'],
     furnishingStatus: furnishingMap[formData.furnishingStatus] as any || 'UNFURNISHED',
-    condition: formData.condition && formData.condition !== '' && formData.condition !== 'undefined' ? conditionMap[formData.condition] as any : 'NEW',
+    condition: 'NEW', // Always default to NEW since condition field is not available in frontend
 
     // Media
     images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400x300?text=Property+Image'],
@@ -200,7 +200,7 @@ export function transformFormDataToApi(
     inspectionType: inspectionType as any || 'BY_APPOINTMENT',
   };
 
-  console.log('Transformed data:', transformedData);
+  // console.log('Transformed data:', transformedData);
   return transformedData;
 }
 
@@ -239,9 +239,10 @@ export function validateFormData(formData: any): { isValid: boolean; errors: str
   if (!formData.amenities || formData.amenities.length === 0) {
     errors.push('At least one feature/amenity is required');
   }
-  if (!formData.condition) {
-    errors.push('Property condition is required');
-  }
+  // Note: condition field is not available in the frontend form, so we skip validation
+  // if (!formData.condition) {
+  //   errors.push('Property condition is required');
+  // }
 
   // Step 4: Media
   if (!formData.images || formData.images.length === 0) {
@@ -321,9 +322,10 @@ export function getStepValidationStatus(step: number, formData: any): { isValid:
       if (!formData.amenities || formData.amenities.length === 0) {
         errors.push('At least one feature/amenity is required');
       }
-      if (!formData.condition) {
-        errors.push('Property condition is required');
-      }
+      // Note: condition field is not available in the frontend form, so we skip validation
+      // if (!formData.condition) {
+      //   errors.push('Property condition is required');
+      // }
       break;
 
     case 4:
