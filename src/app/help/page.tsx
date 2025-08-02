@@ -203,7 +203,7 @@ export default function HelpPage() {
             <a href="/contact" className="btn btn-outline-white">
               Contact Support
             </a>
-            <a href="mailto:support@larnacei.com" className="btn btn-white">
+            <a href="mailto:info@larnaceiglobal.com" className="btn btn-white">
               Email Us
             </a>
           </div>

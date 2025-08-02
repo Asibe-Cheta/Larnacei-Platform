@@ -53,16 +53,17 @@ DATABASE_URL=postgresql://username:password@host:port/database
 DIRECT_URL=postgresql://username:password@host:port/database
 ```
 
-### Email (Mailgun or SMTP)
+### Email (SendGrid or SMTP)
 ```
-# Option 1: Mailgun
-MAILGUN_API_KEY=your_mailgun_api_key
-MAILGUN_DOMAIN=your_domain.com
+# Option 1: SendGrid
+SENDGRID_API_KEY=your_sendgrid_api_key
+SENDGRID_FROM_EMAIL=info@larnaceiglobal.com
+SENDGRID_FROM_NAME=Larnacei Property Platform
 
 # Option 2: SMTP (fallback)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=your_email@gmail.com
+SMTP_USER=info@larnaceiglobal.com
 SMTP_PASSWORD=your_app_password
 ```
 

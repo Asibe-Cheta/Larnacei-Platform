@@ -48,7 +48,7 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      
+
       <main className="container mx-auto px-4 py-8">
         {/* Hero Section */}
         <div className="text-center mb-12">
@@ -64,13 +64,13 @@ export default function ContactPage() {
           {/* Contact Form */}
           <div className="bg-white p-8 rounded-lg shadow-md">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Send us a Message</h2>
-            
+
             {submitStatus === 'success' && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <p className="text-green-800">Thank you for your message! We'll get back to you soon.</p>
               </div>
             )}
-            
+
             {submitStatus === 'error' && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
                 <p className="text-red-800">There was an error sending your message. Please try again.</p>
@@ -94,7 +94,7 @@ export default function ContactPage() {
                     placeholder="Your full name"
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                     Email Address *
@@ -111,7 +111,7 @@ export default function ContactPage() {
                   />
                 </div>
               </div>
-              
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
@@ -127,7 +127,7 @@ export default function ContactPage() {
                     placeholder="+234 123 456 7890"
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
                     Subject *
@@ -149,7 +149,7 @@ export default function ContactPage() {
                   </select>
                 </div>
               </div>
-              
+
               <div>
                 <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
                   Message *
@@ -165,7 +165,7 @@ export default function ContactPage() {
                   placeholder="Tell us how we can help you..."
                 />
               </div>
-              
+
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -188,13 +188,14 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-gray-900">Office Address</h3>
                     <p className="text-gray-600">
-                      123 Real Estate Avenue<br />
-                      Victoria Island, Lagos<br />
+                      Amaoba Plaza, No 1 Amaoba Avenue<br />
+                      Mgbuoba, by Location Flyover<br />
+                      Port Harcourt, Rivers State<br />
                       Nigeria
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-4">
                   <div className="bg-red-100 p-3 rounded-full">
                     <span className="material-icons text-red-600">phone</span>
@@ -207,7 +208,7 @@ export default function ContactPage() {
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-4">
                   <div className="bg-red-100 p-3 rounded-full">
                     <span className="material-icons text-red-600">email</span>
@@ -215,12 +216,12 @@ export default function ContactPage() {
                   <div>
                     <h3 className="font-semibold text-gray-900">Email Address</h3>
                     <p className="text-gray-600">
-                      info@larnacei.com<br />
-                      support@larnacei.com
+                      info@larnaceiglobal.com<br />
+                      info@larnaceiglobal.com
                     </p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start space-x-4">
                   <div className="bg-red-100 p-3 rounded-full">
                     <span className="material-icons text-red-600">schedule</span>
@@ -277,7 +278,7 @@ export default function ContactPage() {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );

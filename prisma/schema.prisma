@@ -71,6 +71,10 @@ model User {
   contactPreference ContactPreference @default(EMAIL)
   availabilityHours Json?
 
+  // Password Reset
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

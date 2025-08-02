@@ -603,17 +603,17 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
 export const sendVerificationEmail = async (email: string, userName: string, userId: string) => {
   try {
     const verificationUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/verify-email?token=${userId}`;
-    
+
     // Try SendGrid first
     if (SENDGRID_API_KEY) {
       const success = await sendVerificationEmailSendGrid(email, userName, userId);
-      
+
       if (success) {
         console.log('Verification email sent via SendGrid');
         return;
       }
     }
-    
+
     // Fallback to nodemailer
     if (SMTP_USER && SMTP_HOST) {
       const content = `
@@ -651,7 +651,7 @@ export const sendVerificationEmail = async (email: string, userName: string, use
             <h3>Need Help?</h3>
             <p>If you have any questions or need assistance, please don't hesitate to contact our support team:</p>
             <ul>
-                <li>Email: support@larnacei.com</li>
+                <li>Email: info@larnaceiglobal.com</li>
                 <li>Phone: +234 800 LARNACEI</li>
                 <li>WhatsApp: +234 800 LARNACEI</li>
             </ul>
@@ -671,14 +671,14 @@ export const sendVerificationEmail = async (email: string, userName: string, use
       console.log('Verification email sent via nodemailer');
       return;
     }
-    
+
     // Development fallback
     if (process.env.NODE_ENV === 'development') {
       console.log('🔗 DEVELOPMENT MODE: Email verification link:', verificationUrl);
       console.log('📧 Would send verification email to:', email);
       return;
     }
-    
+
     throw new Error('No email service configured');
   } catch (error) {
     console.error('Error sending verification email:', error);
