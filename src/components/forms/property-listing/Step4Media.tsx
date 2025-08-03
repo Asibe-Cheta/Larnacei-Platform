@@ -5,6 +5,8 @@ import { useState, useRef } from 'react';
 interface PropertyListingData {
   images: File[];
   videos: File[];
+  virtualTourUrl?: string;
+  floorPlanUrl?: string;
 }
 
 interface Step4MediaProps {
@@ -48,7 +50,7 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
     if (validFiles.length > 0) {
       const currentFiles = type === 'images' ? formData.images : formData.videos;
       const maxFiles = type === 'images' ? 20 : 5;
-      
+
       if (currentFiles.length + validFiles.length > maxFiles) {
         alert(`Maximum ${maxFiles} ${type} allowed`);
         return;
@@ -62,7 +64,7 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
     const files = Array.from(e.target.files || []);
     const currentFiles = type === 'images' ? formData.images : formData.videos;
     const maxFiles = type === 'images' ? 20 : 5;
-    
+
     if (currentFiles.length + files.length > maxFiles) {
       alert(`Maximum ${maxFiles} ${type} allowed`);
       return;
@@ -111,11 +113,10 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
 
         {/* Image Upload Area */}
         <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            dragActive && dragType === 'images'
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive && dragType === 'images'
               ? 'border-red-500 bg-red-50'
               : 'border-gray-300 hover:border-gray-400'
-          }`}
+            }`}
           onDragEnter={(e) => handleDrag(e, 'images')}
           onDragLeave={(e) => handleDrag(e, 'images')}
           onDragOver={(e) => handleDrag(e, 'images')}
@@ -189,11 +190,10 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
 
         {/* Video Upload Area */}
         <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            dragActive && dragType === 'videos'
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive && dragType === 'videos'
               ? 'border-red-500 bg-red-50'
               : 'border-gray-300 hover:border-gray-400'
-          }`}
+            }`}
           onDragEnter={(e) => handleDrag(e, 'videos')}
           onDragLeave={(e) => handleDrag(e, 'videos')}
           onDragOver={(e) => handleDrag(e, 'videos')}
@@ -253,6 +253,43 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
             </div>
           </div>
         )}
+      </div>
+
+      {/* Additional Media URLs */}
+      <div className="space-y-6">
+        <div>
+          <label htmlFor="virtualTourUrl" className="block text-sm font-medium text-gray-700 mb-2">
+            Virtual Tour URL (Optional)
+          </label>
+          <input
+            type="url"
+            id="virtualTourUrl"
+            value={formData.virtualTourUrl || ''}
+            onChange={(e) => updateFormData({ virtualTourUrl: e.target.value })}
+            placeholder="https://example.com/virtual-tour"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Link to virtual tour (YouTube, Matterport, etc.)
+          </p>
+        </div>
+
+        <div>
+          <label htmlFor="floorPlanUrl" className="block text-sm font-medium text-gray-700 mb-2">
+            Floor Plan URL (Optional)
+          </label>
+          <input
+            type="url"
+            id="floorPlanUrl"
+            value={formData.floorPlanUrl || ''}
+            onChange={(e) => updateFormData({ floorPlanUrl: e.target.value })}
+            placeholder="https://example.com/floor-plan"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Link to floor plan image or PDF
+          </p>
+        </div>
       </div>
 
       {/* Media Tips */}

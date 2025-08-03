@@ -46,6 +46,8 @@ interface PropertyListingData {
   // Step 4: Media
   images: File[];
   videos: File[];
+  virtualTourUrl?: string;
+  floorPlanUrl?: string;
 
   // Step 5: Legal
   hasTitleDeed: boolean;
@@ -93,6 +95,8 @@ export default function ListPropertyPage() {
     condition: '',
     images: [],
     videos: [],
+    virtualTourUrl: '',
+    floorPlanUrl: '',
     hasTitleDeed: false,
     hasSurveyPlan: false,
     hasBuildingApproval: false,
