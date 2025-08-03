@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: "Find your perfect property in Nigeria. Browse properties for sale, rentals, short stays, and land investments. Your trusted partner for real estate in Nigeria.",
   keywords: [
     "Nigeria property", "real estate Nigeria", "property for sale", 
-    "rental properties", "land for sale", "short stays", "vacation rentals",
+    "rental properties", "rentals in my area", "land for sale", "short stays", "vacation rentals",
     "Lagos properties", "Abuja real estate", "Port Harcourt properties"
   ],
   openGraph: {
