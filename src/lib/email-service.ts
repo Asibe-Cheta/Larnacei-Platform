@@ -591,12 +591,12 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
       console.log('SendGrid API key not found, using nodemailer');
     }
 
-    // Check if nodemailer is configured
+    // Check if nodemailer is properly configured (need both SMTP_USER and SMTP_HOST)
     if (!process.env.SMTP_USER || !process.env.SMTP_HOST) {
-      console.error('Nodemailer not configured - missing SMTP_USER or SMTP_HOST');
-      console.error('Email configuration missing. Please configure either SendGrid or SMTP settings.');
-      console.error('For development, check console logs for reset link.');
-      console.error('For production, configure email services.');
+      console.error('Nodemailer not properly configured - missing SMTP_USER or SMTP_HOST');
+      console.error('SMTP_USER:', process.env.SMTP_USER ? 'Set' : 'Missing');
+      console.error('SMTP_HOST:', process.env.SMTP_HOST ? 'Set' : 'Missing');
+      console.error('Email configuration incomplete. Please configure either SendGrid or complete SMTP settings.');
       console.log('=== SEND PASSWORD RESET EMAIL FAILED (NO CONFIG) ===');
       return false;
     }

@@ -535,7 +535,16 @@ export const sendWelcomeEmail = async (data: { to: string; userName: string; ver
 
 // Password reset email function
 export const sendPasswordResetEmail = async (data: { to: string; userName: string; resetUrl: string; expiryHours: number }): Promise<boolean> => {
-  const content = `
+  try {
+    console.log('=== SENDGRID PASSWORD RESET EMAIL START ===');
+    console.log('SendGrid password reset data:', {
+      to: data.to,
+      userName: data.userName,
+      resetUrl: data.resetUrl,
+      expiryHours: data.expiryHours
+    });
+
+    const content = `
     <h2>Password Reset Request</h2>
     
     <p>Dear <span class="highlight">${data.userName}</span>,</p>
@@ -566,12 +575,32 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
     </div>
   `;
 
-  return await sendEmail({
-    to: data.to,
-    subject: 'Password Reset Request - Larnacei',
-    html: createEmailTemplate(content, 'Password Reset'),
-    tracking: true
-  });
+    console.log('Calling sendEmail function...');
+    const result = await sendEmail({
+      to: data.to,
+      subject: 'Password Reset Request - Larnacei',
+      html: createEmailTemplate(content, 'Password Reset'),
+      tracking: true
+    });
+
+    console.log('SendGrid password reset email result:', result);
+    console.log('=== SENDGRID PASSWORD RESET EMAIL END ===');
+    
+    return result;
+  } catch (error) {
+    console.error('=== SENDGRID PASSWORD RESET EMAIL ERROR ===');
+    console.error('Error in sendPasswordResetEmail:', error);
+    
+    if (error instanceof Error) {
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+    }
+    
+    return false;
+  }
 };
 
 // Email verification function
