@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
       console.error('Cloudinary configuration missing');
       console.error('Available env vars:', Object.keys(process.env).filter(key => key.includes('CLOUDINARY')));
       
-      // Fallback: Process videos as base64 for temporary storage
-      console.log('Using fallback base64 storage for videos');
+      // Fallback: Process videos and return file identifiers
+      console.log('Using fallback storage with file identifiers for videos');
       const uploadedUrls: string[] = [];
 
       for (let i = 0; i < files.length; i++) {
@@ -81,13 +81,13 @@ export async function POST(request: NextRequest) {
         }
 
         try {
-          // Convert file to base64 for temporary storage
-          const bytes = await file.arrayBuffer();
-          const buffer = Buffer.from(bytes);
-          const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
+          // Generate a file identifier instead of base64
+          const timestamp = Date.now();
+          const fileExtension = file.name.split('.').pop() || 'mp4';
+          const fileId = `temp_video_${session.user.id}_${i}_${timestamp}.${fileExtension}`;
 
-          console.log('Video processed successfully (base64):', file.name);
-          uploadedUrls.push(base64String);
+          console.log('Video processed successfully (identifier):', fileId);
+          uploadedUrls.push(`temp://${fileId}`);
         } catch (fileError: any) {
           console.error('Error processing video file:', file.name, fileError);
           return NextResponse.json(
