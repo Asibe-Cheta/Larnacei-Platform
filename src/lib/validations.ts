@@ -238,6 +238,19 @@ export const propertyCreationSchema = propertyBasicInfoSchema
   .merge(propertyAvailabilitySchema);
 
 /**
+ * Property creation schema for API (without media fields - handled separately)
+ */
+export const propertyCreationApiSchema = propertyBasicInfoSchema
+  .merge(propertyLocationSchema)
+  .merge(propertyDetailsSchema)
+  .merge(propertyLegalSchema)
+  .merge(propertyAvailabilitySchema)
+  .extend({
+    images: z.array(z.string().url()).optional(),
+    videos: z.array(z.string().url()).optional(),
+  });
+
+/**
  * Property search/filter schema
  */
 export const propertySearchSchema = z.object({

@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
-  propertyCreationSchema,
+  propertyCreationApiSchema,
   propertySearchSchema,
   apiResponseSchema,
   paginatedResponseSchema
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
 
     let validatedData;
     try {
-      validatedData = propertyCreationSchema.parse(body);
+      validatedData = propertyCreationApiSchema.parse(body);
       console.log('Data validation passed');
       console.log('Validated data:', JSON.stringify(validatedData, null, 2));
     } catch (validationError: any) {
@@ -77,9 +77,13 @@ export async function POST(request: NextRequest) {
 
     // Create property with owner
     console.log('Creating property in database...');
+    
+    // Extract images and videos from validated data to handle separately
+    const { images, videos, ...propertyData } = validatedData;
+    
     const property = await prisma.property.create({
       data: {
-        ...validatedData,
+        ...propertyData,
         ownerId: session.user.id,
         // Set initial status based on user role
         isActive: session.user.role === UserRole.ADMIN || session.user.role === UserRole.SUPER_ADMIN,
