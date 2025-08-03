@@ -114,8 +114,8 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
         {/* Image Upload Area */}
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive && dragType === 'images'
-              ? 'border-red-500 bg-red-50'
-              : 'border-gray-300 hover:border-gray-400'
+            ? 'border-red-500 bg-red-50'
+            : 'border-gray-300 hover:border-gray-400'
             }`}
           onDragEnter={(e) => handleDrag(e, 'images')}
           onDragLeave={(e) => handleDrag(e, 'images')}
@@ -191,8 +191,8 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
         {/* Video Upload Area */}
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragActive && dragType === 'videos'
-              ? 'border-red-500 bg-red-50'
-              : 'border-gray-300 hover:border-gray-400'
+            ? 'border-red-500 bg-red-50'
+            : 'border-gray-300 hover:border-gray-400'
             }`}
           onDragEnter={(e) => handleDrag(e, 'videos')}
           onDragLeave={(e) => handleDrag(e, 'videos')}
@@ -256,7 +256,9 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
       </div>
 
       {/* Additional Media URLs */}
-      <div className="space-y-6">
+      <div className="space-y-6 mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Additional Media Links</h3>
+
         <div>
           <label htmlFor="virtualTourUrl" className="block text-sm font-medium text-gray-700 mb-2">
             Virtual Tour URL (Optional)
