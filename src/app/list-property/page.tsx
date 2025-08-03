@@ -155,13 +155,51 @@ export default function ListPropertyPage() {
       return;
     }
 
-    // Simulate image upload (replace with real upload logic)
-    const imageUrls = formData.images.map((file: File) =>
-      typeof file === 'string' ? file : URL.createObjectURL(file)
-    );
-    const videoUrls = formData.videos.map((file: File) =>
-      typeof file === 'string' ? file : URL.createObjectURL(file)
-    );
+    // Upload images first
+    let imageUrls: string[] = [];
+    if (formData.images.length > 0) {
+      const imageFormData = new FormData();
+      formData.images.forEach((file: File) => {
+        imageFormData.append('images', file);
+      });
+
+      const imageResponse = await fetch('/api/upload-images', {
+        method: 'POST',
+        body: imageFormData,
+      });
+
+      if (imageResponse.ok) {
+        const imageResult = await imageResponse.json();
+        imageUrls = imageResult.urls;
+      } else {
+        setError('Failed to upload images. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
+    // Upload videos first
+    let videoUrls: string[] = [];
+    if (formData.videos.length > 0) {
+      const videoFormData = new FormData();
+      formData.videos.forEach((file: File) => {
+        videoFormData.append('videos', file);
+      });
+
+      const videoResponse = await fetch('/api/upload-videos', {
+        method: 'POST',
+        body: videoFormData,
+      });
+
+      if (videoResponse.ok) {
+        const videoResult = await videoResponse.json();
+        videoUrls = videoResult.urls;
+      } else {
+        setError('Failed to upload videos. Please try again.');
+        setIsSubmitting(false);
+        return;
+      }
+    }
 
     // Transform data for API
     const apiData = transformFormDataToApi(formData, imageUrls, videoUrls);

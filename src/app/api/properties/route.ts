@@ -106,14 +106,16 @@ export async function POST(request: NextRequest) {
     // Create property images
     if (validatedData.images && validatedData.images.length > 0) {
       console.log('Creating property images...');
+      const imageData = validatedData.images.map((url, index) => ({
+        url,
+        alt: `Property image ${index + 1}`,
+        order: index,
+        isPrimary: index === 0,
+        propertyId: property.id,
+      }));
+
       await prisma.propertyImage.createMany({
-        data: validatedData.images.map((url, index) => ({
-          url,
-          alt: `Property image ${index + 1}`,
-          order: index,
-          isPrimary: index === 0,
-          propertyId: property.id,
-        })),
+        data: imageData,
       });
       console.log('Property images created');
     }
