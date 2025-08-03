@@ -2,24 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    // Check environment variables
-    const envCheck = {
-      DATABASE_URL: process.env.DATABASE_URL ? 'SET' : 'NOT_SET',
-      DIRECT_URL: process.env.DIRECT_URL ? 'SET' : 'NOT_SET',
+    console.log('Testing environment variables...');
+
+    const envVars = {
+      CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ? 'SET' : 'NOT SET',
+      CLOUDINARY_API_KEY: process.env.CLOUDINARY_API_KEY ? 'SET' : 'NOT SET',
+      CLOUDINARY_API_SECRET: process.env.CLOUDINARY_API_SECRET ? 'SET' : 'NOT SET',
       NODE_ENV: process.env.NODE_ENV,
+      VERCEL_ENV: process.env.VERCEL_ENV,
+      VERCEL_URL: process.env.VERCEL_URL,
     };
+
+    console.log('Environment variables:', envVars);
 
     return NextResponse.json({
       success: true,
-      environment: envCheck,
-      message: 'Environment check completed'
+      environment: envVars,
+      allEnvKeys: Object.keys(process.env).filter(key => key.includes('CLOUDINARY'))
     });
 
-  } catch (error) {
-    console.error('Environment check error:', error);
-    return NextResponse.json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+  } catch (error: any) {
+    console.error('Test env error:', error);
+    return NextResponse.json(
+      { error: 'Test failed', details: error.message },
+      { status: 500 }
+    );
   }
 } 

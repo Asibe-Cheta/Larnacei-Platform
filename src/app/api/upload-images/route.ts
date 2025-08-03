@@ -16,6 +16,12 @@ export async function POST(request: NextRequest) {
     console.log('Request URL:', request.url);
     console.log('Request method:', request.method);
 
+    // Debug environment variables
+    console.log('Environment variables check:');
+    console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? 'SET' : 'NOT SET');
+    console.log('CLOUDINARY_API_KEY:', process.env.CLOUDINARY_API_KEY ? 'SET' : 'NOT SET');
+    console.log('CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? 'SET' : 'NOT SET');
+
     // Check authentication
     const session = await getServerSession(authOptions);
     if (!session?.user) {
@@ -42,14 +48,67 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Cloudinary is configured
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    const cloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudinaryConfigured) {
       console.error('Cloudinary configuration missing');
-      return NextResponse.json(
-        { error: 'Upload service not configured. Please contact support.' },
-        { status: 500 }
-      );
+      console.error('Available env vars:', Object.keys(process.env).filter(key => key.includes('CLOUDINARY')));
+
+      // Fallback: Process images as base64 for temporary storage
+      console.log('Using fallback base64 storage');
+      const uploadedUrls: string[] = [];
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        console.log(`Processing file ${i + 1}/${files.length}:`, file.name, file.type, file.size);
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+          console.log('Skipping non-image file:', file.name, file.type);
+          continue;
+        }
+
+        // Validate file size (5MB limit)
+        const maxSize = 5 * 1024 * 1024; // 5MB
+        if (file.size > maxSize) {
+          console.log('File too large:', file.name, file.size);
+          return NextResponse.json(
+            { error: `File ${file.name} is too large. Maximum size is 5MB.` },
+            { status: 400 }
+          );
+        }
+
+        try {
+          // Convert file to base64 for temporary storage
+          const bytes = await file.arrayBuffer();
+          const buffer = Buffer.from(bytes);
+          const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
+
+          console.log('File processed successfully (base64):', file.name);
+          uploadedUrls.push(base64String);
+        } catch (fileError: any) {
+          console.error('Error processing file:', file.name, fileError);
+          return NextResponse.json(
+            { error: `Failed to process file ${file.name}: ${fileError.message}` },
+            { status: 500 }
+          );
+        }
+      }
+
+      console.log('Fallback upload completed. Files processed:', uploadedUrls.length);
+
+      return NextResponse.json({
+        success: true,
+        urls: uploadedUrls,
+        message: 'Images processed with temporary storage. Please configure Cloudinary environment variables for production.',
+        setupRequired: true
+      });
     }
 
+    // Cloudinary is configured - use it
+    console.log('Cloudinary is configured, using cloud storage');
     const uploadedUrls: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
