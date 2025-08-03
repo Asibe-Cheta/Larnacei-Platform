@@ -186,8 +186,8 @@ export function transformFormDataToApi(
     // Media
     images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400x300?text=Property+Image'],
     videos: videoUrls,
-    virtualTourUrl: formData.virtualTourUrl || '',
-    floorPlanUrl: formData.floorPlanUrl || '',
+    virtualTourUrl: formData.virtualTourUrl && formData.virtualTourUrl !== '' ? formData.virtualTourUrl : undefined,
+    floorPlanUrl: formData.floorPlanUrl && formData.floorPlanUrl !== '' ? formData.floorPlanUrl : undefined,
 
     // Legal
     titleDocuments: Object.keys(titleDocuments).length > 0 ? titleDocuments : { titleDeed: true },

@@ -113,7 +113,7 @@ export const ninSchema = z
 export const nigerianCurrencySchema = z
   .number()
   .min(100, "Minimum amount is ₦1 (100 kobo)")
-  .max(1000000000, "Maximum amount is ₦10,000,000 (1 billion kobo)");
+  .max(100000000000, "Maximum amount is ₦1,000,000,000 (100 billion kobo)");
 
 /**
  * User registration schema
@@ -201,8 +201,8 @@ export const propertyDetailsSchema = z.object({
 export const propertyMediaSchema = z.object({
   images: z.array(z.string().url("Invalid image URL")).min(1, "At least one image is required").max(20),
   videos: z.array(z.string().url("Invalid video URL")).max(10).optional(),
-  virtualTourUrl: z.string().url("Invalid virtual tour URL").optional(),
-  floorPlanUrl: z.string().url("Invalid floor plan URL").optional(),
+  virtualTourUrl: z.string().url("Invalid virtual tour URL").optional().transform(val => val === "" ? undefined : val),
+  floorPlanUrl: z.string().url("Invalid floor plan URL").optional().transform(val => val === "" ? undefined : val),
 });
 
 /**
