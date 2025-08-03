@@ -181,13 +181,13 @@ export function transformFormDataToApi(
     totalFloors,
     features: features.length > 0 ? features : ['Basic amenities'],
     furnishingStatus: furnishingMap[formData.furnishingStatus] as any || 'UNFURNISHED',
-    condition: 'NEW', // Always default to NEW since condition field is not available in frontend
+    condition: formData.condition ? conditionMap[formData.condition] as any : 'NEW',
 
     // Media
     images: imageUrls.length > 0 ? imageUrls : ['https://via.placeholder.com/400x300?text=Property+Image'],
     videos: videoUrls,
-    virtualTourUrl: formData.virtualTourUrl && formData.virtualTourUrl !== '' ? formData.virtualTourUrl : undefined,
-    floorPlanUrl: formData.floorPlanUrl && formData.floorPlanUrl !== '' ? formData.floorPlanUrl : undefined,
+    virtualTourUrl: formData.virtualTourUrl && formData.virtualTourUrl.trim() !== '' ? formData.virtualTourUrl : undefined,
+    floorPlanUrl: formData.floorPlanUrl && formData.floorPlanUrl.trim() !== '' ? formData.floorPlanUrl : undefined,
 
     // Legal
     titleDocuments: Object.keys(titleDocuments).length > 0 ? titleDocuments : { titleDeed: true },

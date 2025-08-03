@@ -192,7 +192,7 @@ export const propertyDetailsSchema = z.object({
   totalFloors: z.number().min(1).max(100).optional(),
   features: z.array(z.string()).min(1, "At least one feature is required"),
   furnishingStatus: z.nativeEnum(FurnishingStatus).optional(),
-  condition: z.nativeEnum(PropertyCondition),
+  condition: z.nativeEnum(PropertyCondition).optional().default('NEW'),
 });
 
 /**
@@ -201,8 +201,8 @@ export const propertyDetailsSchema = z.object({
 export const propertyMediaSchema = z.object({
   images: z.array(z.string().url("Invalid image URL")).min(1, "At least one image is required").max(20),
   videos: z.array(z.string().url("Invalid video URL")).max(10).optional(),
-  virtualTourUrl: z.string().url("Invalid virtual tour URL").optional().transform(val => val === "" ? undefined : val),
-  floorPlanUrl: z.string().url("Invalid floor plan URL").optional().transform(val => val === "" ? undefined : val),
+  virtualTourUrl: z.string().url("Invalid virtual tour URL").optional().or(z.literal('')),
+  floorPlanUrl: z.string().url("Invalid floor plan URL").optional().or(z.literal('')),
 });
 
 /**

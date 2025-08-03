@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Find user with valid reset token
-    // Use current time for comparison
+    // Use the same time format as stored in database
     const currentTime = new Date();
 
     console.log('Searching for user with token and expiry >', currentTime.toISOString());
@@ -54,6 +54,9 @@ export async function GET(request: NextRequest) {
 
       if (expiredUser) {
         console.log('User found but token expired. Expiry was:', expiredUser.resetTokenExpiry?.toISOString());
+        console.log('Current time is:', currentTime.toISOString());
+        console.log('Time difference (minutes):', expiredUser.resetTokenExpiry ? 
+          Math.round((currentTime.getTime() - expiredUser.resetTokenExpiry.getTime()) / (1000 * 60)) : 'N/A');
       }
 
       return NextResponse.json({
@@ -68,6 +71,8 @@ export async function GET(request: NextRequest) {
       name: user.name,
       expiry: user.resetTokenExpiry?.toISOString()
     });
+    console.log('Time until expiry (minutes):', user.resetTokenExpiry ? 
+      Math.round((user.resetTokenExpiry.getTime() - currentTime.getTime()) / (1000 * 60)) : 'N/A');
     console.log('=== VALIDATE RESET TOKEN SUCCESS ===');
 
     return NextResponse.json({
