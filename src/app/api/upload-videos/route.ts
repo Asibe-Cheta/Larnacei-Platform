@@ -48,67 +48,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Cloudinary is configured
-    const cloudinaryConfigured = process.env.CLOUDINARY_CLOUD_NAME && 
-                                process.env.CLOUDINARY_API_KEY && 
-                                process.env.CLOUDINARY_API_SECRET;
-
-    if (!cloudinaryConfigured) {
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
       console.error('Cloudinary configuration missing');
       console.error('Available env vars:', Object.keys(process.env).filter(key => key.includes('CLOUDINARY')));
-      
-      // Fallback: Process videos and return file identifiers
-      console.log('Using fallback storage with file identifiers for videos');
-      const uploadedUrls: string[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        console.log(`Processing file ${i + 1}/${files.length}:`, file.name, file.type, file.size);
-
-        // Validate file type
-        if (!file.type.startsWith('video/')) {
-          console.log('Skipping non-video file:', file.name, file.type);
-          continue;
-        }
-
-        // Validate file size (50MB limit for videos)
-        const maxSize = 50 * 1024 * 1024; // 50MB
-        if (file.size > maxSize) {
-          console.log('File too large:', file.name, file.size);
-          return NextResponse.json(
-            { error: `File ${file.name} is too large. Maximum size is 50MB.` },
-            { status: 400 }
-          );
-        }
-
-        try {
-          // Generate a file identifier instead of base64
-          const timestamp = Date.now();
-          const fileExtension = file.name.split('.').pop() || 'mp4';
-          const fileId = `temp_video_${session.user.id}_${i}_${timestamp}.${fileExtension}`;
-
-          console.log('Video processed successfully (identifier):', fileId);
-          uploadedUrls.push(`temp://${fileId}`);
-        } catch (fileError: any) {
-          console.error('Error processing video file:', file.name, fileError);
-          return NextResponse.json(
-            { error: `Failed to process video file ${file.name}: ${fileError.message}` },
-            { status: 500 }
-          );
-        }
-      }
-
-      console.log('Fallback video upload completed. Files processed:', uploadedUrls.length);
-
-      return NextResponse.json({
-        success: true,
-        urls: uploadedUrls,
-        message: 'Videos processed with temporary storage. Please configure Cloudinary environment variables for production.',
-        setupRequired: true
-      });
+      return NextResponse.json(
+        { error: 'Upload service not configured. Please contact support.' },
+        { status: 500 }
+      );
     }
 
-    // Cloudinary is configured - use it
-    console.log('Cloudinary is configured, using cloud storage for videos');
+    console.log('Cloudinary is configured, uploading videos to cloud storage');
     const uploadedUrls: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
