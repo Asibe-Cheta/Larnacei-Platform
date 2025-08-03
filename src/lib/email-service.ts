@@ -545,7 +545,8 @@ export const sendWelcomeEmail = async (data: { to: string; userName: string; ver
 // Password reset email function
 export const sendPasswordResetEmail = async (data: { to: string; userName: string; resetUrl: string; expiryHours: number }) => {
   try {
-    console.log('sendPasswordResetEmail called with:', {
+    console.log('=== SEND PASSWORD RESET EMAIL START ===');
+    console.log('Email data:', {
       to: data.to,
       userName: data.userName,
       resetUrl: data.resetUrl,
@@ -557,18 +558,34 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
       console.log('🔗 DEVELOPMENT MODE: Password reset link:', data.resetUrl);
       console.log('📧 Would send password reset email to:', data.to);
       console.log('👤 User name:', data.userName);
+      console.log('=== SEND PASSWORD RESET EMAIL SUCCESS (DEV) ===');
       return true;
     }
+
+    console.log('Production mode - checking email services...');
 
     // Check if SendGrid is configured
     if (process.env.SENDGRID_API_KEY) {
       console.log('SendGrid API key found, attempting SendGrid email...');
-      const success = await sendPasswordResetEmailSendGrid(data);
-      if (success) {
-        console.log('Password reset email sent via SendGrid');
-        return true;
-      } else {
-        console.log('SendGrid email failed, falling back to nodemailer');
+      console.log('SendGrid configuration:', {
+        apiKeyLength: process.env.SENDGRID_API_KEY.length,
+        apiKeyPrefix: process.env.SENDGRID_API_KEY.substring(0, 10) + '...',
+        fromEmail: process.env.SENDGRID_FROM_EMAIL,
+        fromName: process.env.SENDGRID_FROM_NAME
+      });
+      
+      try {
+        const success = await sendPasswordResetEmailSendGrid(data);
+        if (success) {
+          console.log('Password reset email sent via SendGrid');
+          console.log('=== SEND PASSWORD RESET EMAIL SUCCESS (SENDGRID) ===');
+          return true;
+        } else {
+          console.log('SendGrid email failed, falling back to nodemailer');
+        }
+      } catch (sendgridError) {
+        console.error('SendGrid error:', sendgridError);
+        console.log('SendGrid failed, falling back to nodemailer');
       }
     } else {
       console.log('SendGrid API key not found, using nodemailer');
@@ -580,10 +597,17 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
       console.error('Email configuration missing. Please configure either SendGrid or SMTP settings.');
       console.error('For development, check console logs for reset link.');
       console.error('For production, configure email services.');
+      console.log('=== SEND PASSWORD RESET EMAIL FAILED (NO CONFIG) ===');
       return false;
     }
 
     console.log('Attempting to send email via nodemailer...');
+    console.log('SMTP configuration:', {
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      user: process.env.SMTP_USER,
+      hasPassword: !!process.env.SMTP_PASSWORD
+    });
 
     // Fallback to nodemailer
     const content = `
@@ -632,8 +656,10 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
 
     await transporter.sendMail(mailOptions);
     console.log('Password reset email sent via nodemailer');
+    console.log('=== SEND PASSWORD RESET EMAIL SUCCESS (NODEMAILER) ===');
     return true;
   } catch (error) {
+    console.error('=== SEND PASSWORD RESET EMAIL ERROR ===');
     console.error('Failed to send password reset email:', error);
 
     // Log detailed error information
