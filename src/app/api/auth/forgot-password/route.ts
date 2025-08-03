@@ -63,17 +63,19 @@ export async function POST(request: NextRequest) {
 
     // Generate reset token
     const resetToken = crypto.randomBytes(16).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000);
-    const utcExpiry = new Date(resetTokenExpiry.getTime() - resetTokenExpiry.getTimezoneOffset() * 60000);
-
+    
+    // Set expiry to 2 hours from now using proper UTC time
+    const resetTokenExpiry = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 hours
+    
     console.log('Generated reset token and updating user record...');
+    console.log('Token expiry time:', resetTokenExpiry.toISOString());
 
     try {
       await prisma.user.update({
         where: { id: user.id },
         data: {
           resetToken,
-          resetTokenExpiry: utcExpiry,
+          resetTokenExpiry: resetTokenExpiry,
         },
       });
       console.log('User record updated successfully');
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
         to: user.email,
         userName: user.name || 'User',
         resetUrl,
-        expiryHours: 1,
+        expiryHours: 2, // Updated to match the actual expiry time
       });
 
       if (!emailSent) {

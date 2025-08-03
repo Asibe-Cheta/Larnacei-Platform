@@ -10,11 +10,16 @@ const resetPasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('=== RESET PASSWORD START ===');
+    
     const body = await request.json();
     const { token, password } = resetPasswordSchema.parse(body);
 
+    console.log('Reset password request for token:', token);
+    console.log('Current time:', new Date().toISOString());
+
     // Find user with valid reset token
-    // Use UTC time for comparison to avoid timezone issues
+    // Use current time for comparison
     const currentTime = new Date();
 
     const user = await prisma.user.findFirst({
@@ -27,10 +32,28 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
+      console.log('No valid user found with this token');
+      
+      // Check if user exists but token is expired
+      const expiredUser = await prisma.user.findFirst({
+        where: {
+          resetToken: token,
+        },
+        select: {
+          resetTokenExpiry: true,
+        },
+      });
+
+      if (expiredUser) {
+        console.log('User found but token expired. Expiry was:', expiredUser.resetTokenExpiry?.toISOString());
+      }
+
       return NextResponse.json({
         error: 'Invalid or expired reset token. Please request a new password reset.'
       }, { status: 400 });
     }
+
+    console.log('Valid user found, updating password...');
 
     // Hash the new password
     const hashedPassword = await hash(password, 12);
@@ -45,12 +68,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    console.log('Password reset successful for user:', user.email);
+    console.log('=== RESET PASSWORD SUCCESS ===');
+
     return NextResponse.json({
       success: true,
       message: 'Password has been reset successfully.'
     });
 
   } catch (error) {
+    console.error('=== RESET PASSWORD ERROR ===');
     console.error('Reset password error:', error);
 
     if (error instanceof z.ZodError) {
