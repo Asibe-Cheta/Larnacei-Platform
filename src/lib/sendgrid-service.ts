@@ -163,12 +163,31 @@ export const sendEmail = async (data: {
   replyTo?: string;
 }): Promise<boolean> => {
   try {
+    // Validate SendGrid configuration
+    if (!SENDGRID_API_KEY) {
+      console.error('SendGrid API key not configured');
+      return false;
+    }
+
+    // Validate API key format
+    if (!SENDGRID_API_KEY.startsWith('SG.')) {
+      console.error('Invalid SendGrid API key format - should start with SG.');
+      return false;
+    }
+
+    if (SENDGRID_API_KEY.length < 50) {
+      console.error('SendGrid API key appears to be truncated or invalid');
+      return false;
+    }
+
     // Check rate limits
     const identifier = data.to.split('@')[0]; // Use email prefix as identifier
     if (!checkRateLimit(identifier)) {
       console.error(`Rate limit exceeded for ${data.to}`);
       return false;
     }
+
+    console.log('SendGrid configuration validated, attempting to send email...');
 
     const msg = {
       to: data.to,
@@ -192,6 +211,14 @@ export const sendEmail = async (data: {
       }
     };
 
+    console.log('Sending email with configuration:', {
+      to: data.to,
+      from: msg.from,
+      subject: data.subject,
+      apiKeyLength: SENDGRID_API_KEY.length,
+      apiKeyPrefix: SENDGRID_API_KEY.substring(0, 10) + '...'
+    });
+
     const response = await sgMail.send(msg);
 
     console.log(`Email sent successfully to ${data.to}`, response);
@@ -205,7 +232,9 @@ export const sendEmail = async (data: {
         message: error.message,
         stack: error.stack,
         recipient: data.to,
-        subject: data.subject
+        subject: data.subject,
+        apiKeyLength: SENDGRID_API_KEY?.length || 0,
+        apiKeyPrefix: SENDGRID_API_KEY?.substring(0, 10) + '...' || 'Not set'
       });
     }
 
