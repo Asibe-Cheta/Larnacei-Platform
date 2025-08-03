@@ -26,8 +26,6 @@ export async function POST(request: NextRequest) {
       SENDGRID_API_KEY: !!process.env.SENDGRID_API_KEY,
       SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL,
       SENDGRID_FROM_NAME: process.env.SENDGRID_FROM_NAME,
-      SMTP_HOST: process.env.SMTP_HOST,
-      SMTP_USER: process.env.SMTP_USER,
     };
     
     console.log('Environment check:', envCheck);
@@ -89,27 +87,25 @@ export async function POST(request: NextRequest) {
     const resetUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}`;
     console.log('Reset URL generated:', resetUrl);
 
-    // Check email service configuration
+    // Check if SendGrid is configured
     const isDevelopment = process.env.NODE_ENV === 'development';
     const hasSendGrid = !!process.env.SENDGRID_API_KEY;
-    const hasNodemailer = !!(process.env.SMTP_USER && process.env.SMTP_HOST);
 
     console.log('Email service configuration:', {
       isDevelopment,
       hasSendGrid,
-      hasNodemailer,
       NEXTAUTH_URL: process.env.NEXTAUTH_URL
     });
 
-    // If no email services are configured and we're in production, return success but log the issue
-    if (!isDevelopment && !hasSendGrid && !hasNodemailer) {
-      console.warn('No email services configured in production. Password reset link:', resetUrl);
+    // If no SendGrid is configured and we're in production, return success but log the issue
+    if (!isDevelopment && !hasSendGrid) {
+      console.warn('SendGrid not configured in production. Password reset link:', resetUrl);
       console.warn('This should be configured for production use.');
       
       return NextResponse.json({
         success: true,
         message: 'If an account with that email exists, a password reset link has been sent.',
-        warning: 'Email services not configured - check server logs for reset link'
+        warning: 'SendGrid not configured - check server logs for reset link'
       });
     }
 
