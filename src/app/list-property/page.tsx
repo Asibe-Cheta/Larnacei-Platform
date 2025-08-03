@@ -56,6 +56,12 @@ interface PropertyListingData {
   surveyPlanNumber?: string;
   hasBuildingApproval: boolean;
   buildingApprovalNumber?: string;
+  hasCertificateOfOccupancy: boolean;
+  certificateOfOccupancyNumber?: string;
+  hasDeedOfAssignment: boolean;
+  deedOfAssignmentNumber?: string;
+  hasPowerOfAttorney: boolean;
+  powerOfAttorneyNumber?: string;
   legalDocuments: File[];
 
   // Step 6: Availability
@@ -100,11 +106,15 @@ export default function ListPropertyPage() {
     hasTitleDeed: false,
     hasSurveyPlan: false,
     hasBuildingApproval: false,
+    hasCertificateOfOccupancy: false,
+    hasDeedOfAssignment: false,
+    hasPowerOfAttorney: false,
     legalDocuments: [],
     isAvailable: true,
     viewingPreferences: [],
     contactPhone: '',
-    contactEmail: ''
+    contactEmail: '',
+    additionalNotes: ''
   });
 
   const router = useRouter();
