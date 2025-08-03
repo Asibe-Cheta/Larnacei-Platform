@@ -577,6 +577,9 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
     // Check if nodemailer is configured
     if (!process.env.SMTP_USER || !process.env.SMTP_HOST) {
       console.error('Nodemailer not configured - missing SMTP_USER or SMTP_HOST');
+      console.error('Email configuration missing. Please configure either SendGrid or SMTP settings.');
+      console.error('For development, check console logs for reset link.');
+      console.error('For production, configure email services.');
       return false;
     }
 
