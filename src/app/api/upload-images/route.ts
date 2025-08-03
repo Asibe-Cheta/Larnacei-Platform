@@ -6,19 +6,29 @@ import { join } from 'path';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Image upload request received');
+    console.log('Request URL:', request.url);
+    console.log('Request method:', request.method);
+
     // Check authentication
     const session = await getServerSession(authOptions);
     if (!session?.user) {
+      console.log('Authentication failed - no session or user');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
+    console.log('User authenticated:', session.user.id);
+
     const formData = await request.formData();
     const files = formData.getAll('images') as File[];
 
+    console.log('Files received:', files.length);
+
     if (!files || files.length === 0) {
+      console.log('No images provided in request');
       return NextResponse.json(
         { error: 'No images provided' },
         { status: 400 }
@@ -27,31 +37,59 @@ export async function POST(request: NextRequest) {
 
     // Create uploads directory if it doesn't exist
     const uploadsDir = join(process.cwd(), 'public', 'uploads');
+    console.log('Creating uploads directory:', uploadsDir);
     await mkdir(uploadsDir, { recursive: true });
 
     const uploadedUrls: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      console.log(`Processing file ${i + 1}/${files.length}:`, file.name, file.type, file.size);
 
       // Validate file type
       if (!file.type.startsWith('image/')) {
+        console.log('Skipping non-image file:', file.name, file.type);
         continue; // Skip non-image files
       }
 
-      // Generate unique filename
-      const timestamp = Date.now();
-      const filename = `${session.user.id}-${i}-${timestamp}.${file.name.split('.').pop()}`;
-      const filepath = join(uploadsDir, filename);
+      // Validate file size (5MB limit)
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        console.log('File too large:', file.name, file.size);
+        return NextResponse.json(
+          { error: `File ${file.name} is too large. Maximum size is 5MB.` },
+          { status: 400 }
+        );
+      }
 
-      // Convert File to Buffer and save
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filepath, buffer);
+      try {
+        // Generate unique filename
+        const timestamp = Date.now();
+        const fileExtension = file.name.split('.').pop() || 'jpg';
+        const filename = `${session.user.id}-${i}-${timestamp}.${fileExtension}`;
+        const filepath = join(uploadsDir, filename);
 
-      // Add to uploaded URLs
-      uploadedUrls.push(`/uploads/${filename}`);
+        console.log('Saving file to:', filepath);
+
+        // Convert File to Buffer and save
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        await writeFile(filepath, buffer);
+
+        console.log('File saved successfully:', filename);
+
+        // Add to uploaded URLs
+        uploadedUrls.push(`/uploads/${filename}`);
+      } catch (fileError: any) {
+        console.error('Error processing file:', file.name, fileError);
+        return NextResponse.json(
+          { error: `Failed to process file ${file.name}: ${fileError.message}` },
+          { status: 500 }
+        );
+      }
     }
+
+    console.log('Upload completed successfully. URLs:', uploadedUrls);
 
     return NextResponse.json({
       success: true,
@@ -60,8 +98,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Image upload error:', error);
+    console.error('Error stack:', error.stack);
     return NextResponse.json(
-      { error: 'Failed to upload images' },
+      { error: 'Failed to upload images', details: error.message },
       { status: 500 }
     );
   }
