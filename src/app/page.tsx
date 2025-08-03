@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   keywords: [
     "Nigeria property", "real estate Nigeria", "property for sale", 
     "rental properties", "land for sale", "short stays", "vacation rentals",
-    "Lagos properties", "Abuja real estate", "Port Harcourt properties."
+    "Lagos properties", "Abuja real estate", "Port Harcourt properties"
   ],
   openGraph: {
     title: "Larnacei Global Limited - Nigerian Property Marketplace",
