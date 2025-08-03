@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,6 +41,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Check if Cloudinary is configured
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error('Cloudinary configuration missing');
+      return NextResponse.json(
+        { error: 'Upload service not configured. Please contact support.' },
+        { status: 500 }
+      );
+    }
+
     const uploadedUrls: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
@@ -56,7 +73,7 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Convert file to base64 for temporary storage
+        // Convert file to base64 for Cloudinary
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
         const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
@@ -64,13 +81,25 @@ export async function POST(request: NextRequest) {
         // Generate unique filename
         const timestamp = Date.now();
         const fileExtension = file.name.split('.').pop() || 'jpg';
-        const filename = `${session.user.id}-${i}-${timestamp}.${fileExtension}`;
+        const publicId = `larnacei-properties/${session.user.id}-${i}-${timestamp}`;
 
-        console.log('File processed successfully:', filename);
+        console.log('Uploading to Cloudinary:', publicId);
 
-        // For now, return the base64 data as a temporary solution
-        // In production, this should be uploaded to cloud storage (Cloudinary, AWS S3, etc.)
-        uploadedUrls.push(base64String);
+        // Upload to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(base64String, {
+          public_id: publicId,
+          folder: 'larnacei-properties',
+          resource_type: 'image',
+          transformation: [
+            { width: 1200, height: 800, crop: 'limit' }, // Resize for web
+            { quality: 'auto', fetch_format: 'auto' } // Optimize
+          ]
+        });
+
+        console.log('File uploaded successfully to Cloudinary:', uploadResult.secure_url);
+
+        // Add to uploaded URLs
+        uploadedUrls.push(uploadResult.secure_url);
       } catch (fileError: any) {
         console.error('Error processing file:', file.name, fileError);
         return NextResponse.json(
@@ -80,12 +109,11 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('Upload completed successfully. Files processed:', uploadedUrls.length);
+    console.log('Upload completed successfully. URLs:', uploadedUrls);
 
     return NextResponse.json({
       success: true,
-      urls: uploadedUrls,
-      message: 'Images processed successfully. For production, configure cloud storage (Cloudinary, AWS S3, etc.)'
+      urls: uploadedUrls
     });
 
   } catch (error: any) {

@@ -1,57 +1,115 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { v2 as cloudinary } from 'cloudinary';
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Video upload request received');
+    console.log('Request URL:', request.url);
+    console.log('Request method:', request.method);
+
     // Check authentication
     const session = await getServerSession(authOptions);
     if (!session?.user) {
+      console.log('Authentication failed - no session or user');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
 
+    console.log('User authenticated:', session.user.id);
+
     const formData = await request.formData();
     const files = formData.getAll('videos') as File[];
 
+    console.log('Files received:', files.length);
+
     if (!files || files.length === 0) {
+      console.log('No videos provided in request');
       return NextResponse.json(
         { error: 'No videos provided' },
         { status: 400 }
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    await mkdir(uploadsDir, { recursive: true });
+    // Check if Cloudinary is configured
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.error('Cloudinary configuration missing');
+      return NextResponse.json(
+        { error: 'Upload service not configured. Please contact support.' },
+        { status: 500 }
+      );
+    }
 
     const uploadedUrls: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      console.log(`Processing file ${i + 1}/${files.length}:`, file.name, file.type, file.size);
 
       // Validate file type
       if (!file.type.startsWith('video/')) {
+        console.log('Skipping non-video file:', file.name, file.type);
         continue; // Skip non-video files
       }
 
-      // Generate unique filename
-      const timestamp = Date.now();
-      const filename = `${session.user.id}-video-${i}-${timestamp}.${file.name.split('.').pop()}`;
-      const filepath = join(uploadsDir, filename);
+      // Validate file size (50MB limit for videos)
+      const maxSize = 50 * 1024 * 1024; // 50MB
+      if (file.size > maxSize) {
+        console.log('File too large:', file.name, file.size);
+        return NextResponse.json(
+          { error: `File ${file.name} is too large. Maximum size is 50MB.` },
+          { status: 400 }
+        );
+      }
 
-      // Convert File to Buffer and save
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filepath, buffer);
+      try {
+        // Convert file to base64 for Cloudinary
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-      // Add to uploaded URLs
-      uploadedUrls.push(`/uploads/${filename}`);
+        // Generate unique filename
+        const timestamp = Date.now();
+        const fileExtension = file.name.split('.').pop() || 'mp4';
+        const publicId = `larnacei-properties/videos/${session.user.id}-${i}-${timestamp}`;
+
+        console.log('Uploading video to Cloudinary:', publicId);
+
+        // Upload to Cloudinary
+        const uploadResult = await cloudinary.uploader.upload(base64String, {
+          public_id: publicId,
+          folder: 'larnacei-properties/videos',
+          resource_type: 'video',
+          transformation: [
+            { width: 1280, height: 720, crop: 'limit' }, // Resize for web
+            { quality: 'auto' } // Optimize
+          ]
+        });
+
+        console.log('Video uploaded successfully to Cloudinary:', uploadResult.secure_url);
+
+        // Add to uploaded URLs
+        uploadedUrls.push(uploadResult.secure_url);
+      } catch (fileError: any) {
+        console.error('Error processing video file:', file.name, fileError);
+        return NextResponse.json(
+          { error: `Failed to process video file ${file.name}: ${fileError.message}` },
+          { status: 500 }
+        );
+      }
     }
+
+    console.log('Video upload completed successfully. URLs:', uploadedUrls);
 
     return NextResponse.json({
       success: true,
@@ -60,8 +118,9 @@ export async function POST(request: NextRequest) {
 
   } catch (error: any) {
     console.error('Video upload error:', error);
+    console.error('Error stack:', error.stack);
     return NextResponse.json(
-      { error: 'Failed to upload videos' },
+      { error: 'Failed to upload videos', details: error.message },
       { status: 500 }
     );
   }
