@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,11 +33,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create uploads directory if it doesn't exist
-    const uploadsDir = join(process.cwd(), 'public', 'uploads');
-    console.log('Creating uploads directory:', uploadsDir);
-    await mkdir(uploadsDir, { recursive: true });
-
     const uploadedUrls: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
@@ -63,23 +56,21 @@ export async function POST(request: NextRequest) {
       }
 
       try {
+        // Convert file to base64 for temporary storage
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
+
         // Generate unique filename
         const timestamp = Date.now();
         const fileExtension = file.name.split('.').pop() || 'jpg';
         const filename = `${session.user.id}-${i}-${timestamp}.${fileExtension}`;
-        const filepath = join(uploadsDir, filename);
 
-        console.log('Saving file to:', filepath);
+        console.log('File processed successfully:', filename);
 
-        // Convert File to Buffer and save
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        await writeFile(filepath, buffer);
-
-        console.log('File saved successfully:', filename);
-
-        // Add to uploaded URLs
-        uploadedUrls.push(`/uploads/${filename}`);
+        // For now, return the base64 data as a temporary solution
+        // In production, this should be uploaded to cloud storage (Cloudinary, AWS S3, etc.)
+        uploadedUrls.push(base64String);
       } catch (fileError: any) {
         console.error('Error processing file:', file.name, fileError);
         return NextResponse.json(
@@ -89,11 +80,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('Upload completed successfully. URLs:', uploadedUrls);
+    console.log('Upload completed successfully. Files processed:', uploadedUrls.length);
 
     return NextResponse.json({
       success: true,
-      urls: uploadedUrls
+      urls: uploadedUrls,
+      message: 'Images processed successfully. For production, configure cloud storage (Cloudinary, AWS S3, etc.)'
     });
 
   } catch (error: any) {
