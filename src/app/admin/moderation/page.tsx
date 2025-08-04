@@ -1,157 +1,86 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import useSWR from 'swr';
 import {
-  Eye,
+  AlertTriangle,
   CheckCircle,
   XCircle,
+  Eye,
   Clock,
-  AlertTriangle,
-  Filter,
-  Search
+  MessageSquare,
+  Flag,
+  Building
 } from 'lucide-react';
 
-interface ModerationItem {
-  id: string;
-  type: 'property' | 'user' | 'review' | 'inquiry';
-  title: string;
-  description: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedBy: string;
-  submittedAt: string;
-  priority: 'low' | 'medium' | 'high';
-  category: string;
-}
+const fetcher = (url: string) => fetch(url).then(res => res.json());
 
-export default function AdminModerationPage() {
-  const [moderationItems, setModerationItems] = useState<ModerationItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export default function ContentReviewPage() {
   const [filter, setFilter] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
+  const { data, isLoading, error, mutate } = useSWR('/api/admin/moderation/content', fetcher);
 
-  useEffect(() => {
-    fetchModerationData();
-  }, []);
+  const handleApprove = async (itemId: string, type: string) => {
+    if (!confirm('Are you sure you want to approve this content?')) return;
 
-  const fetchModerationData = async () => {
     try {
-      setIsLoading(true);
-      const response = await fetch('/api/admin/moderation');
-      if (!response.ok) {
-        throw new Error('Failed to fetch moderation data');
-      }
-      const data = await response.json();
-      setModerationItems(data.items || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleApprove = async (itemId: string) => {
-    try {
-      const response = await fetch(`/api/admin/moderation/${itemId}/approve`, {
-        method: 'POST',
+      const response = await fetch(`/api/admin/moderation/${type}/${itemId}/approve`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: 'Approved by admin',
+        }),
       });
+
       if (response.ok) {
-        // Refresh the data
-        fetchModerationData();
+        mutate();
+        alert('Content approved successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to approve content: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error approving item:', error);
+      alert('Failed to approve content. Please try again.');
     }
   };
 
-  const handleReject = async (itemId: string) => {
+  const handleReject = async (itemId: string, type: string) => {
+    const reason = prompt('Please provide a reason for rejection:');
+    if (!reason) return;
+
     try {
-      const response = await fetch(`/api/admin/moderation/${itemId}/reject`, {
-        method: 'POST',
+      const response = await fetch(`/api/admin/moderation/${type}/${itemId}/reject`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          notes: reason,
+        }),
       });
+
       if (response.ok) {
-        // Refresh the data
-        fetchModerationData();
+        mutate();
+        alert('Content rejected successfully!');
+      } else {
+        const errorData = await response.json();
+        alert(`Failed to reject content: ${errorData.error || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Error rejecting item:', error);
+      alert('Failed to reject content. Please try again.');
     }
   };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high':
-        return 'bg-red-100 text-red-800';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'low':
-        return 'bg-green-100 text-green-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getTypeIcon = (type: string) => {
-    switch (type) {
-      case 'property':
-        return <Eye className="w-4 h-4" />;
-      case 'user':
-        return <AlertTriangle className="w-4 h-4" />;
-      case 'review':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'inquiry':
-        return <Clock className="w-4 h-4" />;
-      default:
-        return <Eye className="w-4 h-4" />;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const filteredItems = moderationItems.filter(item => {
-    const matchesFilter = filter === 'all' || item.status === filter;
-    const matchesSearch = searchTerm === '' ||
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.description.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesFilter && matchesSearch;
-  });
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg shadow p-6">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
-                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
-                </div>
-              ))}
-            </div>
+      <div className="p-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-20 bg-gray-200 rounded"></div>
+            ))}
           </div>
         </div>
       </div>
@@ -160,196 +89,214 @@ export default function AdminModerationPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Moderation</h1>
-            <p className="text-gray-600">{error}</p>
-          </div>
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <p className="text-red-800">Error loading content: {error.message}</p>
         </div>
       </div>
     );
   }
 
+  const contentItems = data?.items || [];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Content Moderation</h1>
-          <p className="text-gray-600 mt-2">Review and moderate user-submitted content</p>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Clock className="w-6 h-6 text-yellow-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending Review</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {moderationItems.filter(item => item.status === 'pending').length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Approved</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {moderationItems.filter(item => item.status === 'approved').length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <XCircle className="w-6 h-6 text-red-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Rejected</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {moderationItems.filter(item => item.status === 'rejected').length}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <AlertTriangle className="w-6 h-6 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">High Priority</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {moderationItems.filter(item => item.priority === 'high').length}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Filters and Search */}
-        <div className="bg-white rounded-lg shadow mb-6">
-          <div className="p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search moderation items..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <select
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="all">All Items</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Moderation Items Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredItems.map((item) => (
-            <div key={item.id} className="bg-white rounded-lg shadow overflow-hidden">
-              {/* Item Header */}
-              <div className="p-6 border-b border-gray-200">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="p-2 bg-gray-100 rounded-lg">
-                      {getTypeIcon(item.type)}
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
-                      <p className="text-sm text-gray-500">{item.category}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end space-y-2">
-                    <span className={`px-2 py-1 text-xs font-medium rounded ${getStatusColor(item.status)}`}>
-                      {item.status}
-                    </span>
-                    <span className={`px-2 py-1 text-xs font-medium rounded ${getPriorityColor(item.priority)}`}>
-                      {item.priority}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Item Content */}
-              <div className="p-6">
-                <p className="text-sm text-gray-600 mb-4">{item.description}</p>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center text-xs text-gray-500">
-                    <span className="font-medium">Submitted by:</span>
-                    <span className="ml-2">{item.submittedBy}</span>
-                  </div>
-                  <div className="flex items-center text-xs text-gray-500">
-                    <span className="font-medium">Submitted:</span>
-                    <span className="ml-2">{formatDate(item.submittedAt)}</span>
-                  </div>
-                </div>
-
-                {/* Actions */}
-                {item.status === 'pending' && (
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleApprove(item.id)}
-                      className="flex-1 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 transition-colors"
-                    >
-                      <CheckCircle className="w-4 h-4 mr-1 inline" />
-                      Approve
-                    </button>
-                    <button
-                      onClick={() => handleReject(item.id)}
-                      className="flex-1 px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-md hover:bg-red-700 transition-colors"
-                    >
-                      <XCircle className="w-4 h-4 mr-1 inline" />
-                      Reject
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {filteredItems.length === 0 && (
-          <div className="text-center py-12">
-            <AlertTriangle className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No items found</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || filter !== 'all'
-                ? 'Try adjusting your search or filter criteria.'
-                : 'No moderation items available.'
-              }
-            </p>
-          </div>
-        )}
+    <div className="p-6">
+      {/* Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Content Review</h1>
+        <p className="text-gray-600">Review and moderate platform content</p>
       </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <Clock className="w-6 h-6 text-yellow-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Pending Review</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {contentItems.filter(item => item.status === 'PENDING').length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Approved</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {contentItems.filter(item => item.status === 'APPROVED').length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <XCircle className="w-6 h-6 text-red-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Rejected</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {contentItems.filter(item => item.status === 'REJECTED').length}
+              </p>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white p-4 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-2 bg-orange-100 rounded-lg">
+              <Flag className="w-6 h-6 text-orange-600" />
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Flagged</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {contentItems.filter(item => item.flagged).length}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex gap-2">
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
+            >
+              <option value="all">All Content</option>
+              <option value="PENDING">Pending</option>
+              <option value="APPROVED">Approved</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="flagged">Flagged</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Content List */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Content
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Author
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Created
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {contentItems
+                .filter(item => filter === 'all' || item.status === filter || (filter === 'flagged' && item.flagged))
+                .map((item: any) => (
+                  <tr key={item.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-10">
+                          <div className="h-10 w-10 rounded-lg bg-gray-200 flex items-center justify-center">
+                            {item.type === 'PROPERTY' && <Building className="w-5 h-5 text-gray-600" />}
+                            {item.type === 'REVIEW' && <MessageSquare className="w-5 h-5 text-gray-600" />}
+                            {item.type === 'INQUIRY' && <AlertTriangle className="w-5 h-5 text-gray-600" />}
+                          </div>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{item.title}</div>
+                          <div className="text-sm text-gray-500">{item.description}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.type === 'PROPERTY' ? 'bg-blue-100 text-blue-800' :
+                          item.type === 'REVIEW' ? 'bg-green-100 text-green-800' :
+                            'bg-yellow-100 text-yellow-800'
+                        }`}>
+                        {item.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{item.author?.name || 'Unknown'}</div>
+                      <div className="text-sm text-gray-500">{item.author?.email}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.status === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                          item.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                        }`}>
+                        {item.status}
+                      </span>
+                      {item.flagged && (
+                        <span className="ml-2 inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                          <Flag className="w-3 h-3 mr-1" />
+                          Flagged
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {new Date(item.createdAt).toLocaleDateString('en-NG')}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => window.open(`/admin/content/${item.id}`, '_blank')}
+                          className="text-[#7C0302] hover:text-[#5a0201]"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        {item.status === 'PENDING' && (
+                          <>
+                            <button
+                              onClick={() => handleApprove(item.id, item.type.toLowerCase())}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleReject(item.id, item.type.toLowerCase())}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <XCircle className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {contentItems.length === 0 && (
+        <div className="text-center py-12">
+          <AlertTriangle className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No content to review</h3>
+          <p className="mt-1 text-sm text-gray-500">All content has been reviewed or there are no pending items.</p>
+        </div>
+      )}
     </div>
   );
 } 

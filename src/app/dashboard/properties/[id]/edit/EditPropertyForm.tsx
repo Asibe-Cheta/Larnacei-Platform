@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface EditPropertyFormProps {
   property: any;
@@ -11,6 +11,7 @@ interface EditPropertyFormProps {
 export default function EditPropertyForm({ property }: EditPropertyFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [formData, setFormData] = useState({
     title: property.title || '',
     description: property.description || '',
@@ -40,6 +41,7 @@ export default function EditPropertyForm({ property }: EditPropertyFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setAlertMessage(null);
 
     try {
       const response = await fetch(`/api/properties/${property.id}`, {
@@ -53,13 +55,15 @@ export default function EditPropertyForm({ property }: EditPropertyFormProps) {
       const data = await response.json();
 
       if (data.success) {
-        toast.success('Property updated successfully!');
-        router.push('/dashboard/properties');
+        setAlertMessage({ type: 'success', message: 'Property updated successfully!' });
+        setTimeout(() => {
+          router.push('/dashboard/properties');
+        }, 1500);
       } else {
-        toast.error(data.message || 'Failed to update property');
+        setAlertMessage({ type: 'error', message: data.message || 'Failed to update property' });
       }
     } catch (error) {
-      toast.error('An error occurred while updating the property');
+      setAlertMessage({ type: 'error', message: 'An error occurred while updating the property' });
     } finally {
       setIsLoading(false);
     }
@@ -75,6 +79,15 @@ export default function EditPropertyForm({ property }: EditPropertyFormProps) {
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
+      {/* Alert Messages */}
+      {alertMessage && (
+        <Alert className={`mb-4 ${alertMessage.type === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+          <AlertDescription className={alertMessage.type === 'success' ? 'text-green-800' : 'text-red-800'}>
+            {alertMessage.message}
+          </AlertDescription>
+        </Alert>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

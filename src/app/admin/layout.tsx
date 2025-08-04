@@ -64,7 +64,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     },
     {
       name: 'Content Review',
-      href: '/admin/content',
+      href: '/admin/moderation',
       icon: FileText,
       description: 'Moderate images and content'
     },
@@ -149,8 +149,8 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   key={item.name}
                   href={item.href}
                   className={`flex items-center h-11 px-4 py-2 rounded-md transition-colors text-sm font-medium ${isActive
-                      ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
-                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                     }`}
                   style={{ marginBottom: 8, height: 44, padding: '8px 16px' }}
                   onClick={() => setSidebarOpen(false)}

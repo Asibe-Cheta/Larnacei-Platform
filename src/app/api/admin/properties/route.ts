@@ -4,23 +4,62 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
+import { z } from 'zod';
+
+// Schema for admin property creation
+const adminPropertyCreateSchema = z.object({
+  title: z.string().min(1, 'Title is required'),
+  description: z.string().optional(),
+  price: z.number().min(0, 'Price must be positive'),
+  currency: z.string().default('NGN'),
+  propertyType: z.string().optional(),
+  category: z.string().optional(),
+  purpose: z.string().optional(),
+  bedrooms: z.number().optional(),
+  bathrooms: z.number().optional(),
+  parkingSpaces: z.number().optional(),
+  landSize: z.number().optional(),
+  builtUpArea: z.number().optional(),
+  yearBuilt: z.number().optional(),
+  condition: z.string().optional(),
+  furnishingStatus: z.string().optional(),
+  state: z.string().optional(),
+  city: z.string().optional(),
+  lga: z.string().optional(),
+  address: z.string().optional(),
+  isActive: z.boolean().optional(),
+  isFeatured: z.boolean().optional(),
+  contactPhone: z.string().optional(),
+  contactEmail: z.string().optional(),
+  additionalNotes: z.string().optional(),
+});
 
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.email) {
+      console.log('Admin properties GET: No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user is admin
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { role: true }
+      select: { id: true, role: true, email: true }
     });
 
-    if (user?.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    console.log('Admin properties GET: User found:', { id: user?.id, role: user?.role, email: user?.email });
+
+    if (!user) {
+      console.log('Admin properties GET: User not found');
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Check if user has admin privileges
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      console.log('Admin properties GET: User not admin:', user.role);
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -30,9 +69,11 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '20');
     const skip = (page - 1) * limit;
 
+    console.log('Admin properties GET: Query params:', { search, type, page, limit });
+
     // Build where clause
     const where: any = {};
-    
+
     if (search) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
@@ -43,7 +84,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (type && type !== 'all') {
-      where.propertyType = type;
+      where.type = type;
     }
 
     // Get properties with owner information
@@ -83,6 +124,8 @@ export async function GET(request: NextRequest) {
     // Get total count
     const total = await prisma.property.count({ where });
 
+    console.log('Admin properties GET: Found properties:', properties.length, 'Total:', total);
+
     return NextResponse.json({
       properties,
       total,
@@ -102,7 +145,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user?.email) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -110,143 +153,78 @@ export async function POST(request: NextRequest) {
     // Check if user is admin
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { role: true }
+      select: { id: true, role: true }
     });
 
-    if (user?.role !== 'ADMIN') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
+      return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const formData = await request.formData();
-    
-    // Extract form data
-    const title = formData.get('title') as string;
-    const description = formData.get('description') as string;
-    const category = formData.get('category') as string;
-    const type = formData.get('type') as string;
-    const price = formData.get('price') as string;
-    const currency = formData.get('currency') as string;
-    const city = formData.get('city') as string;
-    const state = formData.get('state') as string;
-    const address = formData.get('address') as string;
-    const bedrooms = formData.get('bedrooms') as string;
-    const bathrooms = formData.get('bathrooms') as string;
-    const sizeInSqm = formData.get('sizeInSqm') as string;
-         const isFeatured = formData.get('isFeatured') === 'true';
-     const isActive = formData.get('isActive') === 'true';
-     const isApproved = formData.get('isApproved') === 'true';
-     const isVerified = formData.get('isVerified') === 'true';
-    const amenities = JSON.parse(formData.get('amenities') as string || '[]');
-    const contactPhone = formData.get('contactPhone') as string;
-    const contactEmail = formData.get('contactEmail') as string;
-    const contactName = formData.get('contactName') as string;
-    
-    // Get image files
-    const imageFiles = formData.getAll('images') as File[];
+    const body = await request.json();
+    const validatedData = adminPropertyCreateSchema.parse(body);
 
-    // Validate required fields
-    if (!title || !description || !category || !type || !price || !city || !state || !address) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Create or get admin user
-    let adminUser = await prisma.user.findFirst({
-      where: { role: 'ADMIN' }
+    // Create the property with admin as owner and automatically approved
+    const property = await prisma.property.create({
+      data: {
+        title: validatedData.title,
+        description: validatedData.description || '',
+        price: validatedData.price,
+        currency: validatedData.currency,
+        type: validatedData.propertyType as any,
+        category: validatedData.category as any,
+        purpose: validatedData.purpose as any,
+        bedrooms: validatedData.bedrooms,
+        bathrooms: validatedData.bathrooms,
+        parkingSpaces: validatedData.parkingSpaces,
+        landSize: validatedData.landSize,
+        builtUpArea: validatedData.builtUpArea,
+        yearBuilt: validatedData.yearBuilt,
+        condition: validatedData.condition as any,
+        furnishingStatus: validatedData.furnishingStatus as any,
+        state: validatedData.state || '',
+        city: validatedData.city || '',
+        lga: validatedData.lga || '',
+        streetAddress: validatedData.address || '',
+        isActive: validatedData.isActive ?? true,
+        isFeatured: validatedData.isFeatured ?? false,
+        contactPhone: validatedData.contactPhone,
+        contactEmail: validatedData.contactEmail,
+        additionalNotes: validatedData.additionalNotes,
+        // Admin-created properties are automatically approved
+        moderationStatus: 'APPROVED',
+        isVerified: true,
+        // Set admin as the owner
+        ownerId: user.id,
+      },
     });
 
-    if (!adminUser) {
-      adminUser = await prisma.user.create({
-        data: {
-          email: 'admin@larnacei.com',
-          name: 'Larnacei Admin',
-          role: 'ADMIN',
-          isVerified: true,
-        },
-      });
-    }
-
-         // Create property
-     const property = await prisma.property.create({
-       data: {
-         title,
-         description,
-         category: category as any,
-         type: type as any,
-         price: parseFloat(price.replace(/,/g, '')),
-         currency: currency as any,
-         city,
-         state,
-         address,
-         bedrooms: bedrooms ? parseInt(bedrooms) : null,
-         bathrooms: bathrooms ? parseInt(bathrooms) : null,
-         sizeInSqm: sizeInSqm ? parseInt(sizeInSqm) : null,
-         isFeatured,
-         isActive,
-         isApproved,
-         isVerified,
-         features: amenities,
-         contactPhone,
-         contactEmail,
-         contactName,
-         ownerId: adminUser.id,
-         viewCount: 0,
-         inquiryCount: 0,
-         favoriteCount: 0,
-       },
-     });
-
-    // Handle image uploads
-    if (imageFiles.length > 0) {
-      const uploadPromises = imageFiles.map(async (file, index) => {
-        try {
-          // Create uploads directory if it doesn't exist
-          const uploadsDir = join(process.cwd(), 'public', 'uploads');
-          await mkdir(uploadsDir, { recursive: true });
-
-          // Generate unique filename
-          const timestamp = Date.now();
-          const filename = `${property.id}-${index}-${timestamp}.${file.name.split('.').pop()}`;
-          const filepath = join(uploadsDir, filename);
-
-          // Convert File to Buffer and save
-          const bytes = await file.arrayBuffer();
-          const buffer = Buffer.from(bytes);
-          await writeFile(filepath, buffer);
-
-          // Save image record to database
-          return prisma.propertyImage.create({
-            data: {
-              propertyId: property.id,
-              url: `/uploads/${filename}`,
-              alt: `${property.title} - Image ${index + 1}`,
-              isPrimary: index === 0, // First image is primary
-            },
-          });
-        } catch (error) {
-          console.error('Error uploading image:', error);
-          return null;
-        }
-      });
-
-      await Promise.all(uploadPromises);
-    }
+    // Add a default placeholder image
+    await prisma.propertyImage.create({
+      data: {
+        propertyId: property.id,
+        url: 'https://via.placeholder.com/400x300?text=Property+Image',
+        alt: 'Property Image',
+        isPrimary: true,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      property: {
-        id: property.id,
-        title: property.title,
-        message: 'Property created successfully',
-      },
+      message: 'Property created successfully',
+      data: property,
     });
   } catch (error) {
     console.error('Error creating admin property:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+
+    if (error instanceof z.ZodError) {
+      return NextResponse.json({
+        error: 'Validation error',
+        details: error.errors,
+      }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      error: 'Failed to create property',
+    }, { status: 500 });
   }
 } 
