@@ -35,12 +35,22 @@ export default function PropertiesGrid({ properties: initialProperties }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
       {properties.map((property) => {
-        const image = property.images.find((img) => img.isPrimary) || property.images[0];
+        // Handle different image data structures
+        let imageUrl = '/images/Larnacei_coloured.png'; // Default fallback
+
+        if (property.images && property.images.length > 0) {
+          const primaryImage = property.images.find((img) => img.isPrimary) || property.images[0];
+          if (primaryImage) {
+            // Handle both string URLs and object structures
+            imageUrl = typeof primaryImage === 'string' ? primaryImage : primaryImage.url;
+          }
+        }
+
         return (
           <div key={property.id} className="bg-white rounded shadow hover:shadow-lg transition overflow-hidden flex flex-col">
             <div className="relative h-48 w-full">
               <Image
-                src={image?.url || '/images/Larnacei_coloured.png'}
+                src={imageUrl}
                 alt={property.title}
                 fill
                 className="object-cover"
