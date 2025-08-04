@@ -2,36 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 import { z } from 'zod';
 
 // Schema for admin property creation
 const adminPropertyCreateSchema = z.object({
   title: z.string().min(1, 'Title is required'),
-  description: z.string().optional(),
-  price: z.number().min(0, 'Price must be positive'),
-  currency: z.string().default('NGN'),
-  propertyType: z.string().optional(),
-  category: z.string().optional(),
-  purpose: z.string().optional(),
-  bedrooms: z.number().optional(),
-  bathrooms: z.number().optional(),
-  parkingSpaces: z.number().optional(),
-  landSize: z.number().optional(),
-  builtUpArea: z.number().optional(),
-  yearBuilt: z.number().optional(),
-  condition: z.string().optional(),
-  furnishingStatus: z.string().optional(),
-  state: z.string().optional(),
-  city: z.string().optional(),
-  lga: z.string().optional(),
-  address: z.string().optional(),
-  isActive: z.boolean().optional(),
-  isFeatured: z.boolean().optional(),
-  contactPhone: z.string().optional(),
-  contactEmail: z.string().optional(),
-  additionalNotes: z.string().optional(),
+  description: z.string().min(1, 'Description is required'),
+  price: z.number().positive('Price must be positive'),
+  type: z.enum(['HOUSE', 'APARTMENT', 'CONDO', 'TOWNHOUSE', 'LAND', 'COMMERCIAL']),
+  category: z.enum(['SHORT_STAY', 'LONG_TERM_RENTAL', 'LANDED_PROPERTY', 'PROPERTY_SALE']),
+  bedrooms: z.number().min(0, 'Bedrooms must be 0 or more'),
+  bathrooms: z.number().min(0, 'Bathrooms must be 0 or more'),
+  size: z.number().min(0, 'Size must be 0 or more'),
+  city: z.string().min(1, 'City is required'),
+  state: z.string().min(1, 'State is required'),
+  address: z.string().min(1, 'Address is required'),
+  postalCode: z.string().optional(),
+  latitude: z.number().optional(),
+  longitude: z.number().optional(),
+  features: z.array(z.string()).optional(),
+  amenities: z.array(z.string()).optional(),
+  images: z.array(z.string().url()).optional(),
+  videos: z.array(z.string().url()).optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -39,7 +31,6 @@ export async function GET(request: NextRequest) {
     const session = await getServerSession(authOptions);
 
     if (!session?.user?.email) {
-      console.log('Admin properties GET: No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -52,13 +43,10 @@ export async function GET(request: NextRequest) {
     console.log('Admin properties GET: User found:', { id: user?.id, role: user?.role, email: user?.email });
 
     if (!user) {
-      console.log('Admin properties GET: User not found');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if user has admin privileges
     if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
-      console.log('Admin properties GET: User not admin:', user.role);
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
@@ -67,7 +55,6 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
-    const skip = (page - 1) * limit;
 
     console.log('Admin properties GET: Query params:', { search, type, page, limit });
 
@@ -78,8 +65,7 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { title: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
-        { city: { contains: search, mode: 'insensitive' } },
-        { state: { contains: search, mode: 'insensitive' } },
+        { owner: { name: { contains: search, mode: 'insensitive' } } },
       ];
     }
 
@@ -87,7 +73,7 @@ export async function GET(request: NextRequest) {
       where.type = type;
     }
 
-    // Get properties with owner information
+    // Get properties with owner details
     const properties = await prisma.property.findMany({
       where,
       include: {
@@ -96,9 +82,9 @@ export async function GET(request: NextRequest) {
             id: true,
             name: true,
             email: true,
-            phone: true,
           },
         },
+        location: true,
         images: {
           select: {
             id: true,
@@ -107,24 +93,15 @@ export async function GET(request: NextRequest) {
             isPrimary: true,
           },
         },
-        _count: {
-          select: {
-            images: true,
-            videos: true,
-            reviews: true,
-            inquiries: true,
-          },
-        },
       },
       orderBy: { createdAt: 'desc' },
-      skip,
+      skip: (page - 1) * limit,
       take: limit,
     });
 
-    // Get total count
     const total = await prisma.property.count({ where });
 
-    console.log('Admin properties GET: Found properties:', properties.length, 'Total:', total);
+    console.log('Admin properties GET: Found properties:', properties.length);
 
     return NextResponse.json({
       properties,
@@ -156,62 +133,113 @@ export async function POST(request: NextRequest) {
       select: { id: true, role: true }
     });
 
-    if (!user || (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN')) {
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
     const body = await request.json();
-    const validatedData = adminPropertyCreateSchema.parse(body);
 
-    // Create the property with admin as owner and automatically approved
+    // Convert string numbers to actual numbers
+    const processedBody = {
+      ...body,
+      price: typeof body.price === 'string' ? parseFloat(body.price) : body.price,
+      bedrooms: typeof body.bedrooms === 'string' ? parseInt(body.bedrooms) : body.bedrooms,
+      bathrooms: typeof body.bathrooms === 'string' ? parseInt(body.bathrooms) : body.bathrooms,
+      size: typeof body.size === 'string' ? parseFloat(body.size) : body.size,
+      latitude: body.latitude ? (typeof body.latitude === 'string' ? parseFloat(body.latitude) : body.latitude) : undefined,
+      longitude: body.longitude ? (typeof body.longitude === 'string' ? parseFloat(body.longitude) : body.longitude) : undefined,
+    };
+
+    console.log('Admin property creation: Processing body:', processedBody);
+
+    const validatedData = adminPropertyCreateSchema.parse(processedBody);
+
+    // Create location first
+    const location = await prisma.location.create({
+      data: {
+        address: validatedData.address,
+        city: validatedData.city,
+        state: validatedData.state,
+        postalCode: validatedData.postalCode,
+        latitude: validatedData.latitude,
+        longitude: validatedData.longitude,
+      },
+    });
+
+    // Create property
     const property = await prisma.property.create({
       data: {
         title: validatedData.title,
-        description: validatedData.description || '',
+        description: validatedData.description,
         price: validatedData.price,
-        currency: validatedData.currency,
-        type: validatedData.propertyType as any,
-        category: validatedData.category as any,
-        purpose: validatedData.purpose as any,
+        type: validatedData.type,
+        category: validatedData.category,
         bedrooms: validatedData.bedrooms,
         bathrooms: validatedData.bathrooms,
-        parkingSpaces: validatedData.parkingSpaces,
-        landSize: validatedData.landSize,
-        builtUpArea: validatedData.builtUpArea,
-        yearBuilt: validatedData.yearBuilt,
-        condition: validatedData.condition as any,
-        furnishingStatus: validatedData.furnishingStatus as any,
-        state: validatedData.state || '',
-        city: validatedData.city || '',
-        lga: validatedData.lga || '',
-        streetAddress: validatedData.address || '',
-        isActive: validatedData.isActive ?? true,
-        isFeatured: validatedData.isFeatured ?? false,
-        contactPhone: validatedData.contactPhone,
-        contactEmail: validatedData.contactEmail,
-        additionalNotes: validatedData.additionalNotes,
-        // Admin-created properties are automatically approved
-        moderationStatus: 'APPROVED',
+        size: validatedData.size,
+        features: validatedData.features || [],
+        amenities: validatedData.amenities || [],
+        moderationStatus: 'APPROVED', // Admin-created properties are automatically approved
+        isActive: true,
         isVerified: true,
-        // Set admin as the owner
-        ownerId: user.id,
+        ownerId: user.id, // Set admin as the owner
+        locationId: location.id,
       },
     });
 
-    // Add a default placeholder image
-    await prisma.propertyImage.create({
-      data: {
-        propertyId: property.id,
-        url: 'https://via.placeholder.com/400x300?text=Property+Image',
-        alt: 'Property Image',
-        isPrimary: true,
-      },
-    });
+    // Add default placeholder image if no images provided
+    if (!validatedData.images || validatedData.images.length === 0) {
+      await prisma.propertyImage.create({
+        data: {
+          propertyId: property.id,
+          url: 'https://via.placeholder.com/400x300?text=Property+Image',
+          alt: 'Property placeholder image',
+          isPrimary: true,
+        },
+      });
+    } else {
+      // Add provided images
+      for (let i = 0; i < validatedData.images.length; i++) {
+        await prisma.propertyImage.create({
+          data: {
+            propertyId: property.id,
+            url: validatedData.images[i],
+            alt: `Property image ${i + 1}`,
+            isPrimary: i === 0, // First image is primary
+          },
+        });
+      }
+    }
+
+    // Add videos if provided
+    if (validatedData.videos && validatedData.videos.length > 0) {
+      for (let i = 0; i < validatedData.videos.length; i++) {
+        await prisma.propertyVideo.create({
+          data: {
+            propertyId: property.id,
+            url: validatedData.videos[i],
+            alt: `Property video ${i + 1}`,
+          },
+        });
+      }
+    }
+
+    console.log('Admin property creation: Successfully created property:', property.id);
 
     return NextResponse.json({
       success: true,
       message: 'Property created successfully',
-      data: property,
+      property: {
+        id: property.id,
+        title: property.title,
+        price: property.price,
+        type: property.type,
+        moderationStatus: property.moderationStatus,
+      },
     });
   } catch (error) {
     console.error('Error creating admin property:', error);
@@ -223,8 +251,9 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    return NextResponse.json({
-      error: 'Failed to create property',
-    }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to create property' },
+      { status: 500 }
+    );
   }
 } 

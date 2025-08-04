@@ -4,143 +4,157 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
-export default function AdminCreatePropertyPage() {
+export default function CreatePropertyPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     price: '',
-    currency: 'NGN',
-    propertyType: '',
-    category: '',
-    purpose: '',
+    type: 'HOUSE',
+    category: 'PROPERTY_SALE',
     bedrooms: '',
     bathrooms: '',
-    parkingSpaces: '',
-    landSize: '',
-    builtUpArea: '',
-    yearBuilt: '',
-    condition: 'NEW',
-    furnishingStatus: 'UNFURNISHED',
-    state: '',
+    size: '',
     city: '',
-    lga: '',
+    state: '',
     address: '',
-    isActive: true,
-    isFeatured: false,
-    contactPhone: '',
-    contactEmail: '',
-    additionalNotes: '',
+    postalCode: '',
+    latitude: '',
+    longitude: '',
+    features: [] as string[],
+    amenities: [] as string[],
+    images: [] as string[],
+    videos: [] as string[],
   });
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setAlertMessage(null);
+    setMessage(null);
 
     try {
+      // Convert string values to numbers where needed
+      const submitData = {
+        ...formData,
+        price: parseFloat(formData.price) || 0,
+        bedrooms: parseInt(formData.bedrooms) || 0,
+        bathrooms: parseInt(formData.bathrooms) || 0,
+        size: parseFloat(formData.size) || 0,
+        latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
+        longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
+      };
+
       const response = await fetch('/api/admin/properties', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const data = await response.json();
 
-      if (data.success) {
-        setAlertMessage({ type: 'success', message: 'Property created successfully!' });
+      if (response.ok) {
+        setMessage({ type: 'success', text: 'Property created successfully!' });
         setTimeout(() => {
           router.push('/admin/properties');
-        }, 1500);
+        }, 2000);
       } else {
-        setAlertMessage({ type: 'error', message: data.message || 'Failed to create property' });
+        setMessage({
+          type: 'error',
+          text: data.error || 'Failed to create property'
+        });
       }
     } catch (error) {
-      setAlertMessage({ type: 'error', message: 'An error occurred while creating the property' });
+      setMessage({
+        type: 'error',
+        text: 'An error occurred while creating the property'
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value, type } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'number' ? Number(value) : value,
-    }));
-  };
-
   return (
-    <div className="p-6">
-      {/* Header */}
+    <div className="max-w-4xl mx-auto px-4 py-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Create Property</h1>
-        <p className="text-gray-600">Add a new property listing (automatically approved)</p>
+        <h1 className="text-3xl font-bold text-gray-900">Create Property</h1>
+        <p className="text-gray-600 mt-2">Add a new property listing (automatically approved)</p>
       </div>
 
-      {/* Alert Messages */}
-      {alertMessage && (
-        <Alert className={`mb-4 ${alertMessage.type === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
-          <AlertDescription className={alertMessage.type === 'success' ? 'text-green-800' : 'text-red-800'}>
-            {alertMessage.message}
+      {message && (
+        <Alert className={`mb-6 ${message.type === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
+          <AlertDescription className={message.type === 'success' ? 'text-green-800' : 'text-red-800'}>
+            {message.text}
           </AlertDescription>
         </Alert>
       )}
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
                 Property Title *
               </label>
               <input
                 type="text"
+                id="title"
                 name="title"
+                required
                 value={formData.title}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
-                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter property title"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
                 Price *
               </label>
               <input
                 type="number"
+                id="price"
                 name="price"
+                required
+                min="0"
+                step="0.01"
                 value={formData.price}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
-                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter price"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
                 Property Type *
               </label>
               <select
-                name="propertyType"
-                value={formData.propertyType}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
+                id="type"
+                name="type"
                 required
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
               >
-                <option value="">Select Property Type</option>
-                <option value="APARTMENT">Apartment</option>
                 <option value="HOUSE">House</option>
-                <option value="DUPLEX">Duplex</option>
-                <option value="BUNGALOW">Bungalow</option>
-                <option value="PENTHOUSE">Penthouse</option>
-                <option value="VILLA">Villa</option>
+                <option value="APARTMENT">Apartment</option>
+                <option value="CONDO">Condo</option>
                 <option value="TOWNHOUSE">Townhouse</option>
                 <option value="LAND">Land</option>
                 <option value="COMMERCIAL">Commercial</option>
@@ -148,206 +162,209 @@ export default function AdminCreatePropertyPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
                 Category *
               </label>
               <select
+                id="category"
                 name="category"
+                required
                 value={formData.category}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
-                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
               >
-                <option value="">Select Category</option>
-                <option value="SHORT_STAY">Short Stay</option>
-                <option value="LONG_TERM_RENTAL">Long Term Rental</option>
-                <option value="LANDED_PROPERTY">Landed Property</option>
                 <option value="PROPERTY_SALE">Property Sale</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Purpose *
-              </label>
-              <select
-                name="purpose"
-                value={formData.purpose}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
-                required
-              >
-                <option value="">Select Purpose</option>
-                <option value="FOR_SALE">For Sale</option>
-                <option value="FOR_RENT">For Rent</option>
-                <option value="FOR_LEASE">For Lease</option>
+                <option value="LONG_TERM_RENTAL">Long Term Rental</option>
                 <option value="SHORT_STAY">Short Stay</option>
+                <option value="LANDED_PROPERTY">Landed Property</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="bedrooms" className="block text-sm font-medium text-gray-700 mb-1">
                 Bedrooms
               </label>
               <input
                 type="number"
+                id="bedrooms"
                 name="bedrooms"
+                min="0"
                 value={formData.bedrooms}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Number of bedrooms"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="bathrooms" className="block text-sm font-medium text-gray-700 mb-1">
                 Bathrooms
               </label>
               <input
                 type="number"
+                id="bathrooms"
                 name="bathrooms"
+                min="0"
                 value={formData.bathrooms}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Number of bathrooms"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="size" className="block text-sm font-medium text-gray-700 mb-1">
+                Size (sq ft)
+              </label>
+              <input
+                type="number"
+                id="size"
+                name="size"
+                min="0"
+                step="0.01"
+                value={formData.size}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Property size"
               />
             </div>
           </div>
 
-          {/* Location */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="mt-4">
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Description *
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              required
+              rows={4}
+              value={formData.description}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              placeholder="Describe the property..."
+            />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Location</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                State *
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                Address *
               </label>
               <input
                 type="text"
-                name="state"
-                value={formData.state}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
+                id="address"
+                name="address"
                 required
+                value={formData.address}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter full address"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
                 City *
               </label>
               <input
                 type="text"
+                id="city"
                 name="city"
+                required
                 value={formData.city}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
-                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter city"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                LGA
+              <label htmlFor="state" className="block text-sm font-medium text-gray-700 mb-1">
+                State *
               </label>
               <input
                 type="text"
-                name="lga"
-                value={formData.lga}
+                id="state"
+                name="state"
+                required
+                value={formData.state}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter state"
               />
             </div>
-          </div>
 
-          {/* Description */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              rows={4}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
-            />
-          </div>
-
-          {/* Contact Information */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Contact Phone
+              <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
+                Postal Code
               </label>
               <input
-                type="tel"
-                name="contactPhone"
-                value={formData.contactPhone}
+                type="text"
+                id="postalCode"
+                name="postalCode"
+                value={formData.postalCode}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter postal code"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Contact Email
+              <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-1">
+                Latitude
               </label>
               <input
-                type="email"
-                name="contactEmail"
-                value={formData.contactEmail}
+                type="number"
+                id="latitude"
+                name="latitude"
+                step="any"
+                value={formData.latitude}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#7C0302]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter latitude"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-1">
+                Longitude
+              </label>
+              <input
+                type="number"
+                id="longitude"
+                name="longitude"
+                step="any"
+                value={formData.longitude}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter longitude"
               />
             </div>
           </div>
+        </div>
 
-          {/* Status */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isActive: e.target.checked }))}
-                  className="mr-2"
-                />
-                <span className="text-sm font-medium text-gray-700">Active Property</span>
-              </label>
-            </div>
-
-            <div>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="isFeatured"
-                  checked={formData.isFeatured}
-                  onChange={(e) => setFormData(prev => ({ ...prev, isFeatured: e.target.checked }))}
-                  className="mr-2"
-                />
-                <span className="text-sm font-medium text-gray-700">Featured Property</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Submit Buttons */}
-          <div className="flex gap-4">
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="px-6 py-2 bg-[#7C0302] text-white rounded-md hover:bg-[#5a0201] disabled:opacity-50"
-            >
-              {isLoading ? 'Creating...' : 'Create Property'}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => router.push('/admin/properties')}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      </div>
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={() => router.push('/admin/properties')}
+            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+          >
+            {isLoading ? 'Creating...' : 'Create Property'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 } 
