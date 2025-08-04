@@ -242,12 +242,14 @@ export const propertyCreationSchema = propertyBasicInfoSchema
  */
 export const propertyCreationApiSchema = propertyBasicInfoSchema
   .merge(propertyLocationSchema)
-  .merge(propertyDetailsSchema)
+  .merge(propertyDetailsSchema.omit({ virtualTourUrl: true, floorPlanUrl: true }))
   .merge(propertyLegalSchema)
   .merge(propertyAvailabilitySchema)
   .extend({
     images: z.array(z.string().url()).optional(),
     videos: z.array(z.string().url()).optional(),
+    virtualTourUrl: z.string().url("Invalid virtual tour URL").optional().or(z.literal('')),
+    floorPlanUrl: z.string().url("Invalid floor plan URL").optional().or(z.literal('')),
   });
 
 /**
