@@ -81,7 +81,7 @@ export async function GET(request: NextRequest) {
 
     console.log('Admin properties GET: Where clause:', where);
 
-    // Get properties with owner details
+    // Get properties with owner details - FIXED: Removed invalid 'location' include
     const properties = await prisma.property.findMany({
       where,
       include: {
@@ -92,7 +92,6 @@ export async function GET(request: NextRequest) {
             email: true,
           },
         },
-        location: true,
         images: {
           select: {
             id: true,

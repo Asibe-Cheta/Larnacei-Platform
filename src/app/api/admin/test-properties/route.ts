@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     const isAdmin = user.role === 'ADMIN' || user.role === 'SUPER_ADMIN';
     console.log('Is admin:', isAdmin);
 
-    // Test database connection and get all properties
+    // Test database connection and get all properties - FIXED: Removed invalid 'location' include
     const allProperties = await prisma.property.findMany({
       include: {
         owner: {
@@ -39,7 +39,6 @@ export async function GET(request: NextRequest) {
             role: true,
           }
         },
-        location: true,
       },
       orderBy: { createdAt: 'desc' },
       take: 10, // Limit to 10 for testing

@@ -419,7 +419,7 @@ export default function AdminPropertiesPage() {
                           {property.description}
                         </div>
                         <div className="text-xs text-gray-400">
-                          {property.location?.city}, {property.location?.state}
+                          {property.city}, {property.state}
                         </div>
                       </div>
                     </div>
