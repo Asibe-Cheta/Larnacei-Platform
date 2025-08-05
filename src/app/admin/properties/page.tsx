@@ -6,6 +6,7 @@ import { Eye, Edit, CheckCircle, XCircle, Plus, Search, Filter, Bug, Database } 
 import Link from 'next/link';
 
 const fetcher = (url: string) => fetch(url).then(res => {
+  console.log('Fetcher called for:', url, 'Status:', res.status);
   if (!res.ok) {
     throw new Error(`HTTP error! status: ${res.status}`);
   }
@@ -21,7 +22,7 @@ export default function AdminPropertiesPage() {
   const [propertiesTestInfo, setPropertiesTestInfo] = useState<any>(null);
 
   // Add cache-busting parameter
-  const { data, error, mutate, isLoading } = useSWR(`/api/admin/properties?t=${Date.now()}`, fetcher);
+  const { data, error, mutate, isLoading } = useSWR('/api/admin/properties', fetcher);
 
   // Force refresh on mount
   useEffect(() => {
