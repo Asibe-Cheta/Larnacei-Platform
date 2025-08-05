@@ -17,10 +17,40 @@ import {
   AlertTriangle
 } from 'lucide-react';
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) {
+    throw new Error(`HTTP error! status: ${res.status}`);
+  }
+  return res.json();
+});
 
 export default function AdminDashboardPage() {
-  const { data: stats, isLoading } = useSWR('/api/admin/dashboard/stats', fetcher);
+  const { data: stats, error, isLoading } = useSWR('/api/admin/dashboard/stats', fetcher);
+
+  // Debug logging
+  console.log('Dashboard - Data:', stats);
+  console.log('Dashboard - Error:', error);
+  console.log('Dashboard - Loading:', isLoading);
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h3 className="text-red-800 font-medium">Error Loading Dashboard</h3>
+          <p className="text-red-600 mt-1">Failed to fetch dashboard stats</p>
+          <p className="text-red-500 text-sm mt-2">Error: {error.message}</p>
+          <div className="mt-4">
+            <button
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

@@ -140,10 +140,42 @@ export default function AdminPropertiesPage() {
 
   if (isLoading) return (
     <div className="p-6">
-      <div className="flex items-center justify-center">
+      <div className="flex items-center justify-center mb-6">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
         <span className="ml-2">Loading properties...</span>
       </div>
+
+      {/* Show debug buttons even when loading */}
+      <div className="flex items-center space-x-2 mb-6">
+        <button
+          onClick={testApiConnection}
+          className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center text-sm"
+        >
+          <Bug className="w-4 h-4 mr-1" />
+          Debug API
+        </button>
+        <button
+          onClick={testPropertiesData}
+          className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center text-sm"
+        >
+          <Database className="w-4 h-4 mr-1" />
+          Test Props
+        </button>
+      </div>
+
+      {debugInfo && (
+        <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
+          <h4 className="font-medium mb-2">Debug Info:</h4>
+          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+        </div>
+      )}
+
+      {propertiesTestInfo && (
+        <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
+          <h4 className="font-medium mb-2">Properties Test Info:</h4>
+          <pre>{JSON.stringify(propertiesTestInfo, null, 2)}</pre>
+        </div>
+      )}
     </div>
   );
 
