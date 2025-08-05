@@ -29,6 +29,7 @@ const adminPropertyCreateSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     console.log('Admin properties GET: Starting request');
+    const startTime = Date.now();
 
     const session = await getServerSession(authOptions);
     console.log('Admin properties GET: Session:', session?.user?.email);
@@ -80,6 +81,7 @@ export async function GET(request: NextRequest) {
     }
 
     console.log('Admin properties GET: Where clause:', where);
+    console.log('Admin properties GET: About to query database...');
 
     // Get properties with owner details - FIXED: Removed invalid 'location' include
     const properties = await prisma.property.findMany({
@@ -108,6 +110,8 @@ export async function GET(request: NextRequest) {
 
     const total = await prisma.property.count({ where });
 
+    const endTime = Date.now();
+    console.log('Admin properties GET: Database query completed in', endTime - startTime, 'ms');
     console.log('Admin properties GET: Found properties:', properties.length, 'Total:', total);
 
     return NextResponse.json({
