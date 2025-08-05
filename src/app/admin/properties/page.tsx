@@ -60,6 +60,18 @@ export default function AdminPropertiesPage() {
     }
   };
 
+  const testImagesData = async () => {
+    try {
+      const response = await fetch('/api/admin/test-images');
+      const result = await response.json();
+      setPropertiesTestInfo(result);
+      console.log('Images test result:', result);
+    } catch (error) {
+      console.error('Images test error:', error);
+      setPropertiesTestInfo({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  };
+
   const handleApprove = async (propertyId: string) => {
     if (!confirm('Are you sure you want to approve this property?')) return;
     setApprovingId(propertyId);
@@ -69,14 +81,18 @@ export default function AdminPropertiesPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: 'Approved by admin', featured: false }),
       });
+
+      const responseData = await response.json();
+
       if (response.ok) {
         mutate();
         alert('Property approved successfully!');
       } else {
-        const errorData = await response.json();
-        alert(`Failed to approve property: ${errorData.error || 'Unknown error'}`);
+        const errorMessage = responseData.error || responseData.message || 'Unknown error occurred';
+        alert(`Failed to approve property: ${errorMessage}`);
       }
     } catch (error) {
+      console.error('Approval error:', error);
       alert('Failed to approve property. Please try again.');
     } finally {
       setApprovingId(null);
@@ -161,6 +177,13 @@ export default function AdminPropertiesPage() {
         >
           <Database className="w-4 h-4 mr-1" />
           Test Props
+        </button>
+        <button
+          onClick={testImagesData}
+          className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center text-sm"
+        >
+          <Database className="w-4 h-4 mr-1" />
+          Test Images
         </button>
       </div>
 
@@ -296,6 +319,13 @@ export default function AdminPropertiesPage() {
           >
             <Database className="w-4 h-4 mr-1" />
             Test Props
+          </button>
+          <button
+            onClick={testImagesData}
+            className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center text-sm"
+          >
+            <Database className="w-4 h-4 mr-1" />
+            Test Images
           </button>
           <Link
             href="/admin/properties/create"
@@ -440,16 +470,25 @@ export default function AdminPropertiesPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <div className="flex-shrink-0 h-12 w-12">
-                        <div className="h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center">
+                        {property.images && property.images.length > 0 ? (
+                          <img
+                            src={property.images[0].url}
+                            alt={property.images[0].alt || property.title}
+                            className="h-12 w-12 rounded-lg object-cover"
+                            onError={(e) => {
+                              // Fallback to icon if image fails to load
+                              e.currentTarget.style.display = 'none';
+                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                        ) : null}
+                        <div className={`h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center ${property.images && property.images.length > 0 ? 'hidden' : ''}`}>
                           {getPropertyTypeIcon(property.type)}
                         </div>
                       </div>
                       <div className="ml-4">
                         <div className="text-sm font-medium text-gray-900">
                           {property.title}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {property.description}
                         </div>
                         <div className="text-xs text-gray-400">
                           {property.city}, {property.state}

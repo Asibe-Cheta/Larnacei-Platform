@@ -104,8 +104,20 @@ export async function GET(
       );
     }
 
+    // Check if user is admin
+    const session = await getServerSession(authOptions);
+    let isAdmin = false;
+    
+    if (session?.user?.email) {
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { role: true }
+      });
+      isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+    }
+
     // Only return active and approved properties (unless admin)
-    if (!property.isActive || property.moderationStatus !== "APPROVED") {
+    if (!isAdmin && (!property.isActive || property.moderationStatus !== "APPROVED")) {
       return NextResponse.json(
         { success: false, message: "Property not available" },
         { status: 404 }
