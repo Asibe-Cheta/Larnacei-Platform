@@ -9,6 +9,7 @@ import PropertyImageGallery from '@/components/properties/PropertyImageGallery';
 import PropertyInfo from '@/components/properties/PropertyInfo';
 import ContactForm from '@/components/properties/ContactForm';
 import SimilarProperties from '@/components/properties/SimilarProperties';
+import OwnerProfile from '@/components/properties/OwnerProfile';
 import { Property, PropertyType } from '@prisma/client';
 
 interface PropertyWithDetails extends Property {
