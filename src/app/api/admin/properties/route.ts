@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { z } from 'zod';
 
 // Schema for admin property creation
@@ -28,9 +28,13 @@ const adminPropertyCreateSchema = z.object({
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('Admin properties GET: Starting request');
+
     const session = await getServerSession(authOptions);
+    console.log('Admin properties GET: Session:', session?.user?.email);
 
     if (!session?.user?.email) {
+      console.log('Admin properties GET: No session found');
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -43,10 +47,12 @@ export async function GET(request: NextRequest) {
     console.log('Admin properties GET: User found:', { id: user?.id, role: user?.role, email: user?.email });
 
     if (!user) {
+      console.log('Admin properties GET: User not found');
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
     if (user.role !== 'ADMIN' && user.role !== 'SUPER_ADMIN') {
+      console.log('Admin properties GET: User not admin:', user.role);
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
@@ -72,6 +78,8 @@ export async function GET(request: NextRequest) {
     if (type && type !== 'all') {
       where.type = type;
     }
+
+    console.log('Admin properties GET: Where clause:', where);
 
     // Get properties with owner details
     const properties = await prisma.property.findMany({
@@ -101,7 +109,7 @@ export async function GET(request: NextRequest) {
 
     const total = await prisma.property.count({ where });
 
-    console.log('Admin properties GET: Found properties:', properties.length);
+    console.log('Admin properties GET: Found properties:', properties.length, 'Total:', total);
 
     return NextResponse.json({
       properties,
@@ -113,7 +121,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching admin properties:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

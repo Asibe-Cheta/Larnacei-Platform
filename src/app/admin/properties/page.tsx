@@ -2,24 +2,62 @@
 
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
-import { Eye, Edit, CheckCircle, XCircle, Plus, Search, Filter } from 'lucide-react';
+import { Eye, Edit, CheckCircle, XCircle, Plus, Search, Filter, Bug, Database } from 'lucide-react';
 import Link from 'next/link';
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = (url: string) => fetch(url).then(res => {
+  if (!res.ok) {
+    throw new Error(`HTTP error! status: ${res.status}`);
+  }
+  return res.json();
+});
 
 export default function AdminPropertiesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [propertyType, setPropertyType] = useState('all');
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [propertiesTestInfo, setPropertiesTestInfo] = useState<any>(null);
 
   // Add cache-busting parameter
-  const { data, error, mutate } = useSWR(`/api/admin/properties?t=${Date.now()}`, fetcher);
+  const { data, error, mutate, isLoading } = useSWR(`/api/admin/properties?t=${Date.now()}`, fetcher);
 
   // Force refresh on mount
   useEffect(() => {
     mutate();
   }, [mutate]);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Admin properties page - Data:', data);
+    console.log('Admin properties page - Error:', error);
+    console.log('Admin properties page - Loading:', isLoading);
+  }, [data, error, isLoading]);
+
+  const testApiConnection = async () => {
+    try {
+      const response = await fetch('/api/admin/test');
+      const result = await response.json();
+      setDebugInfo(result);
+      console.log('Debug API result:', result);
+    } catch (error) {
+      console.error('Debug API error:', error);
+      setDebugInfo({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  };
+
+  const testPropertiesData = async () => {
+    try {
+      const response = await fetch('/api/admin/test-properties');
+      const result = await response.json();
+      setPropertiesTestInfo(result);
+      console.log('Properties test result:', result);
+    } catch (error) {
+      console.error('Properties test error:', error);
+      setPropertiesTestInfo({ error: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  };
 
   const handleApprove = async (propertyId: string) => {
     if (!confirm('Are you sure you want to approve this property?')) return;
@@ -100,8 +138,100 @@ export default function AdminPropertiesPage() {
     }
   };
 
-  if (error) return <div className="p-6">Error loading properties</div>;
-  if (!data) return <div className="p-6">Loading...</div>;
+  if (isLoading) return (
+    <div className="p-6">
+      <div className="flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+        <span className="ml-2">Loading properties...</span>
+      </div>
+    </div>
+  );
+
+  if (error) return (
+    <div className="p-6">
+      <div className="bg-red-50 border border-red-200 rounded-md p-4">
+        <h3 className="text-red-800 font-medium">Error loading properties</h3>
+        <p className="text-red-600 mt-1">{error.message}</p>
+        <div className="mt-4 space-x-2">
+          <button
+            onClick={() => mutate()}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Retry
+          </button>
+          <button
+            onClick={testApiConnection}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+          >
+            <Bug className="w-4 h-4 mr-2" />
+            Debug API
+          </button>
+          <button
+            onClick={testPropertiesData}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+          >
+            <Database className="w-4 h-4 mr-2" />
+            Test Properties
+          </button>
+        </div>
+        {debugInfo && (
+          <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+            <h4 className="font-medium mb-2">Debug Info:</h4>
+            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+          </div>
+        )}
+        {propertiesTestInfo && (
+          <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+            <h4 className="font-medium mb-2">Properties Test Info:</h4>
+            <pre>{JSON.stringify(propertiesTestInfo, null, 2)}</pre>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  if (!data) return (
+    <div className="p-6">
+      <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
+        <h3 className="text-yellow-800 font-medium">No data received</h3>
+        <p className="text-yellow-600 mt-1">The API returned no data. Please check the console for more details.</p>
+        <div className="mt-4 space-x-2">
+          <button
+            onClick={() => mutate()}
+            className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+          >
+            Retry
+          </button>
+          <button
+            onClick={testApiConnection}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+          >
+            <Bug className="w-4 h-4 mr-2" />
+            Debug API
+          </button>
+          <button
+            onClick={testPropertiesData}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
+          >
+            <Database className="w-4 h-4 mr-2" />
+            Test Properties
+          </button>
+        </div>
+        {debugInfo && (
+          <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+            <h4 className="font-medium mb-2">Debug Info:</h4>
+            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+          </div>
+        )}
+        {propertiesTestInfo && (
+          <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
+            <h4 className="font-medium mb-2">Properties Test Info:</h4>
+            <pre>{JSON.stringify(propertiesTestInfo, null, 2)}</pre>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   const filteredProperties = data.properties?.filter((property: any) => {
     const matchesSearch = property.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -119,14 +249,44 @@ export default function AdminPropertiesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Properties Management</h1>
           <p className="text-gray-600">Manage and approve property listings</p>
         </div>
-        <Link
-          href="/admin/properties/create"
-          className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Create Property
-        </Link>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={testApiConnection}
+            className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center text-sm"
+          >
+            <Bug className="w-4 h-4 mr-1" />
+            Debug
+          </button>
+          <button
+            onClick={testPropertiesData}
+            className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center text-sm"
+          >
+            <Database className="w-4 h-4 mr-1" />
+            Test Props
+          </button>
+          <Link
+            href="/admin/properties/create"
+            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Create Property
+          </Link>
+        </div>
       </div>
+
+      {debugInfo && (
+        <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
+          <h4 className="font-medium mb-2">Debug Info:</h4>
+          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+        </div>
+      )}
+
+      {propertiesTestInfo && (
+        <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
+          <h4 className="font-medium mb-2">Properties Test Info:</h4>
+          <pre>{JSON.stringify(propertiesTestInfo, null, 2)}</pre>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
