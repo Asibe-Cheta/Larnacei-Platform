@@ -67,7 +67,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const adminNavigation = [
     {
       name: 'Dashboard',
-      href: '/admin',
+      href: '/admin/dashboard',
       icon: Home,
       description: 'Overview and statistics'
     },
@@ -75,10 +75,10 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       name: 'Properties',
       href: '/admin/properties',
       icon: Building,
-      description: 'Create and manage admin properties'
+      description: 'Create and manage properties'
     },
     {
-      name: 'Property Moderation',
+      name: 'Content Review',
       href: '/admin/moderation',
       icon: Shield,
       description: 'Review and approve property listings'
@@ -88,12 +88,6 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       href: '/admin/users',
       icon: Users,
       description: 'Manage user accounts and KYC'
-    },
-    {
-      name: 'Content Review',
-      href: '/admin/moderation',
-      icon: FileText,
-      description: 'Moderate images and content'
     },
     {
       name: 'Financial Management',
