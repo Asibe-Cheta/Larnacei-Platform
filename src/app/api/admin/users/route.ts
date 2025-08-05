@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 // GET /api/admin/users - Get all users with admin information
 export async function GET(req: NextRequest) {
@@ -70,15 +70,15 @@ export async function GET(req: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user is admin
-    const isAdmin = session.user.email?.includes('admin') || 
-                   session.user.email === 'admin@larnacei.com';
-    
+    const isAdmin = session.user.email?.includes('admin') ||
+      session.user.email === 'admin@larnacei.com';
+
     if (!isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

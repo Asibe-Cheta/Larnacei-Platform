@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 // PUT /api/admin/users/[id]/verify - Verify user KYC
 export async function PUT(
@@ -10,28 +10,28 @@ export async function PUT(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user is admin
-    const isAdmin = session.user.email?.includes('admin') || 
-                   session.user.email === 'admin@larnacei.com';
-    
+    const isAdmin = session.user.email?.includes('admin') ||
+      session.user.email === 'admin@larnacei.com';
+
     if (!isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const { id } = params;
     const body = await request.json();
-    const { 
-      verificationStatus, 
-      kycStatus, 
-      notes, 
-      documentType, 
+    const {
+      verificationStatus,
+      kycStatus,
+      notes,
+      documentType,
       documentNumber,
-      rejectionReason 
+      rejectionReason
     } = body;
 
     // Validate required fields
@@ -100,7 +100,7 @@ export async function PUT(
     // Create verification notification
     const notificationType = verificationStatus === 'VERIFIED' ? 'KYC_APPROVED' : 'KYC_REJECTED';
     const notificationTitle = verificationStatus === 'VERIFIED' ? 'KYC Verification Approved' : 'KYC Verification Rejected';
-    const notificationMessage = verificationStatus === 'VERIFIED' 
+    const notificationMessage = verificationStatus === 'VERIFIED'
       ? 'Your KYC verification has been approved. You can now access all platform features.'
       : `Your KYC verification has been rejected. Reason: ${rejectionReason || 'Please contact support for details.'}`;
 
@@ -171,15 +171,15 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session?.user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     // Check if user is admin
-    const isAdmin = session.user.email?.includes('admin') || 
-                   session.user.email === 'admin@larnacei.com';
-    
+    const isAdmin = session.user.email?.includes('admin') ||
+      session.user.email === 'admin@larnacei.com';
+
     if (!isAdmin) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }

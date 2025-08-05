@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { analyticsService } from '@/lib/analytics-service';
 
 export async function GET(request: NextRequest) {
@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     // Get analytics based on type
     let analyticsData;
-    
+
     if (type === 'market') {
       analyticsData = await analyticsService.getMarketIntelligence();
     } else {

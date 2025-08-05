@@ -63,7 +63,7 @@ export default function AdminPropertiesPage() {
     if (!confirm('Are you sure you want to approve this property?')) return;
     setApprovingId(propertyId);
     try {
-      const response = await fetch(`/api/admin/properties/${propertyId}/approve`, {
+      const response = await fetch(`/api/admin/moderation/property/${propertyId}/approve`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: 'Approved by admin', featured: false }),
@@ -87,7 +87,7 @@ export default function AdminPropertiesPage() {
     if (!reason) return;
     setRejectingId(propertyId);
     try {
-      const response = await fetch(`/api/admin/properties/${propertyId}/reject`, {
+      const response = await fetch(`/api/admin/moderation/property/${propertyId}/reject`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: reason }),
