@@ -112,6 +112,7 @@ export async function POST(
         message: validatedData.message,
         preferredContactMethod: validatedData.preferredContact,
         inquiryType: validatedData.inquiryType,
+        contactPreference: validatedData.preferredContact as any, // Add missing field
         intendedUse: validatedData.intendedUse,
         budget: validatedData.budget ? parseInt(validatedData.budget.replace(/\D/g, '')) : null,
         timeframe: validatedData.timeframe,
@@ -200,7 +201,7 @@ export async function POST(
     );
   } catch (error: any) {
     console.error("Inquiry creation error:", error);
-    
+
     if (error.name === "ZodError") {
       return NextResponse.json(
         {
