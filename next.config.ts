@@ -138,11 +138,10 @@ const nextConfig: NextConfig = {
             key: 'Referrer-Policy',
             value: 'strict-origin-when-cross-origin',
           },
-          // Temporarily removed CSP to fix image loading issues
-          // {
-          //   key: 'Content-Security-Policy',
-          //   value: "default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https: res.cloudinary.com lh3.googleusercontent.com images.unsplash.com; connect-src 'self' https: blob:; font-src 'self' data: blob:;",
-          // },
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https: res.cloudinary.com lh3.googleusercontent.com images.unsplash.com; connect-src 'self' https: blob:; font-src 'self' data: blob:; object-src 'none';",
+          },
         ],
       },
       {

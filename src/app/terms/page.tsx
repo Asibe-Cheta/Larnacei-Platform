@@ -186,7 +186,7 @@ export default function TermsPage() {
                 If you have any questions about these Terms, please contact us at:
               </p>
               <div className="mt-4 space-y-2 text-gray-600">
-                <p><strong>Email:</strong> legal@larnacei.com</p>
+                <p><strong>Email:</strong> info@larnaceiglobal.com</p>
                 <p><strong>Phone:</strong> +234 123 456 7890</p>
                 <p><strong>Address:</strong> 123 Real Estate Avenue, Victoria Island, Lagos, Nigeria</p>
               </div>

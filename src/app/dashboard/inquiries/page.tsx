@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
 import { formatPrice } from '@/utils/formatters';
 import { formatDate } from '@/utils/formatters';
+import InquiryDetailModal from '@/components/inquiries/InquiryDetailModal';
 
 interface Inquiry {
   id: string;
@@ -92,6 +93,8 @@ export default function InquiriesPage() {
 
   const [selectedInquiries, setSelectedInquiries] = useState<string[]>([]);
   const [bulkAction, setBulkAction] = useState('');
+  const [selectedInquiry, setSelectedInquiry] = useState<Inquiry | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -497,7 +500,8 @@ export default function InquiriesPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => {
-                            // TODO: Open inquiry detail modal
+                            setSelectedInquiry(inquiry);
+                            setIsModalOpen(true);
                           }}
                           className="text-red-600 hover:text-red-900"
                         >
@@ -549,6 +553,16 @@ export default function InquiriesPage() {
           </div>
         )}
       </div>
+
+      {/* Inquiry Detail Modal */}
+      <InquiryDetailModal
+        inquiry={selectedInquiry}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedInquiry(null);
+        }}
+      />
     </div>
   );
 } 
