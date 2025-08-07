@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { formatDate } from '@/utils/formatters';
+import ResponseModal from './ResponseModal';
 
 interface InquiryDetailModalProps {
   inquiry: any;
@@ -11,6 +12,8 @@ interface InquiryDetailModalProps {
 
 export default function InquiryDetailModal({ inquiry, isOpen, onClose }: InquiryDetailModalProps) {
   const [activeTab, setActiveTab] = useState<'details' | 'messages'>('details');
+  const [isResponseModalOpen, setIsResponseModalOpen] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   if (!isOpen || !inquiry) return null;
 
@@ -27,6 +30,33 @@ export default function InquiryDetailModal({ inquiry, isOpen, onClose }: Inquiry
 
   const getInquiryTypeLabel = (type: string) => {
     return type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const handleSendResponse = async (message: string) => {
+    setIsSending(true);
+    try {
+      const response = await fetch(`/api/inquiries/${inquiry.id}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message }),
+      });
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to send response');
+      }
+
+      // Refresh the inquiry data or close the modal
+      window.location.reload();
+    } catch (error) {
+      console.error('Error sending response:', error);
+      throw error;
+    } finally {
+      setIsSending(false);
+    }
   };
 
   return (
@@ -226,16 +256,21 @@ export default function InquiryDetailModal({ inquiry, isOpen, onClose }: Inquiry
             Close
           </button>
           <button
-            onClick={() => {
-              // TODO: Open response modal
-              onClose();
-            }}
+            onClick={() => setIsResponseModalOpen(true)}
             className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-md hover:bg-red-700"
           >
             Respond
           </button>
         </div>
       </div>
+
+      {/* Response Modal */}
+      <ResponseModal
+        inquiry={inquiry}
+        isOpen={isResponseModalOpen}
+        onClose={() => setIsResponseModalOpen(false)}
+        onSend={handleSendResponse}
+      />
     </div>
   );
 } 

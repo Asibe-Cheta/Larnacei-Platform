@@ -62,21 +62,65 @@ export default function PropertyImageGallery({
     }
   };
 
+  const renderImage = (image: PropertyImage, className: string, onClick?: () => void) => {
+    if (image.url.startsWith('blob:')) {
+      return (
+        <img
+          src={image.url}
+          alt={image.alt || 'Property image'}
+          className={className}
+          onClick={onClick}
+          onLoad={() => setIsLoading(false)}
+        />
+      );
+    } else {
+      return (
+        <Image
+          src={image.url}
+          alt={image.alt || 'Property image'}
+          fill
+          className={className}
+          onClick={onClick}
+          onLoad={() => setIsLoading(false)}
+        />
+      );
+    }
+  };
+
+  const renderThumbnail = (image: PropertyImage, className: string, onClick?: () => void) => {
+    if (image.url.startsWith('blob:')) {
+      return (
+        <img
+          src={image.url}
+          alt={image.alt || 'Property image'}
+          className={className}
+          onClick={onClick}
+        />
+      );
+    } else {
+      return (
+        <Image
+          src={image.url}
+          alt={image.alt || 'Property image'}
+          width={80}
+          height={64}
+          className={className}
+          onClick={onClick}
+        />
+      );
+    }
+  };
+
   return (
     <>
       {/* Main Image Gallery */}
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
         {/* Main Image */}
         <div className="relative aspect-video bg-gray-100">
-          {currentImage && (
-            <Image
-              src={currentImage.url}
-              alt={currentImage.alt || 'Property image'}
-              fill
-              className="object-cover cursor-pointer"
-              onClick={() => onLightboxToggle(true)}
-              onLoad={() => setIsLoading(false)}
-            />
+          {currentImage && renderImage(
+            currentImage,
+            "object-cover cursor-pointer",
+            () => onLightboxToggle(true)
           )}
           
           {/* Loading Overlay */}
@@ -140,13 +184,7 @@ export default function PropertyImageGallery({
                       : 'border-gray-300 hover:border-gray-400'
                   }`}
                 >
-                  <Image
-                    src={image.url}
-                    alt={image.alt || `Property image ${index + 1}`}
-                    width={80}
-                    height={64}
-                    className="w-full h-full object-cover"
-                  />
+                  {renderThumbnail(image, "w-full h-full object-cover")}
                 </button>
               ))}
             </div>
@@ -176,13 +214,21 @@ export default function PropertyImageGallery({
             {/* Main Image */}
             <div className="relative" onClick={(e) => e.stopPropagation()}>
               {currentImage && (
-                <Image
-                  src={currentImage.url}
-                  alt={currentImage.alt || 'Property image'}
-                  width={1200}
-                  height={800}
-                  className="max-w-full max-h-[80vh] object-contain"
-                />
+                currentImage.url.startsWith('blob:') ? (
+                  <img
+                    src={currentImage.url}
+                    alt={currentImage.alt || 'Property image'}
+                    className="max-w-full max-h-[80vh] object-contain"
+                  />
+                ) : (
+                  <Image
+                    src={currentImage.url}
+                    alt={currentImage.alt || 'Property image'}
+                    width={1200}
+                    height={800}
+                    className="max-w-full max-h-[80vh] object-contain"
+                  />
+                )
               )}
 
               {/* Navigation Arrows */}
@@ -232,13 +278,7 @@ export default function PropertyImageGallery({
                           : 'border-gray-600 hover:border-gray-400'
                       }`}
                     >
-                      <Image
-                        src={image.url}
-                        alt={image.alt || `Property image ${index + 1}`}
-                        width={64}
-                        height={48}
-                        className="w-full h-full object-cover"
-                      />
+                      {renderThumbnail(image, "w-full h-full object-cover")}
                     </button>
                   ))}
                 </div>

@@ -49,12 +49,20 @@ export default function PropertiesGrid({ properties: initialProperties }) {
         return (
           <div key={property.id} className="bg-white rounded shadow hover:shadow-lg transition overflow-hidden flex flex-col">
             <div className="relative h-48 w-full">
-              <Image
-                src={imageUrl}
-                alt={property.title}
-                fill
-                className="object-cover"
-              />
+              {imageUrl.startsWith('blob:') ? (
+                <img
+                  src={imageUrl}
+                  alt={property.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={imageUrl}
+                  alt={property.title}
+                  fill
+                  className="object-cover"
+                />
+              )}
               {property.isFeatured && (
                 <span className="absolute top-2 left-2 bg-yellow-400 text-xs px-2 py-1 rounded font-bold">Featured</span>
               )}

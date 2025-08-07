@@ -480,6 +480,7 @@ export default function AdminPropertiesPage() {
                               e.currentTarget.style.display = 'none';
                               e.currentTarget.nextElementSibling?.classList.remove('hidden');
                             }}
+                            crossOrigin="anonymous"
                           />
                         ) : null}
                         <div className={`h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center ${property.images && property.images.length > 0 ? 'hidden' : ''}`}>

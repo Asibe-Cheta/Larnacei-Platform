@@ -604,6 +604,39 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
 };
 
 // Email verification function
+export const sendInquiryResponseNotificationSendGrid = async (data: {
+  to: string;
+  from: string;
+  subject: string;
+  html: string;
+}): Promise<boolean> => {
+  if (!SENDGRID_API_KEY) {
+    console.log('SendGrid API key not configured');
+    return false;
+  }
+
+  try {
+    console.log('Sending inquiry response notification via SendGrid...');
+    
+    const msg = {
+      to: data.to,
+      from: {
+        email: data.from,
+        name: SENDGRID_FROM_NAME,
+      },
+      subject: data.subject,
+      html: data.html,
+    };
+
+    const response = await sgMail.send(msg);
+    console.log('Inquiry response notification sent successfully:', response[0].statusCode);
+    return true;
+  } catch (error) {
+    console.error('Failed to send inquiry response notification via SendGrid:', error);
+    return false;
+  }
+};
+
 export const sendVerificationEmail = async (email: string, userName: string, userId: string): Promise<boolean> => {
   const verificationUrl = `${process.env.NEXTAUTH_URL || 'http://localhost:3000'}/verify-email?token=${userId}`;
 

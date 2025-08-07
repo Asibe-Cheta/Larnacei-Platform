@@ -338,6 +338,50 @@ export const sendPasswordResetEmail = async (data: { to: string; userName: strin
   }
 };
 
+interface InquiryResponseNotificationData {
+  inquirerEmail: string;
+  inquirerName: string;
+  propertyTitle: string;
+  ownerName: string;
+  response: string;
+}
+
+export const sendInquiryResponseNotification = async (data: InquiryResponseNotificationData) => {
+  if (!SENDGRID_API_KEY) {
+    console.log('SendGrid API key not configured, skipping email notification');
+    return;
+  }
+
+  try {
+    console.log('Attempting to send inquiry response notification via SendGrid...');
+    
+    const emailContent = `
+      <h2>Response to Your Property Inquiry</h2>
+      <p>Hello ${data.inquirerName},</p>
+      <p>You have received a response to your inquiry about <strong>${data.propertyTitle}</strong>.</p>
+      <p><strong>From:</strong> ${data.ownerName}</p>
+      <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; white-space: pre-wrap;">${data.response}</p>
+      </div>
+      <p>Thank you for your interest in our properties.</p>
+      <p>Best regards,<br>Larnacei Global Limited</p>
+    `;
+
+    const emailData = {
+      to: data.inquirerEmail,
+      from: SENDGRID_FROM_EMAIL,
+      subject: `Response to Your Inquiry - ${data.propertyTitle}`,
+      html: createEmailTemplate(emailContent, 'Inquiry Response'),
+    };
+
+    await sendInquiryResponseNotificationSendGrid(emailData);
+    console.log('Inquiry response notification sent successfully via SendGrid');
+  } catch (error) {
+    console.error('Failed to send inquiry response notification via SendGrid:', error);
+    throw error;
+  }
+};
+
 export const sendVerificationEmail = async (email: string, userName: string, userId: string) => {
   try {
     console.log('Sending verification email via SendGrid...');

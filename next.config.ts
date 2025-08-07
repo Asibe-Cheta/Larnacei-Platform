@@ -140,7 +140,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https: res.cloudinary.com lh3.googleusercontent.com images.unsplash.com; connect-src 'self' https: blob:; font-src 'self' data: blob:; object-src 'none';",
+            value: "default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https: res.cloudinary.com lh3.googleusercontent.com images.unsplash.com properties.larnaceiglobal.com; connect-src 'self' https: blob:; font-src 'self' data: blob:; object-src 'none';",
           },
         ],
       },
