@@ -36,7 +36,10 @@ export function DashboardPage() {
             </div>
             <div className="flex items-center space-x-4">
               <button className="text-gray-500 hover:text-gray-700">
-                <span className="material-icons">notifications</span>
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
               </button>
               <div className="relative">
                 <button className="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
@@ -44,7 +47,9 @@ export function DashboardPage() {
                     <span className="text-sm font-medium">U</span>
                   </div>
                   <span className="hidden md:block">User</span>
-                  <span className="material-icons text-sm">arrow_drop_down</span>
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
                 </button>
               </div>
             </div>
@@ -52,7 +57,7 @@ export function DashboardPage() {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Navigation Tabs */}
         <div className="bg-gray-100 border-b border-gray-200 mb-8">
           <nav className="flex flex-row items-center gap-x-8 px-6" style={{ minHeight: 56 }}>
@@ -89,8 +94,7 @@ export function DashboardPage() {
 
         {/* Render the current tab's content via nested routes */}
         <div className="py-8">
-          {/* This will render the active subroute's page.tsx */}
-          {/* You may want to add a <Outlet /> or {children} here if using a layout */}
+          {/* Content will be rendered by the nested route */}
         </div>
       </div>
     </div>

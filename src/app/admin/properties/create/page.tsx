@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -8,6 +8,10 @@ export default function CreatePropertyPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingVideos, setUploadingVideos] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const videoInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -28,13 +32,131 @@ export default function CreatePropertyPage() {
     amenities: [] as string[],
     images: [] as string[],
     videos: [] as string[],
+    isFeatured: false,
   });
 
+  const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
+  const [selectedVideoFiles, setSelectedVideoFiles] = useState<File[]>([]);
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (selectedImageFiles.length === 0) return;
+
+    setUploadingImages(true);
+    try {
+      const imageFormData = new FormData();
+      selectedImageFiles.forEach((file) => {
+        imageFormData.append('images', file);
+      });
+
+      const response = await fetch('/api/upload-images', {
+        method: 'POST',
+        body: imageFormData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setFormData(prev => ({
+          ...prev,
+          images: [...prev.images, ...result.urls]
+        }));
+        setSelectedImageFiles([]);
+        if (imageInputRef.current) {
+          imageInputRef.current.value = '';
+        }
+      } else {
+        setMessage({
+          type: 'error',
+          text: 'Failed to upload images. Please try again.'
+        });
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to upload images. Please try again.'
+      });
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const handleVideoUpload = async () => {
+    if (selectedVideoFiles.length === 0) return;
+
+    setUploadingVideos(true);
+    try {
+      const videoFormData = new FormData();
+      selectedVideoFiles.forEach((file) => {
+        videoFormData.append('videos', file);
+      });
+
+      const response = await fetch('/api/upload-videos', {
+        method: 'POST',
+        body: videoFormData,
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        setFormData(prev => ({
+          ...prev,
+          videos: [...prev.videos, ...result.urls]
+        }));
+        setSelectedVideoFiles([]);
+        if (videoInputRef.current) {
+          videoInputRef.current.value = '';
+        }
+      } else {
+        setMessage({
+          type: 'error',
+          text: 'Failed to upload videos. Please try again.'
+        });
+      }
+    } catch (error) {
+      setMessage({
+        type: 'error',
+        text: 'Failed to upload videos. Please try again.'
+      });
+    } finally {
+      setUploadingVideos(false);
+    }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedImageFiles(files);
+  };
+
+  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedVideoFiles(files);
+  };
+
+  const removeImage = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+
+  const removeVideo = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      videos: prev.videos.filter((_, i) => i !== index)
     }));
   };
 
@@ -228,6 +350,21 @@ export default function CreatePropertyPage() {
                 placeholder="Property size"
               />
             </div>
+
+            <div className="md:col-span-2">
+              <label className="flex items-center">
+                <input
+                  type="checkbox"
+                  name="isFeatured"
+                  checked={formData.isFeatured}
+                  onChange={handleInputChange}
+                  className="mr-2 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                />
+                <span className="text-sm font-medium text-gray-700">
+                  Feature this property on the home page
+                </span>
+              </label>
+            </div>
           </div>
 
           <div className="mt-4">
@@ -344,6 +481,112 @@ export default function CreatePropertyPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 placeholder="Enter longitude"
               />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Media</h2>
+
+          {/* Image Upload */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium mb-3">Images</h3>
+            <div className="space-y-4">
+              <div>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                />
+                {selectedImageFiles.length > 0 && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={handleImageUpload}
+                      disabled={uploadingImages}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {uploadingImages ? 'Uploading...' : 'Upload Images'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Display uploaded images */}
+              {formData.images.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {formData.images.map((url, index) => (
+                    <div key={index} className="relative">
+                      <img
+                        src={url}
+                        alt={`Property image ${index + 1}`}
+                        className="w-full h-24 object-cover rounded-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Video Upload */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium mb-3">Videos</h3>
+            <div className="space-y-4">
+              <div>
+                <input
+                  ref={videoInputRef}
+                  type="file"
+                  multiple
+                  accept="video/*"
+                  onChange={handleVideoSelect}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                />
+                {selectedVideoFiles.length > 0 && (
+                  <div className="mt-2">
+                    <button
+                      type="button"
+                      onClick={handleVideoUpload}
+                      disabled={uploadingVideos}
+                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {uploadingVideos ? 'Uploading...' : 'Upload Videos'}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Display uploaded videos */}
+              {formData.videos.length > 0 && (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {formData.videos.map((url, index) => (
+                    <div key={index} className="relative">
+                      <video
+                        src={url}
+                        className="w-full h-24 object-cover rounded-md"
+                        controls
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeVideo(index)}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

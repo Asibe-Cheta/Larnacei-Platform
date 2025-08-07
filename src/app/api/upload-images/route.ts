@@ -36,7 +36,12 @@ export async function POST(request: NextRequest) {
 
     // Parse form data
     const formData = await request.formData();
-    const files = formData.getAll('files') as File[];
+
+    // Handle both 'images' and 'files' keys
+    let files = formData.getAll('images') as File[];
+    if (files.length === 0) {
+      files = formData.getAll('files') as File[];
+    }
 
     console.log('Files received:', files.length);
 

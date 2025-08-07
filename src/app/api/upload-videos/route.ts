@@ -24,18 +24,24 @@ export async function POST(request: NextRequest) {
 
     // Check authentication
     const session = await getServerSession(authOptions);
-    if (!session?.user) {
-      console.log('Authentication failed - no session or user');
+    if (!session?.user?.id) {
+      console.log('No authenticated user found');
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'Authentication required' },
         { status: 401 }
       );
     }
 
     console.log('User authenticated:', session.user.id);
 
+    // Parse form data
     const formData = await request.formData();
-    const files = formData.getAll('videos') as File[];
+
+    // Handle both 'videos' and 'files' keys
+    let files = formData.getAll('videos') as File[];
+    if (files.length === 0) {
+      files = formData.getAll('files') as File[];
+    }
 
     console.log('Files received:', files.length);
 
@@ -48,16 +54,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Cloudinary is configured
-    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    const cloudinaryVars = {
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    };
+
+    console.log('Cloudinary configuration check:', {
+      cloud_name_set: !!cloudinaryVars.cloud_name,
+      api_key_set: !!cloudinaryVars.api_key,
+      api_secret_set: !!cloudinaryVars.api_secret,
+      all_set: !!(cloudinaryVars.cloud_name && cloudinaryVars.api_key && cloudinaryVars.api_secret)
+    });
+
+    if (!cloudinaryVars.cloud_name || !cloudinaryVars.api_key || !cloudinaryVars.api_secret) {
       console.error('Cloudinary configuration missing');
       console.error('Available env vars:', Object.keys(process.env).filter(key => key.includes('CLOUDINARY')));
+
       return NextResponse.json(
         { error: 'Upload service not configured. Please contact support.' },
         { status: 500 }
       );
     }
 
-    console.log('Cloudinary is configured, uploading videos to cloud storage');
+    console.log('Cloudinary is configured, uploading to cloud storage');
     const uploadedUrls: string[] = [];
 
     for (let i = 0; i < files.length; i++) {
@@ -91,7 +111,7 @@ export async function POST(request: NextRequest) {
         const fileExtension = file.name.split('.').pop() || 'mp4';
         const publicId = `larnacei-properties/videos/${session.user.id}-${i}-${timestamp}`;
 
-        console.log('Uploading video to Cloudinary:', publicId);
+        console.log('Uploading to Cloudinary:', publicId);
 
         // Upload to Cloudinary
         const uploadResult = await cloudinary.uploader.upload(base64String, {
@@ -100,24 +120,24 @@ export async function POST(request: NextRequest) {
           resource_type: 'video',
           transformation: [
             { width: 1280, height: 720, crop: 'limit' }, // Resize for web
-            { quality: 'auto' } // Optimize
+            { quality: 'auto', fetch_format: 'auto' } // Optimize
           ]
         });
 
-        console.log('Video uploaded successfully to Cloudinary:', uploadResult.secure_url);
+        console.log('File uploaded successfully to Cloudinary:', uploadResult.secure_url);
 
         // Add to uploaded URLs
         uploadedUrls.push(uploadResult.secure_url);
       } catch (fileError: any) {
-        console.error('Error processing video file:', file.name, fileError);
+        console.error('Error processing file:', file.name, fileError);
         return NextResponse.json(
-          { error: `Failed to process video file ${file.name}: ${fileError.message}` },
+          { error: `Failed to process file ${file.name}: ${fileError.message}` },
           { status: 500 }
         );
       }
     }
 
-    console.log('Video upload completed successfully. URLs:', uploadedUrls);
+    console.log('Upload completed successfully. URLs:', uploadedUrls);
 
     return NextResponse.json({
       success: true,

@@ -43,6 +43,12 @@ export default function PropertiesGrid({ properties: initialProperties }) {
           if (primaryImage) {
             // Handle both string URLs and object structures
             imageUrl = typeof primaryImage === 'string' ? primaryImage : primaryImage.url;
+
+            // Ensure we're using Cloudinary URLs, not blob URLs
+            if (imageUrl.startsWith('blob:')) {
+              console.warn('Blob URL detected for property image:', property.id);
+              imageUrl = '/images/Larnacei_coloured.png'; // Fallback to default
+            }
           }
         }
 
@@ -61,6 +67,7 @@ export default function PropertiesGrid({ properties: initialProperties }) {
                   alt={property.title}
                   fill
                   className="object-cover"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                 />
               )}
               {property.isFeatured && (

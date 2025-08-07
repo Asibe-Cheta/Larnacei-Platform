@@ -8,7 +8,7 @@ import CTASection from '@/components/sections/CTASection';
 import Footer from '@/components/layout/Footer';
 
 // Lazy load components for better performance
-const FeaturedProperties = dynamic(() => import('@/components/sections/FeaturedProperties'), {
+const FeaturedProperties = dynamic(() => import('@/components/home/FeaturedProperties'), {
   loading: () => <div className="h-96 bg-gray-100 animate-pulse rounded-lg" />,
   ssr: true,
 });
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: "Larnacei Global Limited - Nigerian Property Marketplace",
   description: "Find your perfect property in Nigeria. Browse properties for sale, rentals, short stays, and land investments. Your trusted partner for real estate in Nigeria.",
   keywords: [
-    "Nigeria property", "real estate Nigeria", "property for sale", 
+    "Nigeria property", "real estate Nigeria", "property for sale",
     "rental properties", "rentals in my area", "land for sale", "short stays", "vacation rentals",
     "Lagos properties", "Abuja real estate", "Port Harcourt properties"
   ],
@@ -77,7 +77,7 @@ export default function HomePage() {
           })
         }}
       />
-      
+
       <Header />
       <main>
         <HeroSection />

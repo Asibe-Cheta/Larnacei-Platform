@@ -62,17 +62,15 @@ export default function PropertyImageGallery({
   };
 
   const renderImage = (image: PropertyImage, className: string, onClick?: () => void) => {
-    // Handle blob URLs and Cloudinary URLs differently
+    // Ensure we're using Cloudinary URLs, not blob URLs
     if (image.url.startsWith('blob:')) {
+      console.warn('Blob URL detected in PropertyImageGallery:', image.id);
       return (
-        <img
-          src={image.url}
-          alt={image.alt || 'Property image'}
-          className={className}
-          onClick={onClick}
-          onLoad={() => setIsLoading(false)}
-          crossOrigin="anonymous"
-        />
+        <div className={`${className} bg-gray-200 flex items-center justify-center`}>
+          <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </div>
       );
     } else {
       return (
@@ -83,6 +81,7 @@ export default function PropertyImageGallery({
           className={className}
           onClick={onClick}
           onLoad={() => setIsLoading(false)}
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 60vw"
         />
       );
     }
@@ -90,14 +89,13 @@ export default function PropertyImageGallery({
 
   const renderThumbnail = (image: PropertyImage, className: string, onClick?: () => void) => {
     if (image.url.startsWith('blob:')) {
+      console.warn('Blob URL detected in thumbnail:', image.id);
       return (
-        <img
-          src={image.url}
-          alt={image.alt || 'Property image'}
-          className={className}
-          onClick={onClick}
-          crossOrigin="anonymous"
-        />
+        <div className={`${className} bg-gray-200 flex items-center justify-center`}>
+          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </div>
       );
     } else {
       return (
@@ -107,6 +105,7 @@ export default function PropertyImageGallery({
           fill
           className={className}
           onClick={onClick}
+          sizes="80px"
         />
       );
     }

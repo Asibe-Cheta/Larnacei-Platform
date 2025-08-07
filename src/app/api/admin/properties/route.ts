@@ -24,6 +24,7 @@ const adminPropertyCreateSchema = z.object({
   amenities: z.array(z.string()).optional(),
   images: z.array(z.string().url()).optional(),
   videos: z.array(z.string().url()).optional(),
+  isFeatured: z.boolean().optional().default(false),
 });
 
 export async function GET(request: NextRequest) {
@@ -189,6 +190,7 @@ export async function POST(request: NextRequest) {
         locationId: location.id,
         moderationStatus: 'APPROVED', // Auto-approve admin-created properties
         isActive: true,
+        isFeatured: validatedData.isFeatured,
       },
     });
 
