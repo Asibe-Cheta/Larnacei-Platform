@@ -242,7 +242,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('Admin properties POST: Error:', error);
-    
+
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: 'Validation error', details: error.errors },

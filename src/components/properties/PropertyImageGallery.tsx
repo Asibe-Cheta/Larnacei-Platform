@@ -121,11 +121,10 @@ export default function PropertyImageGallery({
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           </div>
         )}
-        
+
         {renderImage(
           currentImage,
-          `object-cover w-full h-full transition-opacity duration-300 ${
-            isLoading ? 'opacity-0' : 'opacity-100'
+          `object-cover w-full h-full transition-opacity duration-300 ${isLoading ? 'opacity-0' : 'opacity-100'
           }`,
           () => onLightboxToggle(true)
         )}
@@ -168,9 +167,8 @@ export default function PropertyImageGallery({
           {images.map((image, index) => (
             <div
               key={image.id}
-              className={`relative flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden cursor-pointer border-2 ${
-                index === activeIndex ? 'border-blue-500' : 'border-transparent'
-              }`}
+              className={`relative flex-shrink-0 w-20 h-16 rounded-lg overflow-hidden cursor-pointer border-2 ${index === activeIndex ? 'border-blue-500' : 'border-transparent'
+                }`}
               onClick={() => onImageChange(index)}
             >
               {renderThumbnail(
@@ -199,7 +197,7 @@ export default function PropertyImageGallery({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            
+
             <div className="relative aspect-video">
               {renderImage(
                 currentImage,
