@@ -14,6 +14,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ['@mui/material', '@mui/icons-material', 'lucide-react'],
+    serverComponentsExternalPackages: ['cloudinary'],
   },
 
   // Image optimization for Nigerian networks
@@ -43,6 +44,14 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
     minimumCacheTTL: 60 * 60 * 24 * 30, // 30 days
     dangerouslyAllowSVG: true,
+    domains: [
+      'res.cloudinary.com',
+      'lh3.googleusercontent.com',
+      'images.unsplash.com',
+      'plus.unsplash.com',
+      'images.pexels.com',
+    ],
+    contentSecurityPolicy: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https: http:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';",
     // Remove restrictive CSP that's blocking images
   },
 
@@ -140,7 +149,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data: https: res.cloudinary.com lh3.googleusercontent.com images.unsplash.com properties.larnaceiglobal.com; connect-src 'self' https: blob:; font-src 'self' data: blob:; object-src 'none';",
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; connect-src 'self' https: http:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';",
           },
         ],
       },

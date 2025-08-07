@@ -349,27 +349,36 @@ export default function PropertyCard({ property, viewMode }: PropertyCardProps) 
       <Link href={`/properties/${property.id}`} className="block">
         {/* Image Section */}
         <div 
-          className="relative h-48"
+          className="relative aspect-video bg-gray-200 rounded-t-lg overflow-hidden"
           onMouseEnter={() => setShowImageDots(true)}
           onMouseLeave={() => setShowImageDots(false)}
         >
           {isInView && primaryImage ? (
-            <Image
-              src={primaryImage.url}
-              alt={primaryImage.alt || property.title}
-              fill
-              className={`object-cover rounded-t-lg transition-opacity duration-300 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              onLoad={() => setImageLoaded(true)}
-              priority={false}
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              quality={75}
-            />
+            primaryImage.url.startsWith('blob:') ? (
+              <img
+                src={primaryImage.url}
+                alt={primaryImage.alt || property.title}
+                className={`object-cover w-full h-full transition-opacity duration-300 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setImageLoaded(true)}
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <Image
+                src={primaryImage.url}
+                alt={primaryImage.alt || property.title}
+                fill
+                className={`object-cover transition-opacity duration-300 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
+                onLoad={() => setImageLoaded(true)}
+              />
+            )
           ) : (
-            <div className="w-full h-full bg-gray-200 rounded-t-lg flex items-center justify-center">
-              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
             </div>
           )}
