@@ -1,578 +1,435 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import useSWR from 'swr';
-import { Eye, Edit, CheckCircle, XCircle, Plus, Search, Filter, Bug, Database } from 'lucide-react';
 import Link from 'next/link';
+import {
+  Building,
+  Search,
+  Eye,
+  Shield,
+  CheckCircle,
+  Clock,
+  Phone,
+  Calendar,
+  Star,
+  Home
+} from 'lucide-react';
+import useSWR from 'swr';
 
 const fetcher = async (url: string) => {
-  console.log('Fetcher called for:', url);
-  try {
-    const res = await fetch(url);
-    console.log('Fetcher response status:', res.status);
+  console.log('Admin properties fetcher: Fetching from:', url);
+  const res = await fetch(url);
+  console.log('Admin properties fetcher response status:', res.status);
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      console.error('Fetcher error response:', errorText);
-      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
-    }
-
-    const data = await res.json();
-    console.log('Fetcher success data:', data);
-    return data;
-  } catch (error) {
-    console.error('Fetcher error:', error);
-    throw error;
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('Admin properties fetcher error response:', errorText);
+    throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
   }
+
+  const data = await res.json();
+  console.log('Admin properties fetcher success data:', data);
+  return data;
 };
 
 export default function AdminPropertiesPage() {
+  const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [propertyType, setPropertyType] = useState('all');
+  const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
+  const limit = 20;
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+
   const [propertiesTestInfo, setPropertiesTestInfo] = useState<any>(null);
 
-  // Add cache-busting parameter
-  const { data, error, mutate, isLoading } = useSWR('/api/admin/properties', fetcher);
+  // Build query params
+  const params = new URLSearchParams();
+  if (searchTerm) params.append('search', searchTerm);
+  if (filter && filter !== 'all') {
+    if (['approved', 'pending', 'rejected'].includes(filter)) {
+      params.append('moderationStatus', filter);
+    } else if (filter === 'active') {
+      params.append('isActive', 'true');
+    } else if (filter === 'inactive') {
+      params.append('isActive', 'false');
+    }
+  }
+  params.append('page', String(page));
+  params.append('limit', String(limit));
 
-  // Force refresh on mount
+  const { data, isLoading, error, mutate } = useSWR(`/api/admin/properties?${params.toString()}`, fetcher);
+  const properties = data?.data || [];
+  const total = data?.pagination?.total || 0;
+  const totalPages = Math.ceil(total / limit);
+
+  // Force data refresh on component mount
   useEffect(() => {
+    console.log('Admin properties page: Component mounted, forcing data refresh');
     mutate();
   }, [mutate]);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('Admin properties page - Data:', data);
-    console.log('Admin properties page - Error:', error);
-    console.log('Admin properties page - Loading:', isLoading);
-  }, [data, error, isLoading]);
+  const handleSelectProperty = (propertyId: string) => {
+    setSelectedProperties(prev =>
+      prev.includes(propertyId)
+        ? prev.filter(id => id !== propertyId)
+        : [...prev, propertyId]
+    );
+  };
 
-  const testApiConnection = async () => {
-    try {
-      const response = await fetch('/api/admin/test');
-      const result = await response.json();
-      setDebugInfo(result);
-      console.log('Debug API result:', result);
-    } catch (error) {
-      console.error('Debug API error:', error);
-      setDebugInfo({ error: error instanceof Error ? error.message : 'Unknown error' });
+  const getModerationStatusColor = (status: string) => {
+    switch (status) {
+      case 'APPROVED':
+        return 'bg-green-100 text-green-800';
+      case 'PENDING':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'REJECTED':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const testPropertiesData = async () => {
-    try {
-      const response = await fetch('/api/admin/test-properties');
-      const result = await response.json();
-      setPropertiesTestInfo(result);
-      console.log('Properties test result:', result);
-    } catch (error) {
-      console.error('Properties test error:', error);
-      setPropertiesTestInfo({ error: error instanceof Error ? error.message : 'Unknown error' });
+  const getPropertyTypeColor = (type: string) => {
+    switch (type) {
+      case 'HOUSE':
+        return 'bg-blue-100 text-blue-800';
+      case 'APARTMENT':
+        return 'bg-purple-100 text-purple-800';
+      case 'CONDO':
+        return 'bg-indigo-100 text-indigo-800';
+      case 'LAND':
+        return 'bg-green-100 text-green-800';
+      case 'COMMERCIAL':
+        return 'bg-orange-100 text-orange-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const testImagesData = async () => {
-    try {
-      const response = await fetch('/api/admin/test-images');
-      const result = await response.json();
-      setPropertiesTestInfo(result);
-      console.log('Images test result:', result);
-    } catch (error) {
-      console.error('Images test error:', error);
-      setPropertiesTestInfo({ error: error instanceof Error ? error.message : 'Unknown error' });
-    }
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-NG', {
+      style: 'currency',
+      currency: 'NGN',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
-  const handleApprove = async (propertyId: string) => {
-    if (!confirm('Are you sure you want to approve this property?')) return;
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  const handleApproveProperty = async (propertyId: string) => {
     setApprovingId(propertyId);
     try {
-      const response = await fetch(`/api/admin/moderation/property/${propertyId}/approve`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: 'Approved by admin', featured: false }),
+      const response = await fetch(`/api/admin/properties/${propertyId}/approve`, {
+        method: 'POST',
       });
-
-      const responseData = await response.json();
-
       if (response.ok) {
-        mutate();
-        alert('Property approved successfully!');
-      } else {
-        const errorMessage = responseData.error || responseData.message || 'Unknown error occurred';
-        alert(`Failed to approve property: ${errorMessage}`);
+        mutate(); // Refresh data
       }
     } catch (error) {
-      console.error('Approval error:', error);
-      alert('Failed to approve property. Please try again.');
+      console.error('Error approving property:', error);
     } finally {
       setApprovingId(null);
     }
   };
 
-  const handleReject = async (propertyId: string) => {
-    const reason = prompt('Please provide a reason for rejection:');
-    if (!reason) return;
+  const handleRejectProperty = async (propertyId: string) => {
     setRejectingId(propertyId);
     try {
-      const response = await fetch(`/api/admin/moderation/property/${propertyId}/reject`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: reason }),
+      const response = await fetch(`/api/admin/properties/${propertyId}/reject`, {
+        method: 'POST',
       });
       if (response.ok) {
-        mutate();
-        alert('Property rejected successfully!');
-      } else {
-        const errorData = await response.json();
-        alert(`Failed to reject property: ${errorData.error || 'Unknown error'}`);
+        mutate(); // Refresh data
       }
     } catch (error) {
-      alert('Failed to reject property. Please try again.');
+      console.error('Error rejecting property:', error);
     } finally {
       setRejectingId(null);
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'APPROVED':
-        return <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">Approved</span>;
-      case 'REJECTED':
-        return <span className="px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">Rejected</span>;
-      case 'PENDING':
-        return <span className="px-2 py-1 text-xs font-medium bg-yellow-100 text-yellow-800 rounded-full">Pending</span>;
-      default:
-        return <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">{status}</span>;
-    }
-  };
-
-  const getPropertyTypeIcon = (type: string) => {
-    switch (type) {
-      case 'HOUSE':
-        return <span className="text-green-600">🏠</span>;
-      case 'APARTMENT':
-        return <span className="text-blue-600">🏢</span>;
-      case 'CONDO':
-        return <span className="text-purple-600">🏘️</span>;
-      case 'TOWNHOUSE':
-        return <span className="text-orange-600">🏡</span>;
-      case 'LAND':
-        return <span className="text-brown-600">🌾</span>;
-      case 'COMMERCIAL':
-        return <span className="text-gray-600">🏪</span>;
-      default:
-        return <span className="text-gray-600">🏠</span>;
-    }
-  };
-
-  if (isLoading) return (
-    <div className="p-6">
-      <div className="flex items-center justify-center mb-6">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-        <span className="ml-2">Loading properties...</span>
-      </div>
-
-      {/* Show debug buttons even when loading */}
-      <div className="flex items-center space-x-2 mb-6">
-        <button
-          onClick={testApiConnection}
-          className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center text-sm"
-        >
-          <Bug className="w-4 h-4 mr-1" />
-          Debug API
-        </button>
-        <button
-          onClick={testPropertiesData}
-          className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center text-sm"
-        >
-          <Database className="w-4 h-4 mr-1" />
-          Test Props
-        </button>
-        <button
-          onClick={testImagesData}
-          className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center text-sm"
-        >
-          <Database className="w-4 h-4 mr-1" />
-          Test Images
-        </button>
-      </div>
-
-      {debugInfo && (
-        <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
-          <h4 className="font-medium mb-2">Debug Info:</h4>
-          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-        </div>
-      )}
-
-      {propertiesTestInfo && (
-        <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
-          <h4 className="font-medium mb-2">Properties Test Info:</h4>
-          <pre>{JSON.stringify(propertiesTestInfo, null, 2)}</pre>
-        </div>
-      )}
-    </div>
-  );
-
-  if (error) return (
-    <div className="p-6">
-      <div className="bg-red-50 border border-red-200 rounded-md p-4">
-        <h3 className="text-red-800 font-medium">Error loading properties</h3>
-        <p className="text-red-600 mt-1">{error.message}</p>
-        <div className="mt-4 space-x-2">
-          <button
-            onClick={() => mutate()}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-          >
-            Retry
-          </button>
-          <button
-            onClick={testApiConnection}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-          >
-            <Bug className="w-4 h-4 mr-2" />
-            Debug API
-          </button>
-          <button
-            onClick={testPropertiesData}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
-          >
-            <Database className="w-4 h-4 mr-2" />
-            Test Properties
-          </button>
-        </div>
-        {debugInfo && (
-          <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
-            <h4 className="font-medium mb-2">Debug Info:</h4>
-            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-6"></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-white rounded-lg shadow p-6">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/2 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-1/3"></div>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
-        {propertiesTestInfo && (
-          <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
-            <h4 className="font-medium mb-2">Properties Test Info:</h4>
-            <pre>{JSON.stringify(propertiesTestInfo, null, 2)}</pre>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  if (!data) return (
-    <div className="p-6">
-      <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-        <h3 className="text-yellow-800 font-medium">No data received</h3>
-        <p className="text-yellow-600 mt-1">The API returned no data. Please check the console for more details.</p>
-        <div className="mt-4 space-x-2">
-          <button
-            onClick={() => mutate()}
-            className="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
-          >
-            Retry
-          </button>
-          <button
-            onClick={testApiConnection}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-          >
-            <Bug className="w-4 h-4 mr-2" />
-            Debug API
-          </button>
-          <button
-            onClick={testPropertiesData}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
-          >
-            <Database className="w-4 h-4 mr-2" />
-            Test Properties
-          </button>
         </div>
-        {debugInfo && (
-          <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
-            <h4 className="font-medium mb-2">Debug Info:</h4>
-            <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-          </div>
-        )}
-        {propertiesTestInfo && (
-          <div className="mt-4 p-3 bg-gray-100 rounded text-sm">
-            <h4 className="font-medium mb-2">Properties Test Info:</h4>
-            <pre>{JSON.stringify(propertiesTestInfo, null, 2)}</pre>
-          </div>
-        )}
       </div>
-    </div>
-  );
+    );
+  }
 
-  const filteredProperties = data.properties?.filter((property: any) => {
-    const matchesSearch = property.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      property.owner?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = propertyType === 'all' || property.type === propertyType;
-    return matchesSearch && matchesType;
-  }) || [];
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Error Loading Properties</h1>
+            <p className="text-gray-600">Failed to load properties. Please try again.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Properties Management</h1>
-          <p className="text-gray-600">Manage and approve property listings</p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={testApiConnection}
-            className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center text-sm"
-          >
-            <Bug className="w-4 h-4 mr-1" />
-            Debug
-          </button>
-          <button
-            onClick={testPropertiesData}
-            className="px-3 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center text-sm"
-          >
-            <Database className="w-4 h-4 mr-1" />
-            Test Props
-          </button>
-          <button
-            onClick={testImagesData}
-            className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center text-sm"
-          >
-            <Database className="w-4 h-4 mr-1" />
-            Test Images
-          </button>
-          <Link
-            href="/admin/properties/create"
-            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Create Property
-          </Link>
-        </div>
-      </div>
-
-      {debugInfo && (
-        <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
-          <h4 className="font-medium mb-2">Debug Info:</h4>
-          <pre>{JSON.stringify(debugInfo, null, 2)}</pre>
-        </div>
-      )}
-
-      {propertiesTestInfo && (
-        <div className="mb-4 p-3 bg-gray-100 rounded text-sm">
-          <h4 className="font-medium mb-2">Properties Test Info:</h4>
-          <pre>{JSON.stringify(propertiesTestInfo, null, 2)}</pre>
-        </div>
-      )}
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <span className="text-blue-600">🏠</span>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6">
+        {/* Header */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Property Management</h1>
+              <p className="text-gray-600 mt-2">Manage and approve property listings</p>
             </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Total Properties</p>
-              <p className="text-2xl font-bold text-gray-900">{data.properties?.length || 0}</p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center">
-            <div className="p-2 bg-yellow-100 rounded-lg">
-              <span className="text-yellow-600">⏳</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Pending Approval</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {data.properties?.filter((p: any) => p.moderationStatus === 'PENDING').length || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <span className="text-green-600">✅</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Approved</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {data.properties?.filter((p: any) => p.moderationStatus === 'APPROVED').length || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <div className="flex items-center">
-            <div className="p-2 bg-red-100 rounded-lg">
-              <span className="text-red-600">❌</span>
-            </div>
-            <div className="ml-3">
-              <p className="text-sm font-medium text-gray-600">Rejected</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {data.properties?.filter((p: any) => p.moderationStatus === 'REJECTED').length || 0}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search properties..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              />
-            </div>
-          </div>
-          <div className="md:w-48">
-            <select
-              value={propertyType}
-              onChange={(e) => setPropertyType(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            <Link
+              href="/"
+              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
             >
-              <option value="all">All Types</option>
-              <option value="HOUSE">House</option>
-              <option value="APARTMENT">Apartment</option>
-              <option value="CONDO">Condo</option>
-              <option value="TOWNHOUSE">Townhouse</option>
-              <option value="LAND">Land</option>
-              <option value="COMMERCIAL">Commercial</option>
-            </select>
+              <Home className="w-4 h-4 mr-2" />
+              Back to Home
+            </Link>
           </div>
         </div>
-      </div>
 
-      {/* Properties Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Property
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Owner
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Price
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredProperties.map((property: any) => (
-                <tr key={property.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-12 w-12">
-                        {property.images && property.images.length > 0 ? (
-                          <img
-                            src={property.images[0].url}
-                            alt={property.images[0].alt || property.title}
-                            className="h-12 w-12 rounded-lg object-cover"
-                            onError={(e) => {
-                              // Fallback to icon if image fails to load
-                              e.currentTarget.style.display = 'none';
-                              e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                            }}
-                            crossOrigin="anonymous"
-                          />
-                        ) : null}
-                        <div className={`h-12 w-12 rounded-lg bg-gray-200 flex items-center justify-center ${property.images && property.images.length > 0 ? 'hidden' : ''}`}>
-                          {getPropertyTypeIcon(property.type)}
-                        </div>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {property.title}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {property.city}, {property.state}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">
-                      {property.owner?.name || 'Unknown'}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {property.owner?.email}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">
-                      ₦{property.price?.toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    {getStatusBadge(property.moderationStatus)}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900">
-                      {new Date(property.createdAt).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center space-x-2">
-                      <Link
-                        href={`/properties/${property.id}`}
-                        className="text-blue-600 hover:text-blue-900 p-1"
-                        title="View Property"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      <Link
-                        href={`/dashboard/properties/${property.id}/edit`}
-                        className="text-gray-600 hover:text-gray-900 p-1"
-                        title="Edit Property"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </Link>
-                      <button
-                        onClick={() => handleApprove(property.id)}
-                        disabled={approvingId === property.id}
-                        className="text-green-600 hover:text-green-900 p-1 disabled:opacity-50"
-                        title="Approve Property"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleReject(property.id)}
-                        disabled={rejectingId === property.id}
-                        className="text-red-600 hover:text-red-900 p-1 disabled:opacity-50"
-                        title="Reject Property"
-                      >
-                        <XCircle className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <div className="flex items-center">
+              <div className="p-2 sm:p-3 bg-blue-100 rounded-lg">
+                <Building className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
+              </div>
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Total Properties</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{total}</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <div className="flex items-center">
+              <div className="p-2 sm:p-3 bg-green-100 rounded-lg">
+                <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-green-600" />
+              </div>
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Approved</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {properties.filter(p => p.moderationStatus === 'APPROVED').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <div className="flex items-center">
+              <div className="p-2 sm:p-3 bg-yellow-100 rounded-lg">
+                <Clock className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-600" />
+              </div>
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Pending</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {properties.filter(p => p.moderationStatus === 'PENDING').length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+            <div className="flex items-center">
+              <div className="p-2 sm:p-3 bg-red-100 rounded-lg">
+                <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-red-600" />
+              </div>
+              <div className="ml-3 sm:ml-4">
+                <p className="text-xs sm:text-sm font-medium text-gray-600">Rejected</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">
+                  {properties.filter(p => p.moderationStatus === 'REJECTED').length}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        {filteredProperties.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500">No properties found</p>
+
+        {/* Filters and Search */}
+        <div className="bg-white rounded-lg shadow mb-6">
+          <div className="p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search properties..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All Properties</option>
+                  <option value="approved">Approved</option>
+                  <option value="pending">Pending</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Properties Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {properties.map((property) => (
+            <div key={property.id} className="bg-white rounded-lg shadow overflow-hidden">
+              {/* Property Header */}
+              <div className="p-4 sm:p-6 border-b border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="relative">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
+                        <Building className="w-6 h-6 text-gray-400" />
+                      </div>
+                      {property.moderationStatus === 'APPROVED' && (
+                        <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">
+                          <CheckCircle className="w-3 h-3 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-900">{property.title}</h3>
+                      <p className="text-xs sm:text-sm text-gray-500">{property.owner?.email}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <input
+                      type="checkbox"
+                      checked={selectedProperties.includes(property.id)}
+                      onChange={() => handleSelectProperty(property.id)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Status Badges */}
+                <div className="flex flex-wrap gap-2">
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${getModerationStatusColor(property.moderationStatus)}`}>
+                    {property.moderationStatus}
+                  </span>
+                  <span className={`px-2 py-1 text-xs font-medium rounded ${getPropertyTypeColor(property.type)}`}>
+                    {property.type}
+                  </span>
+                  {property.isActive && (
+                    <span className="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-800">
+                      Active
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Property Info */}
+              <div className="p-4 sm:p-6">
+                <div className="space-y-3">
+                  <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    <span>Listed {formatDate(property.createdAt)}</span>
+                  </div>
+                  <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                    <Building className="w-4 h-4 mr-2" />
+                    <span>{property.bedrooms || 0} beds, {property.bathrooms || 0} baths</span>
+                  </div>
+                  <div className="flex items-center text-xs sm:text-sm text-gray-600">
+                    <Star className="w-4 h-4 mr-2" />
+                    <span>{formatCurrency(property.price)}</span>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="mt-6 flex items-center justify-between">
+                  <div className="flex space-x-2">
+                    <Link
+                      href={`/admin/properties/${property.id}`}
+                      className="p-2 text-gray-400 hover:text-gray-600"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </Link>
+                    {property.moderationStatus === 'PENDING' && (
+                      <>
+                        <button
+                          onClick={() => handleApproveProperty(property.id)}
+                          disabled={approvingId === property.id}
+                          className="p-2 text-green-400 hover:text-green-600 disabled:opacity-50"
+                          title="Approve Property"
+                        >
+                          <CheckCircle className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleRejectProperty(property.id)}
+                          disabled={rejectingId === property.id}
+                          className="p-2 text-red-400 hover:text-red-600 disabled:opacity-50"
+                          title="Reject Property"
+                        >
+                          <Shield className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    {property.moderationStatus === 'PENDING' && (
+                      <span className="text-yellow-600">Needs Review</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="mt-8 flex justify-center">
+            <nav className="flex space-x-2">
+              <button
+                onClick={() => setPage(Math.max(1, page - 1))}
+                disabled={page === 1}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <span className="px-3 py-2 text-sm text-gray-700">
+                Page {page} of {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(Math.min(totalPages, page + 1))}
+                disabled={page === totalPages}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+              >
+                Next
+              </button>
+            </nav>
           </div>
         )}
       </div>

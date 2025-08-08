@@ -1,130 +1,115 @@
 "use client";
-import { ReactNode } from "react";
-import Link from "next/link";
-import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { Grid, Home, MessageSquare, BarChart2, Settings, CreditCard } from "lucide-react";
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+import { useSession } from 'next-auth/react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { usePathname } from 'next/navigation';
+import React, { useState } from 'react';
+import { Grid, Home, MessageSquare, BarChart2, Settings, Menu, X } from 'lucide-react';
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const navigation = [
+    { id: 'overview', label: 'Overview', icon: Grid, href: '/dashboard/overview' },
+    { id: 'properties', label: 'My Properties', icon: Home, href: '/dashboard/properties' },
+    { id: 'inquiries', label: 'Inquiries', icon: MessageSquare, href: '/dashboard/inquiries' },
+    { id: 'analytics', label: 'Analytics', icon: BarChart2, href: '/dashboard/analytics' },
+    { id: 'settings', label: 'Settings', icon: Settings, href: '/dashboard/settings' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+    <div className="min-h-screen flex bg-gray-50">
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-gray-600 bg-opacity-75 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 bg-white shadow-lg transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+        style={{ width: 240, minWidth: 220, maxWidth: 240, padding: 16 }}
+      >
+        <div className="flex items-center justify-between h-16 border-b border-gray-200" style={{ paddingLeft: 0, paddingRight: 0 }}>
+          <Link href="/" className="flex items-center space-x-2">
+            <Image
+              src="/images/Larnacei_coloured.png"
+              alt="Larnacei Global Limited Logo"
+              width={32}
+              height={32}
+              className="h-8"
+            />
+            <span className="text-xl font-bold text-gray-900">Dashboard</span>
+          </Link>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <nav className="mt-6">
+          <div>
+            {navigation.map((item) => {
+              const isActive = pathname === item.href || (item.id === 'overview' && pathname === '/dashboard');
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={`flex items-center h-11 px-4 py-2 rounded-md transition-colors text-sm font-medium ${
+                    isActive
+                      ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
+                      : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }`}
+                  style={{ marginBottom: 8, height: 44, padding: '8px 16px' }}
+                  onClick={() => setSidebarOpen(false)}
+                >
+                  <Icon className="w-5 h-5 mr-3" />
+                  <span>{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </aside>
+
+      {/* Main content */}
+      <div className="flex-1 flex flex-col lg:ml-0">
+        {/* Top bar */}
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="flex items-center justify-between h-16 px-4 lg:px-6">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-md text-gray-400 hover:text-gray-600"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
             <div className="flex items-center space-x-4">
-              <Link href="/" className="flex items-center space-x-2">
-                <Image
-                  src="/images/Larnacei_coloured.png"
-                  alt="Larnacei Global Limited Logo"
-                  width={32}
-                  height={32}
-                  className="h-8"
-                />
+              <span className="text-sm text-gray-600">Welcome, User</span>
+              <Link
+                href="/"
+                className="text-sm text-red-600 hover:text-red-700"
+              >
+                Back to Home
               </Link>
-              <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="text-gray-500 hover:text-gray-700">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5 5v-5z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                </svg>
-              </button>
-              <div className="relative">
-                <button className="flex items-center space-x-2 text-gray-700 hover:text-gray-900">
-                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium">U</span>
-                  </div>
-                  <span className="hidden md:block">User</span>
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className="w-64 bg-white shadow-lg min-h-screen">
-          <nav className="mt-8">
-            <div className="px-4 space-y-2">
-              <Link
-                href="/dashboard"
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  pathname === '/dashboard'
-                    ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Home className="w-5 h-5 mr-3" />
-                Overview
-              </Link>
-              <Link
-                href="/dashboard/properties"
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  pathname.startsWith('/dashboard/properties')
-                    ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Grid className="w-5 h-5 mr-3" />
-                My Properties
-              </Link>
-              <Link
-                href="/dashboard/inquiries"
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  pathname.startsWith('/dashboard/inquiries')
-                    ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <MessageSquare className="w-5 h-5 mr-3" />
-                Inquiries
-              </Link>
-              <Link
-                href="/dashboard/analytics"
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  pathname.startsWith('/dashboard/analytics')
-                    ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <BarChart2 className="w-5 h-5 mr-3" />
-                Analytics
-              </Link>
-              <Link
-                href="/dashboard/payments"
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  pathname.startsWith('/dashboard/payments')
-                    ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <CreditCard className="w-5 h-5 mr-3" />
-                Payments
-              </Link>
-              <Link
-                href="/dashboard/settings"
-                className={`flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                  pathname.startsWith('/dashboard/settings')
-                    ? 'bg-red-50 text-red-700 border-r-2 border-red-700'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
-              >
-                <Settings className="w-5 h-5 mr-3" />
-                Settings
-              </Link>
-            </div>
-          </nav>
-        </aside>
-
-        {/* Main Content */}
-        <main className="flex-1 p-8">
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
           {children}
         </main>
       </div>
