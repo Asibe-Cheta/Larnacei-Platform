@@ -5,13 +5,26 @@ import useSWR from 'swr';
 import { Eye, Edit, CheckCircle, XCircle, Plus, Search, Filter, Bug, Database } from 'lucide-react';
 import Link from 'next/link';
 
-const fetcher = (url: string) => fetch(url).then(res => {
-  console.log('Fetcher called for:', url, 'Status:', res.status);
-  if (!res.ok) {
-    throw new Error(`HTTP error! status: ${res.status}`);
+const fetcher = async (url: string) => {
+  console.log('Fetcher called for:', url);
+  try {
+    const res = await fetch(url);
+    console.log('Fetcher response status:', res.status);
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Fetcher error response:', errorText);
+      throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+    }
+
+    const data = await res.json();
+    console.log('Fetcher success data:', data);
+    return data;
+  } catch (error) {
+    console.error('Fetcher error:', error);
+    throw error;
   }
-  return res.json();
-});
+};
 
 export default function AdminPropertiesPage() {
   const [searchTerm, setSearchTerm] = useState('');

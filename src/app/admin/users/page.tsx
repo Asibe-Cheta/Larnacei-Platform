@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Users,
@@ -17,7 +17,21 @@ import useSWR from 'swr';
 
 
 
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+const fetcher = async (url: string) => {
+  console.log('Admin users fetcher: Fetching from:', url);
+  const res = await fetch(url);
+  console.log('Admin users fetcher response status:', res.status);
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error('Admin users fetcher error response:', errorText);
+    throw new Error(`HTTP error! status: ${res.status}, message: ${errorText}`);
+  }
+
+  const data = await res.json();
+  console.log('Admin users fetcher success data:', data);
+  return data;
+};
 
 export default function UserManagementPage() {
   const [filter, setFilter] = useState('all');
@@ -41,10 +55,16 @@ export default function UserManagementPage() {
   params.append('page', String(page));
   params.append('limit', String(limit));
 
-  const { data, isLoading, error } = useSWR(`/api/admin/users?${params.toString()}`, fetcher);
+  const { data, isLoading, error, mutate } = useSWR(`/api/admin/users?${params.toString()}`, fetcher);
   const users = data?.users || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit);
+
+  // Force data refresh on component mount
+  useEffect(() => {
+    console.log('Admin users page: Component mounted, forcing data refresh');
+    mutate();
+  }, [mutate]);
 
   const handleSelectUser = (userId: string) => {
     setSelectedUsers(prev =>
@@ -195,10 +215,10 @@ export default function UserManagementPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto p-6">
+      <div className="max-w-7xl mx-auto p-4 sm:p-6">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">User Management</h1>
           <p className="text-gray-600 mt-2">Manage platform users and their verification status</p>
         </div>
 

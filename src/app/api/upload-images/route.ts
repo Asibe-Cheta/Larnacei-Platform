@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     console.log('Image upload request received');
     console.log('Request URL:', request.url);
     console.log('Request method:', request.method);
+    console.log('User agent:', request.headers.get('user-agent'));
 
     // Debug environment variables
     console.log('Environment variables check:');
@@ -37,10 +38,13 @@ export async function POST(request: NextRequest) {
     // Parse form data
     const formData = await request.formData();
 
-    // Handle both 'images' and 'files' keys
+    // Handle both 'images' and 'files' keys for mobile compatibility
     let files = formData.getAll('images') as File[];
     if (files.length === 0) {
       files = formData.getAll('files') as File[];
+    }
+    if (files.length === 0) {
+      files = formData.getAll('image') as File[]; // Mobile fallback
     }
 
     console.log('Files received:', files.length);
@@ -101,27 +105,35 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Convert file to base64 for Cloudinary
+        // Convert file to base64 for Cloudinary (mobile-compatible)
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
         const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-        // Generate unique filename
+        // Generate unique filename with timestamp for mobile compatibility
         const timestamp = Date.now();
+        const randomId = Math.random().toString(36).substring(2, 15);
         const fileExtension = file.name.split('.').pop() || 'jpg';
-        const publicId = `larnacei-properties/${session.user.id}-${i}-${timestamp}`;
+        const publicId = `larnacei-properties/${session.user.id}-${timestamp}-${randomId}`;
 
         console.log('Uploading to Cloudinary:', publicId);
 
-        // Upload to Cloudinary
+        // Upload to Cloudinary with mobile-optimized settings
         const uploadResult = await cloudinary.uploader.upload(base64String, {
           public_id: publicId,
           folder: 'larnacei-properties',
           resource_type: 'image',
           transformation: [
             { width: 1200, height: 800, crop: 'limit' }, // Resize for web
-            { quality: 'auto', fetch_format: 'auto' } // Optimize
-          ]
+            { quality: 'auto', fetch_format: 'auto' }, // Optimize
+            { flags: 'progressive' } // Progressive loading for mobile
+          ],
+          eager: [
+            { width: 800, height: 600, crop: 'limit', quality: 'auto' },
+            { width: 400, height: 300, crop: 'limit', quality: 'auto' }
+          ],
+          eager_async: true,
+          eager_notification_url: null
         });
 
         console.log('File uploaded successfully to Cloudinary:', uploadResult.secure_url);
@@ -130,6 +142,15 @@ export async function POST(request: NextRequest) {
         uploadedUrls.push(uploadResult.secure_url);
       } catch (fileError: any) {
         console.error('Error processing file:', file.name, fileError);
+
+        // Enhanced error handling for mobile
+        if (fileError.message?.includes('blob') || fileError.message?.includes('Blob')) {
+          return NextResponse.json(
+            { error: 'Mobile upload issue detected. Please try again or use a different image.' },
+            { status: 400 }
+          );
+        }
+
         return NextResponse.json(
           { error: `Failed to process file ${file.name}: ${fileError.message}` },
           { status: 500 }
@@ -147,6 +168,15 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Image upload error:', error);
     console.error('Error stack:', error.stack);
+
+    // Enhanced error handling for mobile issues
+    if (error.message?.includes('blob') || error.message?.includes('Blob')) {
+      return NextResponse.json(
+        { error: 'Mobile upload issue detected. Please try again or use a different image.' },
+        { status: 400 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to upload images', details: error.message },
       { status: 500 }

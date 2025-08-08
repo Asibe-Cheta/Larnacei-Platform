@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
 // Schema for admin property creation
@@ -11,9 +11,9 @@ const adminPropertyCreateSchema = z.object({
   price: z.number().positive('Price must be positive'),
   type: z.enum(['HOUSE', 'APARTMENT', 'CONDO', 'TOWNHOUSE', 'LAND', 'COMMERCIAL']),
   category: z.enum(['SHORT_STAY', 'LONG_TERM_RENTAL', 'LANDED_PROPERTY', 'PROPERTY_SALE']),
-  bedrooms: z.number().min(0, 'Bedrooms must be 0 or more'),
-  bathrooms: z.number().min(0, 'Bathrooms must be 0 or more'),
-  size: z.number().min(0, 'Size must be 0 or more'),
+  bedrooms: z.number().min(0, 'Bedrooms must be 0 or more').optional(),
+  bathrooms: z.number().min(0, 'Bathrooms must be 0 or more').optional(),
+  size: z.number().min(0, 'Size must be 0 or more').optional(),
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
   address: z.string().min(1, 'Address is required'),
@@ -181,9 +181,9 @@ export async function POST(request: NextRequest) {
         price: validatedData.price,
         type: validatedData.type,
         category: validatedData.category,
-        bedrooms: validatedData.bedrooms,
-        bathrooms: validatedData.bathrooms,
-        size: validatedData.size,
+        bedrooms: validatedData.bedrooms || 0,
+        bathrooms: validatedData.bathrooms || 0,
+        size: validatedData.size || 0,
         features: validatedData.features || [],
         amenities: validatedData.amenities || [],
         ownerId: user.id,

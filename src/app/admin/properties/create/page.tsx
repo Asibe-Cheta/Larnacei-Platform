@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { mobileUploadHandler } from '@/utils/mobile-upload';
 
 export default function CreatePropertyPage() {
   const router = useRouter();
@@ -59,36 +60,21 @@ export default function CreatePropertyPage() {
 
     setUploadingImages(true);
     try {
-      const imageFormData = new FormData();
-      selectedImageFiles.forEach((file) => {
-        imageFormData.append('images', file);
-      });
+      const uploadedUrls = await mobileUploadHandler.uploadFiles(selectedImageFiles, 'image');
 
-      const response = await fetch('/api/upload-images', {
-        method: 'POST',
-        body: imageFormData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setFormData(prev => ({
-          ...prev,
-          images: [...prev.images, ...result.urls]
-        }));
-        setSelectedImageFiles([]);
-        if (imageInputRef.current) {
-          imageInputRef.current.value = '';
-        }
-      } else {
-        setMessage({
-          type: 'error',
-          text: 'Failed to upload images. Please try again.'
-        });
+      setFormData(prev => ({
+        ...prev,
+        images: [...prev.images, ...uploadedUrls]
+      }));
+      setSelectedImageFiles([]);
+      if (imageInputRef.current) {
+        imageInputRef.current.value = '';
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Image upload error:', error);
       setMessage({
         type: 'error',
-        text: 'Failed to upload images. Please try again.'
+        text: error.message || 'Failed to upload images. Please try again.'
       });
     } finally {
       setUploadingImages(false);
@@ -100,36 +86,21 @@ export default function CreatePropertyPage() {
 
     setUploadingVideos(true);
     try {
-      const videoFormData = new FormData();
-      selectedVideoFiles.forEach((file) => {
-        videoFormData.append('videos', file);
-      });
+      const uploadedUrls = await mobileUploadHandler.uploadFiles(selectedVideoFiles, 'video');
 
-      const response = await fetch('/api/upload-videos', {
-        method: 'POST',
-        body: videoFormData,
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setFormData(prev => ({
-          ...prev,
-          videos: [...prev.videos, ...result.urls]
-        }));
-        setSelectedVideoFiles([]);
-        if (videoInputRef.current) {
-          videoInputRef.current.value = '';
-        }
-      } else {
-        setMessage({
-          type: 'error',
-          text: 'Failed to upload videos. Please try again.'
-        });
+      setFormData(prev => ({
+        ...prev,
+        videos: [...prev.videos, ...uploadedUrls]
+      }));
+      setSelectedVideoFiles([]);
+      if (videoInputRef.current) {
+        videoInputRef.current.value = '';
       }
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Video upload error:', error);
       setMessage({
         type: 'error',
-        text: 'Failed to upload videos. Please try again.'
+        text: error.message || 'Failed to upload videos. Please try again.'
       });
     } finally {
       setUploadingVideos(false);
@@ -138,12 +109,36 @@ export default function CreatePropertyPage() {
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setSelectedImageFiles(files);
+    // Use mobile upload utility for validation
+    const validFiles = files.filter(file => {
+      const validation = mobileUploadHandler.validateFile(file, 'image');
+      if (!validation.isValid) {
+        setMessage({
+          type: 'error',
+          text: validation.errors.join('\n')
+        });
+        return false;
+      }
+      return true;
+    });
+    setSelectedImageFiles(validFiles);
   };
 
   const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setSelectedVideoFiles(files);
+    // Use mobile upload utility for validation
+    const validFiles = files.filter(file => {
+      const validation = mobileUploadHandler.validateFile(file, 'video');
+      if (!validation.isValid) {
+        setMessage({
+          type: 'error',
+          text: validation.errors.join('\n')
+        });
+        return false;
+      }
+      return true;
+    });
+    setSelectedVideoFiles(validFiles);
   };
 
   const removeImage = (index: number) => {
