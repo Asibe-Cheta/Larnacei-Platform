@@ -3,7 +3,7 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 
-export async function PUT(
+export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
@@ -28,30 +28,41 @@ export async function PUT(
 
     const property = await prisma.property.findUnique({
       where: { id: params.id },
+      include: {
+        owner: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            phone: true,
+            role: true,
+            accountType: true,
+            isVerified: true,
+            verificationLevel: true,
+          },
+        },
+        images: {
+          orderBy: { order: 'asc' },
+        },
+        videos: {
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
 
     if (!property) {
       return NextResponse.json({ error: 'Property not found' }, { status: 404 });
     }
 
-    const updatedProperty = await prisma.property.update({
-      where: { id: params.id },
-      data: {
-        moderationStatus: 'APPROVED',
-        isActive: true,
-      },
-    });
-
     return NextResponse.json({
       success: true,
-      message: 'Property approved successfully',
-      property: updatedProperty,
+      property,
     });
   } catch (error: any) {
-    console.error('Admin property approve error:', error);
+    console.error('Admin property detail error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
-} 
+}

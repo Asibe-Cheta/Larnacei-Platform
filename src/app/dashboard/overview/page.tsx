@@ -7,7 +7,7 @@ import useSWR from 'swr';
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
 export default function DashboardOverview() {
-  const { data: stats, error } = useSWR('/api/dashboard/stats', fetcher);
+  const { data: stats, error } = useSWR('/api/dashboard/overview', fetcher);
   const { data: recentProperties } = useSWR('/api/dashboard/recent-properties', fetcher);
 
   if (error) {
@@ -43,7 +43,7 @@ export default function DashboardOverview() {
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">My Properties</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats?.totalProperties || 0}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats?.myProperties || 0}</p>
               </div>
             </div>
           </div>
@@ -57,7 +57,7 @@ export default function DashboardOverview() {
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Active Listings</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats?.activeProperties || 0}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats?.activeListings || 0}</p>
               </div>
             </div>
           </div>
@@ -86,7 +86,7 @@ export default function DashboardOverview() {
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Inquiries</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats?.totalInquiries || 0}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stats?.inquiries || 0}</p>
               </div>
             </div>
           </div>
@@ -169,10 +169,10 @@ export default function DashboardOverview() {
                         ₦{property.price?.toLocaleString()}
                       </span>
                       <span className={`px-2 py-1 text-xs rounded-full ${property.moderationStatus === 'APPROVED'
-                          ? 'bg-green-100 text-green-800'
-                          : property.moderationStatus === 'PENDING'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
+                        ? 'bg-green-100 text-green-800'
+                        : property.moderationStatus === 'PENDING'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-red-100 text-red-800'
                         }`}>
                         {property.moderationStatus}
                       </span>

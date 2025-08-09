@@ -163,14 +163,29 @@ export default function CreatePropertyPage() {
     try {
       // Convert string values to numbers where needed
       const submitData = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
         price: parseFloat(formData.price) || 0,
+        type: formData.type,
+        category: formData.category,
+        purpose: formData.purpose || 'SALE',
         bedrooms: parseInt(formData.bedrooms) || 0,
         bathrooms: parseInt(formData.bathrooms) || 0,
         size: parseFloat(formData.size) || 0,
+        city: formData.city,
+        state: formData.state,
+        address: formData.address,
+        postalCode: formData.postalCode,
         latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
         longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
+        features: formData.features,
+        amenities: formData.amenities,
+        images: formData.images,
+        videos: formData.videos,
+        isFeatured: formData.isFeatured,
       };
+
+      console.log('Submitting property data:', submitData);
 
       const response = await fetch('/api/admin/properties', {
         method: 'POST',
@@ -181,6 +196,7 @@ export default function CreatePropertyPage() {
       });
 
       const data = await response.json();
+      console.log('Response:', data);
 
       if (response.ok) {
         setMessage({ type: 'success', text: 'Property created successfully!' });
@@ -194,6 +210,7 @@ export default function CreatePropertyPage() {
         });
       }
     } catch (error) {
+      console.error('Error creating property:', error);
       setMessage({
         type: 'error',
         text: 'An error occurred while creating the property'

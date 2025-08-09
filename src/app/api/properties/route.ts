@@ -77,10 +77,10 @@ export async function POST(request: NextRequest) {
 
     // Create property with owner
     console.log('Creating property in database...');
-    
+
     // Extract images and videos from validated data to handle separately
     const { images, videos, ...propertyData } = validatedData;
-    
+
     const property = await prisma.property.create({
       data: {
         ...propertyData,
@@ -220,6 +220,7 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
+    console.log('Properties API: Starting request');
     const { searchParams } = new URL(request.url);
 
     // Parse and validate query parameters
@@ -243,16 +244,7 @@ export async function GET(request: NextRequest) {
       sortOrder: searchParams.get("sortOrder") || "desc",
     };
 
-    const validatedParams = propertySearchSchema.parse(queryParams);
-
-    // Generate cache key based on search parameters
-    const cacheKey = `search:${JSON.stringify(validatedParams)}`;
-
-    // Try to get cached results first
-    const cachedResults = await cacheManager.getSearchResults(cacheKey);
-    if (cachedResults) {
-      return NextResponse.json(cachedResults, { status: 200 });
-    }
+    console.log('Properties API: Query params:', queryParams);
 
     // Build filter conditions
     const where: any = {
@@ -261,45 +253,45 @@ export async function GET(request: NextRequest) {
     };
 
     // Text search
-    if (validatedParams.query) {
+    if (queryParams.query) {
       where.OR = [
-        { title: { contains: validatedParams.query, mode: "insensitive" } },
-        { description: { contains: validatedParams.query, mode: "insensitive" } },
-        { location: { contains: validatedParams.query, mode: "insensitive" } },
-        { city: { contains: validatedParams.query, mode: "insensitive" } },
-        { state: { contains: validatedParams.query, mode: "insensitive" } },
+        { title: { contains: queryParams.query, mode: "insensitive" } },
+        { description: { contains: queryParams.query, mode: "insensitive" } },
+        { city: { contains: queryParams.query, mode: "insensitive" } },
+        { state: { contains: queryParams.query, mode: "insensitive" } },
       ];
     }
 
     // Property type filters
-    if (validatedParams.type) where.type = validatedParams.type;
-    if (validatedParams.category) where.category = validatedParams.category;
-    if (validatedParams.purpose) where.purpose = validatedParams.purpose;
-    if (validatedParams.condition) where.condition = validatedParams.condition;
-    if (validatedParams.furnishingStatus) where.furnishingStatus = validatedParams.furnishingStatus;
-    if (validatedParams.availabilityStatus) where.availabilityStatus = validatedParams.availabilityStatus;
+    if (queryParams.type) where.type = queryParams.type;
+    if (queryParams.category) where.category = queryParams.category;
+    if (queryParams.purpose) where.purpose = queryParams.purpose;
 
     // Location filters
-    if (validatedParams.state) where.state = { contains: validatedParams.state, mode: "insensitive" };
-    if (validatedParams.city) where.city = { contains: validatedParams.city, mode: "insensitive" };
+    if (queryParams.state) where.state = { contains: queryParams.state, mode: "insensitive" };
+    if (queryParams.city) where.city = { contains: queryParams.city, mode: "insensitive" };
 
     // Price range
-    if (validatedParams.minPrice || validatedParams.maxPrice) {
+    if (queryParams.minPrice || queryParams.maxPrice) {
       where.price = {};
-      if (validatedParams.minPrice) where.price.gte = validatedParams.minPrice;
-      if (validatedParams.maxPrice) where.price.lte = validatedParams.maxPrice;
+      if (queryParams.minPrice) where.price.gte = queryParams.minPrice;
+      if (queryParams.maxPrice) where.price.lte = queryParams.maxPrice;
     }
 
     // Bedrooms and bathrooms
-    if (validatedParams.bedrooms !== undefined) where.bedrooms = validatedParams.bedrooms;
-    if (validatedParams.bathrooms !== undefined) where.bathrooms = validatedParams.bathrooms;
+    if (queryParams.bedrooms !== undefined) where.bedrooms = queryParams.bedrooms;
+    if (queryParams.bathrooms !== undefined) where.bathrooms = queryParams.bathrooms;
+
+    console.log('Properties API: Where clause:', JSON.stringify(where, null, 2));
 
     // Calculate pagination
-    const skip = (validatedParams.page - 1) * validatedParams.limit;
+    const skip = (queryParams.page - 1) * queryParams.limit;
 
     // Build order by
     const orderBy: any = {};
-    orderBy[validatedParams.sortBy] = validatedParams.sortOrder;
+    orderBy[queryParams.sortBy] = queryParams.sortOrder;
+
+    console.log('Properties API: About to query database');
 
     // Fetch properties with pagination
     const [properties, total] = await Promise.all([
@@ -329,23 +321,26 @@ export async function GET(request: NextRequest) {
         },
         orderBy,
         skip,
-        take: validatedParams.limit,
+        take: queryParams.limit,
       }),
       prisma.property.count({ where }),
     ]);
 
+    console.log('Properties API: Found properties:', properties.length);
+    console.log('Properties API: Total count:', total);
+
     // Calculate pagination metadata
-    const totalPages = Math.ceil(total / validatedParams.limit);
-    const hasNext = validatedParams.page < totalPages;
-    const hasPrev = validatedParams.page > 1;
+    const totalPages = Math.ceil(total / queryParams.limit);
+    const hasNext = queryParams.page < totalPages;
+    const hasPrev = queryParams.page > 1;
 
     const response = {
       success: true,
       message: "Properties fetched successfully",
       data: properties,
       pagination: {
-        page: validatedParams.page,
-        limit: validatedParams.limit,
+        page: queryParams.page,
+        limit: queryParams.limit,
         total,
         totalPages,
         hasNext,
@@ -353,24 +348,10 @@ export async function GET(request: NextRequest) {
       },
     };
 
-    // Cache the results
-    await cacheManager.setSearchResults(cacheKey, response);
-
+    console.log('Properties API: Returning response');
     return NextResponse.json(response, { status: 200 });
   } catch (error: any) {
-    console.error("Property fetch error:", error);
-
-    if (error.name === "ZodError") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Invalid query parameters",
-          error: error.errors.map((e: any) => e.message).join(", "),
-        },
-        { status: 400 }
-      );
-    }
-
+    console.error('Properties API: Error:', error);
     return NextResponse.json(
       {
         success: false,
