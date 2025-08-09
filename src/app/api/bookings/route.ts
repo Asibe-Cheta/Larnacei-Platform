@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 import { initializeMockPayment, generatePaymentReference, calculatePaymentFees } from '@/lib/paystack-service';
 import { z } from 'zod';
 
