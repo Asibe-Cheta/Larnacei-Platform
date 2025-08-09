@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/authOptions';
+import prisma from '@/lib/prisma';
 import { z } from 'zod';
 
 // Schema for admin property creation
@@ -62,10 +62,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
     const type = searchParams.get('type');
+    const moderationStatus = searchParams.get('moderationStatus');
+    const isActive = searchParams.get('isActive');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
 
-    console.log('Admin properties GET: Query params:', { search, type, page, limit });
+    console.log('Admin properties GET: Query params:', { search, type, moderationStatus, isActive, page, limit });
 
     // Build where clause
     const where: any = {};
@@ -80,6 +82,14 @@ export async function GET(request: NextRequest) {
 
     if (type && type !== 'all') {
       where.type = type;
+    }
+
+    if (moderationStatus && moderationStatus !== 'all') {
+      where.moderationStatus = moderationStatus.toUpperCase();
+    }
+
+    if (isActive !== null && isActive !== undefined) {
+      where.isActive = isActive === 'true';
     }
 
     console.log('Admin properties GET: Where clause:', where);
@@ -113,10 +123,13 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      properties,
-      total,
-      page,
-      limit,
+      data: properties,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
     });
 
   } catch (error) {

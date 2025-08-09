@@ -161,21 +161,23 @@ export default function CreatePropertyPage() {
     setMessage(null);
 
     try {
-      // Convert string values to numbers where needed
+      // Convert string values to numbers and map to API schema
       const submitData = {
         title: formData.title,
         description: formData.description,
         price: parseFloat(formData.price) || 0,
         type: formData.type,
         category: formData.category,
-        purpose: formData.purpose || 'SALE',
+        purpose: 'SALE', // Default to SALE for admin-created properties
         bedrooms: parseInt(formData.bedrooms) || 0,
         bathrooms: parseInt(formData.bathrooms) || 0,
-        size: parseFloat(formData.size) || 0,
+        sizeInSqm: parseFloat(formData.size) || 0, // Map 'size' to 'sizeInSqm'
         city: formData.city,
         state: formData.state,
-        address: formData.address,
-        postalCode: formData.postalCode,
+        location: formData.address, // Map 'address' to 'location'
+        streetAddress: formData.address, // Also map to streetAddress
+        lga: '', // Optional field
+        landmark: '', // Optional field
         latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
         longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
         features: formData.features,

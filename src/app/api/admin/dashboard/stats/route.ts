@@ -37,8 +37,10 @@ export async function GET(request: NextRequest) {
         where: { moderationStatus: 'PENDING' }
       }),
 
-      // Total users
-      prisma.user.count(),
+      // Total users (excluding admin users for consistency with users page)
+      prisma.user.count({
+        where: { role: { notIn: ['ADMIN', 'SUPER_ADMIN'] } }
+      }),
 
       // Recent properties (last 5)
       prisma.property.findMany({
@@ -54,8 +56,9 @@ export async function GET(request: NextRequest) {
         }
       }),
 
-      // Recent users (last 5)
+      // Recent users (last 5, excluding admin users)
       prisma.user.findMany({
+        where: { role: { notIn: ['ADMIN', 'SUPER_ADMIN'] } },
         take: 5,
         orderBy: { createdAt: 'desc' },
         select: {

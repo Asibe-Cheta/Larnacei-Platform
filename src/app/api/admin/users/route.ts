@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
+import { authOptions } from '@/lib/authOptions';
+import prisma from '@/lib/prisma';
 
 // GET /api/admin/users - Get all users with admin information
 export async function GET(req: NextRequest) {
@@ -39,11 +39,12 @@ export async function GET(req: NextRequest) {
     const accountType = searchParams.get('accountType') || undefined;
     const verificationStatus = searchParams.get('verificationStatus') || undefined;
     const kycStatus = searchParams.get('kycStatus') || undefined;
+    const isSuspended = searchParams.get('isSuspended') || undefined;
     const location = searchParams.get('location') || undefined;
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const order = searchParams.get('order') || 'desc';
 
-    console.log('Admin users GET: Query params:', { search, page, limit, accountType, verificationStatus, kycStatus, location, sortBy, order });
+    console.log('Admin users GET: Query params:', { search, page, limit, accountType, verificationStatus, kycStatus, isSuspended, location, sortBy, order });
 
     const where: any = {
       role: { notIn: ['ADMIN', 'SUPER_ADMIN'] } // Exclude admin users from the list
@@ -58,16 +59,34 @@ export async function GET(req: NextRequest) {
     }
     if (accountType) where.accountType = accountType;
     if (verificationStatus) {
-      // Map verification status to verification level
-      const statusMap: { [key: string]: string } = {
-        'verified': 'FULL_VERIFIED',
-        'pending': 'EMAIL_VERIFIED',
-        'unverified': 'NONE',
-        'rejected': 'NONE'
-      };
-      where.verificationLevel = statusMap[verificationStatus] || verificationStatus.toUpperCase();
+      // Map verification status to database fields
+      switch (verificationStatus) {
+        case 'verified':
+          where.isVerified = true;
+          break;
+        case 'pending':
+          where.AND = [
+            { isVerified: false },
+            { verificationLevel: 'EMAIL_VERIFIED' }
+          ];
+          break;
+        case 'unverified':
+          where.AND = [
+            { isVerified: false },
+            { verificationLevel: 'NONE' }
+          ];
+          break;
+        case 'rejected':
+          where.kycStatus = 'REJECTED';
+          break;
+        default:
+          break;
+      }
     }
     if (kycStatus) where.kycStatus = kycStatus;
+    if (isSuspended !== undefined) {
+      where.isVerified = isSuspended === 'true' ? false : true;
+    }
     if (location) where.location = { contains: location, mode: 'insensitive' };
 
     console.log('Admin users GET: Where clause:', where);
@@ -108,7 +127,8 @@ export async function GET(req: NextRequest) {
       propertiesCount: u.properties.length,
       totalRevenue: u.payments.reduce((sum, p) => sum + (p.amount || 0), 0),
       // Map field names for frontend compatibility
-      verificationStatus: u.verificationLevel?.toLowerCase() || 'none',
+      verificationStatus: u.isVerified ? 'verified' : 
+                         u.verificationLevel === 'EMAIL_VERIFIED' ? 'pending' : 'unverified',
       registrationDate: u.createdAt,
       lastActive: u.updatedAt,
       isSuspended: !u.isVerified,
