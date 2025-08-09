@@ -12,7 +12,6 @@ import Step5Legal from '@/components/forms/property-listing/Step5Legal';
 import Step6Availability from '@/components/forms/property-listing/Step6Availability';
 import { apiService } from '@/lib/api-service';
 import { transformFormDataToApi, validateFormData } from '@/utils/form-transformers';
-import { useRouter } from 'next/navigation';
 
 type ListingStep = 1 | 2 | 3 | 4 | 5 | 6;
 
