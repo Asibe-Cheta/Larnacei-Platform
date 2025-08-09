@@ -50,7 +50,7 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
     if (validFiles.length > 0) {
       const currentFiles = type === 'images' ? formData.images : formData.videos;
       const maxFiles = type === 'images' ? 20 : 5;
-      const maxSize = type === 'images' ? 5 * 1024 * 1024 : 50 * 1024 * 1024; // 5MB for images, 50MB for videos
+      const maxSize = type === 'images' ? 4.5 * 1024 * 1024 : 30 * 1024 * 1024; // 4.5MB for images, 30MB for videos
 
       if (currentFiles.length + validFiles.length > maxFiles) {
         alert(`Maximum ${maxFiles} ${type} allowed`);
@@ -60,7 +60,7 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
       // Check file sizes
       const oversizedFiles = validFiles.filter(file => file.size > maxSize);
       if (oversizedFiles.length > 0) {
-        const maxSizeMB = type === 'images' ? 5 : 50;
+        const maxSizeMB = type === 'images' ? 4.5 : 30;
         alert(`${type} files must be under ${maxSizeMB}MB each. Please compress your files and try again.`);
         return;
       }
@@ -73,7 +73,7 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
     const files = Array.from(e.target.files || []);
     const currentFiles = type === 'images' ? formData.images : formData.videos;
     const maxFiles = type === 'images' ? 20 : 5;
-    const maxSize = type === 'images' ? 5 * 1024 * 1024 : 50 * 1024 * 1024; // 5MB for images, 50MB for videos
+    const maxSize = type === 'images' ? 4.5 * 1024 * 1024 : 30 * 1024 * 1024; // 4.5MB for images, 30MB for videos
 
     if (currentFiles.length + files.length > maxFiles) {
       alert(`Maximum ${maxFiles} ${type} allowed`);
@@ -83,7 +83,7 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
     // Check file sizes
     const oversizedFiles = files.filter(file => file.size > maxSize);
     if (oversizedFiles.length > 0) {
-      const maxSizeMB = type === 'images' ? 5 : 50;
+      const maxSizeMB = type === 'images' ? 4.5 : 30;
       alert(`${type} files must be under ${maxSizeMB}MB each. Please compress your files and try again.`);
       return;
     }
@@ -147,7 +147,7 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
                 Drop your photos here or click to browse
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                PNG, JPG, JPEG up to 5MB each. Maximum 20 photos.
+                PNG, JPG, JPEG up to 4.5MB each. Maximum 20 photos.
               </p>
             </div>
             <button
@@ -224,7 +224,7 @@ export default function Step4Media({ formData, updateFormData }: Step4MediaProps
                 Drop your videos here or click to browse
               </p>
               <p className="text-sm text-gray-500 mt-1">
-                MP4, MOV, AVI up to 50MB each. Maximum 5 videos.
+                MP4, MOV, AVI up to 30MB each. Maximum 5 videos.
               </p>
             </div>
             <button

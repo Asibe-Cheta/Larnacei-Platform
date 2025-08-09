@@ -12,7 +12,8 @@ import {
   Phone,
   Calendar,
   Star,
-  Home
+  Home,
+  Sparkles
 } from 'lucide-react';
 import useSWR from 'swr';
 
@@ -40,6 +41,7 @@ export default function AdminPropertiesPage() {
   const limit = 20;
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [featuringId, setFeaturingId] = useState<string | null>(null);
 
   const [propertiesTestInfo, setPropertiesTestInfo] = useState<any>(null);
 
@@ -153,6 +155,22 @@ export default function AdminPropertiesPage() {
       console.error('Error rejecting property:', error);
     } finally {
       setRejectingId(null);
+    }
+  };
+
+  const handleFeatureProperty = async (propertyId: string) => {
+    setFeaturingId(propertyId);
+    try {
+      const response = await fetch(`/api/admin/properties/${propertyId}/feature`, {
+        method: 'POST',
+      });
+      if (response.ok) {
+        mutate(); // Refresh data
+      }
+    } catch (error) {
+      console.error('Error toggling property featured status:', error);
+    } finally {
+      setFeaturingId(null);
     }
   };
 
@@ -347,6 +365,12 @@ export default function AdminPropertiesPage() {
                       Active
                     </span>
                   )}
+                  {property.isFeatured && (
+                    <span className="px-2 py-1 text-xs font-medium rounded bg-yellow-100 text-yellow-800 flex items-center">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      Featured
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -396,6 +420,18 @@ export default function AdminPropertiesPage() {
                         </button>
                       </>
                     )}
+                    <button
+                      onClick={() => handleFeatureProperty(property.id)}
+                      disabled={featuringId === property.id}
+                      className={`p-2 disabled:opacity-50 ${
+                        property.isFeatured 
+                          ? 'text-yellow-600 hover:text-yellow-800' 
+                          : 'text-gray-400 hover:text-yellow-600'
+                      }`}
+                      title={property.isFeatured ? 'Remove from Featured' : 'Add to Featured'}
+                    >
+                      <Sparkles className="w-4 h-4" />
+                    </button>
                   </div>
                   <div className="text-xs text-gray-400">
                     {property.moderationStatus === 'PENDING' && (
