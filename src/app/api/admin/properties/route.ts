@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 
@@ -14,11 +14,13 @@ const adminPropertyCreateSchema = z.object({
   purpose: z.enum(['SALE', 'RENT']).optional().default('SALE'),
   bedrooms: z.number().min(0, 'Bedrooms must be 0 or more').optional(),
   bathrooms: z.number().min(0, 'Bathrooms must be 0 or more').optional(),
-  size: z.number().min(0, 'Size must be 0 or more').optional(),
+  sizeInSqm: z.number().min(0, 'Size must be 0 or more').optional(),
   city: z.string().min(1, 'City is required'),
   state: z.string().min(1, 'State is required'),
-  address: z.string().min(1, 'Address is required'),
-  postalCode: z.string().optional(),
+  location: z.string().min(1, 'Location is required'),
+  streetAddress: z.string().min(1, 'Street address is required'),
+  lga: z.string().optional(),
+  landmark: z.string().optional(),
   latitude: z.number().optional(),
   longitude: z.number().optional(),
   features: z.array(z.string()).optional(),
@@ -104,17 +106,17 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    console.log('Admin properties GET: Properties found:', properties.length);
-    console.log('Admin properties GET: Query time:', Date.now() - startTime, 'ms');
+    const total = await prisma.property.count({ where });
+
+    console.log('Admin properties GET: Found properties:', properties.length);
+    console.log('Admin properties GET: Total count:', total);
 
     return NextResponse.json({
       success: true,
-      data: properties,
-      pagination: {
-        page,
-        limit,
-        total: properties.length,
-      },
+      properties,
+      total,
+      page,
+      limit,
     });
 
   } catch (error) {
@@ -160,21 +162,7 @@ export async function POST(request: NextRequest) {
     const validatedData = adminPropertyCreateSchema.parse(body);
     console.log('Admin properties POST: Validated data:', validatedData);
 
-    // Create location first
-    const location = await prisma.location.create({
-      data: {
-        city: validatedData.city,
-        state: validatedData.state,
-        address: validatedData.address,
-        postalCode: validatedData.postalCode,
-        latitude: validatedData.latitude,
-        longitude: validatedData.longitude,
-      },
-    });
-
-    console.log('Admin properties POST: Created location:', location.id);
-
-    // Create property with auto-approval
+    // Create property with auto-approval (without separate location table)
     const property = await prisma.property.create({
       data: {
         title: validatedData.title,
@@ -185,11 +173,18 @@ export async function POST(request: NextRequest) {
         purpose: validatedData.purpose || 'SALE',
         bedrooms: validatedData.bedrooms || 0,
         bathrooms: validatedData.bathrooms || 0,
-        size: validatedData.size || 0,
+        sizeInSqm: validatedData.sizeInSqm || 0,
         features: validatedData.features || [],
         amenities: validatedData.amenities || [],
         ownerId: user.id,
-        locationId: location.id,
+        city: validatedData.city,
+        state: validatedData.state,
+        location: validatedData.location,
+        streetAddress: validatedData.streetAddress,
+        lga: validatedData.lga || '',
+        landmark: validatedData.landmark || '',
+        latitude: validatedData.latitude,
+        longitude: validatedData.longitude,
         moderationStatus: 'APPROVED', // Auto-approve admin-created properties
         isActive: true,
         isFeatured: validatedData.isFeatured,
@@ -201,9 +196,12 @@ export async function POST(request: NextRequest) {
 
     // Add images if provided
     if (validatedData.images && validatedData.images.length > 0) {
-      const imageData = validatedData.images.map((url: string) => ({
+      const imageData = validatedData.images.map((url: string, index: number) => ({
         propertyId: property.id,
         url,
+        alt: `Property image ${index + 1}`,
+        order: index,
+        isPrimary: index === 0,
       }));
 
       await prisma.propertyImage.createMany({
@@ -217,6 +215,9 @@ export async function POST(request: NextRequest) {
         data: {
           propertyId: property.id,
           url: 'https://res.cloudinary.com/dlzjymszg/image/upload/v1/larnacei-properties/placeholder',
+          alt: 'Property placeholder image',
+          order: 0,
+          isPrimary: true,
         },
       });
 
@@ -225,9 +226,11 @@ export async function POST(request: NextRequest) {
 
     // Add videos if provided
     if (validatedData.videos && validatedData.videos.length > 0) {
-      const videoData = validatedData.videos.map((url: string) => ({
+      const videoData = validatedData.videos.map((url: string, index: number) => ({
         propertyId: property.id,
         url,
+        title: `Property video ${index + 1}`,
+        type: 'WALKTHROUGH' as const,
       }));
 
       await prisma.propertyVideo.createMany({

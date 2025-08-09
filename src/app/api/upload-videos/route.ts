@@ -144,7 +144,6 @@ export async function POST(request: NextRequest) {
           eager_async: true,
           eager_notification_url: null,
           chunk_size: 6000000, // 6MB chunks for mobile
-          resource_type: 'video'
         });
 
         console.log('File uploaded successfully to Cloudinary:', uploadResult.secure_url);

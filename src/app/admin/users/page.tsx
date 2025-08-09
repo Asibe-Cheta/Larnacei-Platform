@@ -47,15 +47,21 @@ export default function UserManagementPage() {
     if (['verified', 'pending', 'unverified', 'rejected'].includes(filter)) {
       params.append('verificationStatus', filter);
     } else if (filter === 'agents') {
-      params.append('accountType', 'agent'); // or handle both agent/agency as needed
+      params.append('accountType', 'agent');
     } else if (filter === 'suspended') {
-      params.append('isSuspended', 'true'); // if supported in API
+      params.append('isSuspended', 'true');
     }
   }
   params.append('page', String(page));
   params.append('limit', String(limit));
 
-  const { data, isLoading, error, mutate } = useSWR(`/api/admin/users?${params.toString()}`, fetcher);
+  const { data, isLoading, error, mutate } = useSWR(`/api/admin/users?${params.toString()}`, fetcher, {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: true,
+    errorRetryCount: 3,
+    errorRetryInterval: 1000,
+  });
+
   const users = data?.users || [];
   const total = data?.total || 0;
   const totalPages = Math.ceil(total / limit);

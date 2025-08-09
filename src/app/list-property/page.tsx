@@ -168,21 +168,30 @@ export default function ListPropertyPage() {
     // Upload images first
     let imageUrls: string[] = [];
     if (formData.images.length > 0) {
-      const imageFormData = new FormData();
-      formData.images.forEach((file: File) => {
-        imageFormData.append('images', file);
-      });
+      try {
+        const imageFormData = new FormData();
+        formData.images.forEach((file: File) => {
+          imageFormData.append('images', file);
+        });
 
-      const imageResponse = await fetch('/api/upload-images', {
-        method: 'POST',
-        body: imageFormData,
-      });
+        const imageResponse = await fetch('/api/upload-images', {
+          method: 'POST',
+          body: imageFormData,
+        });
 
-      if (imageResponse.ok) {
-        const imageResult = await imageResponse.json();
-        imageUrls = imageResult.urls;
-      } else {
-        setError('Failed to upload images. Please try again.');
+        if (imageResponse.ok) {
+          const imageResult = await imageResponse.json();
+          if (imageResult.success && imageResult.urls) {
+            imageUrls = imageResult.urls;
+          } else {
+            throw new Error(imageResult.error || 'Failed to upload images');
+          }
+        } else {
+          const errorData = await imageResponse.json().catch(() => ({ error: 'Failed to upload images' }));
+          throw new Error(errorData.error || 'Failed to upload images');
+        }
+      } catch (uploadError: any) {
+        setError(`Failed to upload images: ${uploadError.message}`);
         setIsSubmitting(false);
         return;
       }
@@ -191,21 +200,30 @@ export default function ListPropertyPage() {
     // Upload videos first
     let videoUrls: string[] = [];
     if (formData.videos.length > 0) {
-      const videoFormData = new FormData();
-      formData.videos.forEach((file: File) => {
-        videoFormData.append('videos', file);
-      });
+      try {
+        const videoFormData = new FormData();
+        formData.videos.forEach((file: File) => {
+          videoFormData.append('videos', file);
+        });
 
-      const videoResponse = await fetch('/api/upload-videos', {
-        method: 'POST',
-        body: videoFormData,
-      });
+        const videoResponse = await fetch('/api/upload-videos', {
+          method: 'POST',
+          body: videoFormData,
+        });
 
-      if (videoResponse.ok) {
-        const videoResult = await videoResponse.json();
-        videoUrls = videoResult.urls;
-      } else {
-        setError('Failed to upload videos. Please try again.');
+        if (videoResponse.ok) {
+          const videoResult = await videoResponse.json();
+          if (videoResult.success && videoResult.urls) {
+            videoUrls = videoResult.urls;
+          } else {
+            throw new Error(videoResult.error || 'Failed to upload videos');
+          }
+        } else {
+          const errorData = await videoResponse.json().catch(() => ({ error: 'Failed to upload videos' }));
+          throw new Error(errorData.error || 'Failed to upload videos');
+        }
+      } catch (uploadError: any) {
+        setError(`Failed to upload videos: ${uploadError.message}`);
         setIsSubmitting(false);
         return;
       }
@@ -242,63 +260,24 @@ export default function ListPropertyPage() {
         console.log('API response text:', rawText);
       }
 
-      if (response.status === 401 || response.status === 403 || (rawText && /not authenticated|unauthorized/i.test(rawText))) {
-        setShowAuthPrompt(true);
-        setError('You need to be signed in to list a property. Please sign in or register to continue.');
-        setTimeout(() => {
-          router.push('/signin');
-        }, 3500);
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (!response.ok) {
-        const errorMessage = result?.message || result?.error || rawText || `Server error (${response.status})`;
-
-        // Handle detailed validation errors
-        if (response.status === 400 && result?.details) {
-          const validationErrors = result.details.map((error: any) => {
-            const field = error.path?.join('.') || 'unknown';
-            return `${field}: ${error.message}`;
-          });
-          setValidationErrors(validationErrors);
-          setError('Please fix the validation errors below');
-        } else {
-          setError(`Failed to list property: ${errorMessage}`);
-        }
-
-        setIsSubmitting(false);
-        return;
-      }
-
-      if (result?.success) {
-        setSuccess('Property listed successfully! Redirecting to dashboard...');
+      if (response.ok) {
+        setSuccess('Property listed successfully! You will be redirected to your dashboard.');
         setTimeout(() => {
           router.push('/dashboard');
-        }, 1500);
+        }, 2000);
       } else {
-        setError(result?.message || rawText || 'Failed to list property');
-      }
-    } catch (err: any) {
-      console.error('Property listing error:', err);
-
-      // Handle specific error types
-      if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        setError('Network error. Please check your internet connection and try again.');
-      } else if (err.name === 'SyntaxError') {
-        setError('Invalid response from server. Please try again.');
-      } else {
-        const msg = err.message || '';
-        if (/not authenticated|unauthorized/i.test(msg)) {
-          setShowAuthPrompt(true);
-          setError('You need to be signed in to list a property. Please sign in or register to continue.');
-          setTimeout(() => {
-            router.push('/signin');
-          }, 3500);
+        // Handle different error scenarios
+        if (result && result.error) {
+          setError(result.error);
+        } else if (rawText) {
+          setError(`Server error: ${rawText}`);
         } else {
-          setError(`Failed to list property: ${msg}`);
+          setError('Failed to create property. Please try again.');
         }
       }
+    } catch (error: any) {
+      console.error('Error creating property:', error);
+      setError('An error occurred while creating the property. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

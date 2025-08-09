@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/authOptions';
+import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 
 // GET /api/admin/users - Get all users with admin information
@@ -85,13 +85,13 @@ export async function GET(req: NextRequest) {
           email: true,
           phone: true,
           accountType: true,
-          verificationLevel: true, // Use verificationLevel instead of verificationStatus
+          verificationLevel: true,
           kycStatus: true,
-          createdAt: true, // Use createdAt instead of registrationDate
-          updatedAt: true, // Use updatedAt instead of lastActive
+          createdAt: true,
+          updatedAt: true,
           location: true,
-          isVerified: true, // Use isVerified instead of isSuspended
-          image: true, // Use image instead of avatar
+          isVerified: true,
+          image: true,
           properties: { select: { id: true } },
           payments: { where: { status: 'SUCCESS' }, select: { amount: true } }
         }
