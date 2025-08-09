@@ -168,7 +168,7 @@ export function transformFormDataToApi(
 
     // Details
     price: priceInKobo,
-    currency: 'NGN',
+    currency: 'NGN' as const,
     isNegotiable: Boolean(formData.isNegotiable),
     bedrooms,
     bathrooms,

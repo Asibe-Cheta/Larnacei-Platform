@@ -242,7 +242,7 @@ export const propertyCreationSchema = propertyBasicInfoSchema
  */
 export const propertyCreationApiSchema = propertyBasicInfoSchema
   .merge(propertyLocationSchema)
-  .merge(propertyDetailsSchema.omit({ virtualTourUrl: true, floorPlanUrl: true }))
+  .merge(propertyDetailsSchema)
   .merge(propertyLegalSchema)
   .merge(propertyAvailabilitySchema)
   .extend({
