@@ -24,12 +24,6 @@ export async function GET(req: NextRequest) {
     const recentProperties = await prisma.property.findMany({
       where: { ownerId: user.id },
       include: {
-        location: {
-          select: {
-            city: true,
-            state: true,
-          }
-        },
         images: {
           select: {
             url: true,
@@ -43,7 +37,13 @@ export async function GET(req: NextRequest) {
       take: 6, // Limit to 6 recent properties
     });
 
-    return NextResponse.json(recentProperties);
+    // Transform the data to ensure proper structure
+    const transformedProperties = recentProperties.map(property => ({
+      ...property,
+      images: property.images || []
+    }));
+
+    return NextResponse.json(transformedProperties);
   } catch (error) {
     console.error('Error fetching recent properties:', error);
     return NextResponse.json(

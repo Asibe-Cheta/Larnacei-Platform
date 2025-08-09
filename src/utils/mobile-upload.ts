@@ -19,9 +19,9 @@ export const mobileUploadHandler = {
     }
 
     // Check file size
-    const maxSize = type === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024; // 5MB for images, 50MB for videos
+    const maxSize = type === 'image' ? 10 * 1024 * 1024 : 100 * 1024 * 1024; // 10MB for images, 100MB for videos
     if (file.size > maxSize) {
-      errors.push(`${file.name} is too large. Maximum size is ${type === 'image' ? '5MB' : '50MB'}.`);
+      errors.push(`${file.name} is too large. Maximum size is ${type === 'image' ? '10MB' : '100MB'}.`);
     }
 
     return {

@@ -4,11 +4,12 @@ import { authOptions } from '@/lib/authOptions';
 import { prisma } from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
-  // Pass req and a dummy res to getServerSession for App Router API routes
-  const session = await getServerSession(authOptions, req, {} as any);
-  if (!session || !session.user?.email) {
-    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-  }
+  try {
+    // Pass req and a dummy res to getServerSession for App Router API routes
+    const session = await getServerSession(authOptions, req, {} as any);
+    if (!session || !session.user?.email) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+    }
 
   // Get user
   const user = await prisma.user.findUnique({
@@ -22,7 +23,12 @@ export async function GET(req: NextRequest) {
   // Get properties
   const properties = await prisma.property.findMany({
     where: { ownerId: user.id },
-    select: { id: true, isActive: true, viewCount: true }
+    select: {
+      id: true,
+      isActive: true,
+      viewCount: true,
+      moderationStatus: true
+    }
   });
 
   const myProperties = properties.length;
@@ -42,4 +48,11 @@ export async function GET(req: NextRequest) {
     totalViews,
     inquiries
   });
+  } catch (error) {
+    console.error('Dashboard overview error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
 } 

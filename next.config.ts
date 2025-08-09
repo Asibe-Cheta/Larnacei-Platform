@@ -14,7 +14,12 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     optimizePackageImports: ['@mui/material', '@mui/icons-material', 'lucide-react'],
-    serverComponentsExternalPackages: ['cloudinary'],
+    serverExternalPackages: ['cloudinary'],
+  },
+
+  // Server configuration for larger uploads
+  serverRuntimeConfig: {
+    maxBodySize: '100mb',
   },
 
   // Image optimization for Nigerian networks

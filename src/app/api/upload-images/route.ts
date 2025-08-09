@@ -10,18 +10,18 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Configure for larger uploads
+export const config = {
+  api: {
+    bodyParser: false,
+    responseLimit: false,
+  },
+  maxDuration: 300, // 5 minutes timeout
+};
+
 export async function POST(request: NextRequest) {
   try {
     console.log('Image upload request received');
-    console.log('Request URL:', request.url);
-    console.log('Request method:', request.method);
-    console.log('User agent:', request.headers.get('user-agent'));
-
-    // Debug environment variables
-    console.log('Environment variables check:');
-    console.log('CLOUDINARY_CLOUD_NAME:', process.env.CLOUDINARY_CLOUD_NAME ? 'SET' : 'NOT SET');
-    console.log('CLOUDINARY_API_KEY:', process.env.CLOUDINARY_API_KEY ? 'SET' : 'NOT SET');
-    console.log('CLOUDINARY_API_SECRET:', process.env.CLOUDINARY_API_SECRET ? 'SET' : 'NOT SET');
 
     // Check authentication
     const session = await getServerSession(authOptions);
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     console.log('User authenticated:', session.user.id);
 
-    // Parse form data
+    // Parse form data with increased size limit
     const formData = await request.formData();
 
     // Handle both 'images' and 'files' keys for mobile compatibility
@@ -64,17 +64,8 @@ export async function POST(request: NextRequest) {
       api_secret: process.env.CLOUDINARY_API_SECRET,
     };
 
-    console.log('Cloudinary configuration check:', {
-      cloud_name_set: !!cloudinaryVars.cloud_name,
-      api_key_set: !!cloudinaryVars.api_key,
-      api_secret_set: !!cloudinaryVars.api_secret,
-      all_set: !!(cloudinaryVars.cloud_name && cloudinaryVars.api_key && cloudinaryVars.api_secret)
-    });
-
     if (!cloudinaryVars.cloud_name || !cloudinaryVars.api_key || !cloudinaryVars.api_secret) {
       console.error('Cloudinary configuration missing');
-      console.error('Available env vars:', Object.keys(process.env).filter(key => key.includes('CLOUDINARY')));
-
       return NextResponse.json(
         { error: 'Upload service not configured. Please contact support.' },
         { status: 500 }
@@ -94,12 +85,12 @@ export async function POST(request: NextRequest) {
         continue; // Skip non-image files
       }
 
-      // Validate file size (5MB limit)
-      const maxSize = 5 * 1024 * 1024; // 5MB
+      // Validate file size (10MB limit for images)
+      const maxSize = 10 * 1024 * 1024; // 10MB
       if (file.size > maxSize) {
         console.log('File too large:', file.name, file.size);
         return NextResponse.json(
-          { error: `File ${file.name} is too large. Maximum size is 5MB.` },
+          { error: `File ${file.name} is too large. Maximum size is 10MB.` },
           { status: 400 }
         );
       }
@@ -114,26 +105,26 @@ export async function POST(request: NextRequest) {
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(2, 15);
         const fileExtension = file.name.split('.').pop() || 'jpg';
-        const publicId = `larnacei-properties/${session.user.id}-${timestamp}-${randomId}`;
+        const publicId = `larnacei-properties/images/${session.user.id}-${timestamp}-${randomId}`;
 
         console.log('Uploading to Cloudinary:', publicId);
 
         // Upload to Cloudinary with mobile-optimized settings
         const uploadResult = await cloudinary.uploader.upload(base64String, {
           public_id: publicId,
-          folder: 'larnacei-properties',
-          resource_type: 'image',
+          folder: 'larnacei-properties/images',
           transformation: [
-            { width: 1200, height: 800, crop: 'limit' }, // Resize for web
+            { width: 1920, height: 1080, crop: 'limit' }, // HD resolution
             { quality: 'auto', fetch_format: 'auto' }, // Optimize
             { flags: 'progressive' } // Progressive loading for mobile
           ],
           eager: [
-            { width: 800, height: 600, crop: 'limit', quality: 'auto' },
-            { width: 400, height: 300, crop: 'limit', quality: 'auto' }
+            { width: 1280, height: 720, crop: 'limit', quality: 'auto' },
+            { width: 640, height: 360, crop: 'limit', quality: 'auto' },
+            { width: 320, height: 180, crop: 'limit', quality: 'auto' }
           ],
           eager_async: true,
-          eager_notification_url: null
+          eager_notification_url: null,
         });
 
         console.log('File uploaded successfully to Cloudinary:', uploadResult.secure_url);
@@ -174,6 +165,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Mobile upload issue detected. Please try again or use a different image.' },
         { status: 400 }
+      );
+    }
+
+    // Handle JSON parsing errors specifically
+    if (error.message?.includes('JSON.parse') || error.message?.includes('unexpected character')) {
+      return NextResponse.json(
+        { error: 'Invalid response format. Please try again.' },
+        { status: 500 }
       );
     }
 

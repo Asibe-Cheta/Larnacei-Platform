@@ -10,6 +10,15 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+// Configure for larger uploads
+export const config = {
+  api: {
+    bodyParser: false,
+    responseLimit: false,
+  },
+  maxDuration: 600, // 10 minutes timeout for videos
+};
+
 export async function POST(request: NextRequest) {
   try {
     console.log('Video upload request received');
@@ -94,12 +103,12 @@ export async function POST(request: NextRequest) {
         continue; // Skip non-video files
       }
 
-      // Validate file size (50MB limit for videos)
-      const maxSize = 50 * 1024 * 1024; // 50MB
+      // Validate file size (100MB limit for videos)
+      const maxSize = 100 * 1024 * 1024; // 100MB
       if (file.size > maxSize) {
         console.log('File too large:', file.name, file.size);
         return NextResponse.json(
-          { error: `File ${file.name} is too large. Maximum size is 50MB.` },
+          { error: `File ${file.name} is too large. Maximum size is 100MB.` },
           { status: 400 }
         );
       }
