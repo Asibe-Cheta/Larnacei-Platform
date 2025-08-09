@@ -1,22 +1,14 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
   "framework": "nextjs",
-  "installCommand": "npm install",
-  "devCommand": "npm run dev",
-  "regions": ["iad1"],
   "functions": {
-    "src/app/api/upload-images/route.ts": {
+    "app/api/upload-images/route.ts": {
       "maxDuration": 300
     },
-    "src/app/api/upload-videos/route.ts": {
+    "app/api/upload-videos/route.ts": {
       "maxDuration": 600
     },
-    "src/app/api/**/*.ts": {
+    "app/api/**/route.ts": {
       "maxDuration": 30
     }
-  },
-  "env": {
-    "NODE_ENV": "production"
   }
 } 

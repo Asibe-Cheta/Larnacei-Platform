@@ -7,10 +7,10 @@ const nextConfig: NextConfig = {
   generateEtags: true,
 
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
   typescript: {
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false,
   },
   experimental: {
     optimizePackageImports: ['@mui/material', '@mui/icons-material', 'lucide-react'],
@@ -59,73 +59,19 @@ const nextConfig: NextConfig = {
     // Remove restrictive CSP that's blocking images
   },
 
-  // Turbopack configuration
-  turbopack: {
-    rules: {
-      '*.svg': {
-        loaders: ['@svgr/webpack'],
-        as: '*.js',
-      },
-    },
-  },
+  // Simplified turbopack configuration for Vercel compatibility
 
-  // Webpack optimizations for Nigerian networks
-  webpack: (config, { dev, isServer }) => {
-    // Exclude Prisma Client from browser bundle
+  // Simplified webpack configuration for Vercel compatibility
+  webpack: (config, { isServer }) => {
+    // Basic fallbacks for client-side
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
         net: false,
         tls: false,
-        crypto: false,
-        stream: false,
-        url: false,
-        zlib: false,
-        http: false,
-        https: false,
-        assert: false,
-        os: false,
-        path: false,
       };
     }
-
-    // Optimize bundle size
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-          common: {
-            name: 'common',
-            minChunks: 2,
-            chunks: 'all',
-            enforce: true,
-          },
-        },
-      };
-    }
-
-    // Optimize images
-    config.module.rules.push({
-      test: /\.(png|jpe?g|gif|svg)$/i,
-      use: [
-        {
-          loader: 'url-loader',
-          options: {
-            limit: 8192,
-            fallback: 'file-loader',
-            publicPath: '/_next/static/images/',
-            outputPath: 'static/images/',
-          },
-        },
-      ],
-    });
-
     return config;
   },
 
@@ -196,8 +142,7 @@ const nextConfig: NextConfig = {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
 
-  // Output configuration
-  output: 'standalone',
+  // Remove standalone output for Vercel compatibility
 
   // Trailing slash for better SEO
   trailingSlash: false,
