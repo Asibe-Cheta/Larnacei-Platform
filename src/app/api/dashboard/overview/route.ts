@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
-import { prisma } from '@/lib/prisma';
+import prisma from '@/lib/prisma';
 
 export async function GET(req: NextRequest) {
   try {
-    // Pass req and a dummy res to getServerSession for App Router API routes
-    const session = await getServerSession(authOptions, req, {} as any);
+    const session = await getServerSession(authOptions);
     if (!session || !session.user?.email) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
@@ -32,7 +31,10 @@ export async function GET(req: NextRequest) {
   });
 
   const myProperties = properties.length;
-  const activeListings = properties.filter((p: { isActive: boolean }) => p.isActive).length;
+  // Active listings are properties that are active AND approved
+  const activeListings = properties.filter((p: { isActive: boolean; moderationStatus: string }) => 
+    p.isActive && p.moderationStatus === 'APPROVED'
+  ).length;
   const totalViews = properties.reduce((sum: number, p: { viewCount?: number }) => sum + (p.viewCount || 0), 0);
 
   // Get inquiries for user's properties
@@ -40,6 +42,21 @@ export async function GET(req: NextRequest) {
   const inquiries = propertyIds.length > 0
     ? await prisma.propertyInquiry.count({ where: { propertyId: { in: propertyIds } } })
     : 0;
+
+  // Debug logging
+  console.log('User dashboard stats:', {
+    userId: user.id,
+    totalProperties: properties.length,
+    myProperties,
+    activeListings,
+    totalViews,
+    inquiries,
+    propertiesData: properties.map(p => ({ 
+      id: p.id, 
+      isActive: p.isActive, 
+      moderationStatus: p.moderationStatus 
+    }))
+  });
 
   return NextResponse.json({
     name: user.name,
