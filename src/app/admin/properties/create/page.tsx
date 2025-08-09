@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { transformFormDataToApi } from '@/utils/form-transformers';
 
 interface AdminPropertyData {
   title: string;
@@ -148,21 +147,41 @@ export default function CreatePropertyPage() {
           imageFormData.append('images', file);
         });
 
+        console.log('Uploading images...', formData.images.length, 'files');
         const imageResponse = await fetch('/api/upload-images', {
           method: 'POST',
           body: imageFormData,
         });
 
+        console.log('Image upload response status:', imageResponse.status);
+        const responseText = await imageResponse.text();
+        console.log('Image upload response text:', responseText);
+
         if (imageResponse.ok) {
-          const imageResult = await imageResponse.json();
+          let imageResult;
+          try {
+            imageResult = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('Failed to parse image upload response:', parseError);
+            throw new Error('Invalid response from upload service');
+          }
+          
           if (imageResult.success && imageResult.urls) {
             imageUrls = imageResult.urls;
+            console.log('Images uploaded successfully:', imageUrls);
           } else {
+            console.error('Upload failed:', imageResult);
             throw new Error(imageResult.error || 'Failed to upload images');
           }
         } else {
-          const errorData = await imageResponse.json().catch(() => ({ error: 'Failed to upload images' }));
-          throw new Error(errorData.error || 'Failed to upload images');
+          console.error('Upload request failed with status:', imageResponse.status);
+          let errorData;
+          try {
+            errorData = JSON.parse(responseText);
+          } catch {
+            errorData = { error: `Upload failed with status ${imageResponse.status}` };
+          }
+          throw new Error(errorData.error || `Upload failed with status ${imageResponse.status}`);
         }
       }
 
@@ -174,43 +193,110 @@ export default function CreatePropertyPage() {
           videoFormData.append('videos', file);
         });
 
+        console.log('Uploading videos...', formData.videos.length, 'files');
         const videoResponse = await fetch('/api/upload-videos', {
           method: 'POST',
           body: videoFormData,
         });
 
+        console.log('Video upload response status:', videoResponse.status);
+        const responseText = await videoResponse.text();
+        console.log('Video upload response text:', responseText);
+
         if (videoResponse.ok) {
-          const videoResult = await videoResponse.json();
+          let videoResult;
+          try {
+            videoResult = JSON.parse(responseText);
+          } catch (parseError) {
+            console.error('Failed to parse video upload response:', parseError);
+            throw new Error('Invalid response from upload service');
+          }
+          
           if (videoResult.success && videoResult.urls) {
             videoUrls = videoResult.urls;
+            console.log('Videos uploaded successfully:', videoUrls);
           } else {
+            console.error('Upload failed:', videoResult);
             throw new Error(videoResult.error || 'Failed to upload videos');
           }
         } else {
-          const errorData = await videoResponse.json().catch(() => ({ error: 'Failed to upload videos' }));
-          throw new Error(errorData.error || 'Failed to upload videos');
+          console.error('Upload request failed with status:', videoResponse.status);
+          let errorData;
+          try {
+            errorData = JSON.parse(responseText);
+          } catch {
+            errorData = { error: `Upload failed with status ${videoResponse.status}` };
+          }
+          throw new Error(errorData.error || `Upload failed with status ${videoResponse.status}`);
         }
       }
 
-      // Transform form data for API submission using the same transformer as user form
-      const apiData = transformFormDataToApi(
-        {
-          ...formData,
-          country: 'Nigeria',
-          // Add required fields for the transformer
-          hasTitleDeed: true, // Admin properties are assumed to have proper documentation
+      // Create API data directly without complex transformation
+      const apiData = {
+        // Basic Info
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        category: formData.category,
+        purpose: formData.category === 'PROPERTY_SALE' || formData.category === 'LANDED_PROPERTY' ? 'FOR_SALE' : 'FOR_RENT',
+
+        // Location
+        location: formData.address,
+        streetAddress: formData.address,
+        city: formData.city,
+        state: formData.state,
+        lga: formData.lga,
+        country: 'Nigeria',
+        latitude: formData.latitude || null,
+        longitude: formData.longitude || null,
+        landmark: '',
+
+        // Pricing
+        price: parseInt(formData.price.replace(/,/g, '')) * 100, // Convert to kobo
+        currency: 'NGN' as const,
+        isNegotiable: true,
+
+        // Property Details
+        bedrooms: formData.bedrooms || 0,
+        bathrooms: formData.bathrooms || 0,
+        toilets: formData.bathrooms || 0,
+        sizeInSqm: formData.area || null,
+        parkingSpaces: 0,
+        features: formData.amenities,
+        condition: 'NEW' as const,
+
+        // Media
+        images: imageUrls,
+        videos: videoUrls,
+        virtualTourUrl: '',
+        floorPlanUrl: '',
+
+        // Legal Documents (admin properties are assumed to have proper docs)
+        titleDocuments: {
+          hasTitleDeed: true,
           hasSurveyPlan: true,
           hasBuildingApproval: true,
           hasCertificateOfOccupancy: true,
           hasDeedOfAssignment: false,
           hasPowerOfAttorney: false,
-          isAvailable: true,
-          viewingPreferences: ['WEEKDAYS', 'WEEKENDS'],
-          additionalNotes: `Admin-created property. Featured: ${formData.isFeatured ? 'Yes' : 'No'}`,
         },
-        imageUrls,
-        videoUrls
-      );
+        ownershipType: 'FREEHOLD' as const,
+        legalStatus: 'CLEAR' as const,
+
+        // Availability
+        availabilityStatus: 'AVAILABLE' as const,
+        availableFrom: new Date(),
+        inspectionType: 'BY_APPOINTMENT' as const,
+
+        // Contact
+        contactPhone: formData.contactPhone,
+        contactEmail: formData.contactEmail,
+
+        // Admin specific
+        isFeatured: formData.isFeatured,
+        isActive: true,
+        moderationStatus: 'APPROVED' as const,
+      };
 
       console.log('Submitting property data:', apiData);
 
@@ -220,13 +306,7 @@ export default function CreatePropertyPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...apiData,
-          // Override with admin-specific settings
-          isFeatured: formData.isFeatured,
-          moderationStatus: 'APPROVED', // Auto-approve admin properties
-          isActive: true,
-        }),
+        body: JSON.stringify(apiData),
       });
 
       const data = await response.json();
