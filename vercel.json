@@ -6,6 +6,12 @@
   "devCommand": "npm run dev",
   "regions": ["iad1"],
   "functions": {
+    "src/app/api/upload-images/route.ts": {
+      "maxDuration": 300
+    },
+    "src/app/api/upload-videos/route.ts": {
+      "maxDuration": 600
+    },
     "src/app/api/**/*.ts": {
       "maxDuration": 30
     }

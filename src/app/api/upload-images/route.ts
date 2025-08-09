@@ -19,9 +19,17 @@ export const config = {
   maxDuration: 300, // 5 minutes timeout
 };
 
+// Set maximum file size for Vercel (4.5MB to stay under 5MB limit)
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB
+
 export async function POST(request: NextRequest) {
   try {
     console.log('Image upload request received');
+    
+    // Add content type header for proper JSON response
+    const responseHeaders = {
+      'Content-Type': 'application/json',
+    };
 
     // Check authentication
     const session = await getServerSession(authOptions);
@@ -85,12 +93,11 @@ export async function POST(request: NextRequest) {
         continue; // Skip non-image files
       }
 
-      // Validate file size (10MB limit for images)
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
+      // Validate file size (4.5MB limit for Vercel)
+      if (file.size > MAX_FILE_SIZE) {
         console.log('File too large:', file.name, file.size);
         return NextResponse.json(
-          { error: `File ${file.name} is too large. Maximum size is 10MB.` },
+          { error: `File ${file.name} is too large. Maximum size is 4.5MB for images.` },
           { status: 400 }
         );
       }
@@ -154,7 +161,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       urls: uploadedUrls
-    });
+    }, { headers: responseHeaders });
 
   } catch (error: any) {
     console.error('Image upload error:', error);
@@ -178,7 +185,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { error: 'Failed to upload images', details: error.message },
-      { status: 500 }
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 } 

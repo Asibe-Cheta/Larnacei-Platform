@@ -19,12 +19,20 @@ export const config = {
   maxDuration: 600, // 10 minutes timeout for videos
 };
 
+// Set maximum file size for Vercel (30MB limit for videos)
+const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+
 export async function POST(request: NextRequest) {
   try {
     console.log('Video upload request received');
     console.log('Request URL:', request.url);
     console.log('Request method:', request.method);
     console.log('User agent:', request.headers.get('user-agent'));
+    
+    // Add content type header for proper JSON response
+    const responseHeaders = {
+      'Content-Type': 'application/json',
+    };
 
     // Debug environment variables
     console.log('Environment variables check:');
@@ -103,12 +111,11 @@ export async function POST(request: NextRequest) {
         continue; // Skip non-video files
       }
 
-      // Validate file size (100MB limit for videos)
-      const maxSize = 100 * 1024 * 1024; // 100MB
-      if (file.size > maxSize) {
+      // Validate file size (30MB limit for Vercel)
+      if (file.size > MAX_FILE_SIZE) {
         console.log('File too large:', file.name, file.size);
         return NextResponse.json(
-          { error: `File ${file.name} is too large. Maximum size is 100MB.` },
+          { error: `File ${file.name} is too large. Maximum size is 30MB for videos.` },
           { status: 400 }
         );
       }
@@ -173,7 +180,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       urls: uploadedUrls
-    });
+    }, { headers: responseHeaders });
 
   } catch (error: any) {
     console.error('Video upload error:', error);
@@ -197,7 +204,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { error: 'Failed to upload videos', details: error.message },
-      { status: 500 }
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 } 

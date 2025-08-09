@@ -18,10 +18,10 @@ export const mobileUploadHandler = {
       errors.push(`${file.name} is not a valid video file.`);
     }
 
-    // Check file size
-    const maxSize = type === 'image' ? 10 * 1024 * 1024 : 100 * 1024 * 1024; // 10MB for images, 100MB for videos
+    // Check file size (Vercel limits)
+    const maxSize = type === 'image' ? 4.5 * 1024 * 1024 : 30 * 1024 * 1024; // 4.5MB for images, 30MB for videos
     if (file.size > maxSize) {
-      errors.push(`${file.name} is too large. Maximum size is ${type === 'image' ? '10MB' : '100MB'}.`);
+      errors.push(`${file.name} is too large. Maximum size is ${type === 'image' ? '4.5MB' : '30MB'}.`);
     }
 
     return {
