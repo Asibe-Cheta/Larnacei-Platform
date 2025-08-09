@@ -1,158 +1,111 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { mobileUploadHandler } from '@/utils/mobile-upload';
+import { transformFormDataToApi } from '@/utils/form-transformers';
+
+interface AdminPropertyData {
+  title: string;
+  category: 'SHORT_STAY' | 'LONG_TERM_RENTAL' | 'LANDED_PROPERTY' | 'PROPERTY_SALE';
+  type: 'APARTMENT' | 'HOUSE' | 'VILLA' | 'LAND' | 'COMMERCIAL';
+  price: string;
+  description: string;
+  address: string;
+  city: string;
+  state: string;
+  lga: string;
+  latitude?: number;
+  longitude?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  areaUnit: 'sqm' | 'sqft';
+  amenities: string[];
+  images: File[];
+  videos: File[];
+  isFeatured: boolean;
+  contactPhone: string;
+  contactEmail: string;
+}
 
 export default function CreatePropertyPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  const [uploadingImages, setUploadingImages] = useState(false);
-  const [uploadingVideos, setUploadingVideos] = useState(false);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<AdminPropertyData>({
     title: '',
-    description: '',
-    price: '',
-    type: 'HOUSE',
     category: 'PROPERTY_SALE',
-    bedrooms: '',
-    bathrooms: '',
-    size: '',
+    type: 'HOUSE',
+    price: '',
+    description: '',
+    address: '',
     city: '',
     state: '',
-    address: '',
-    postalCode: '',
-    latitude: '',
-    longitude: '',
-    features: [] as string[],
-    amenities: [] as string[],
-    images: [] as string[],
-    videos: [] as string[],
+    lga: '',
+    areaUnit: 'sqm',
+    amenities: [],
+    images: [],
+    videos: [],
     isFeatured: false,
+    contactPhone: '',
+    contactEmail: '',
   });
 
-  const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
-  const [selectedVideoFiles, setSelectedVideoFiles] = useState<File[]>([]);
+  const updateFormData = (updates: Partial<AdminPropertyData>) => {
+    setFormData(prev => ({ ...prev, ...updates }));
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({
-        ...prev,
-        [name]: checked
-      }));
+      updateFormData({ [name]: checked });
+    } else if (type === 'number') {
+      updateFormData({ [name]: value ? parseFloat(value) : undefined });
     } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      updateFormData({ [name]: value });
     }
   };
 
-  const handleImageUpload = async () => {
-    if (selectedImageFiles.length === 0) return;
-
-    setUploadingImages(true);
-    try {
-      const uploadedUrls = await mobileUploadHandler.uploadFiles(selectedImageFiles, 'image');
-
-      setFormData(prev => ({
-        ...prev,
-        images: [...prev.images, ...uploadedUrls]
-      }));
-      setSelectedImageFiles([]);
-      if (imageInputRef.current) {
-        imageInputRef.current.value = '';
-      }
-    } catch (error: any) {
-      console.error('Image upload error:', error);
-      setMessage({
-        type: 'error',
-        text: error.message || 'Failed to upload images. Please try again.'
-      });
-    } finally {
-      setUploadingImages(false);
-    }
-  };
-
-  const handleVideoUpload = async () => {
-    if (selectedVideoFiles.length === 0) return;
-
-    setUploadingVideos(true);
-    try {
-      const uploadedUrls = await mobileUploadHandler.uploadFiles(selectedVideoFiles, 'video');
-
-      setFormData(prev => ({
-        ...prev,
-        videos: [...prev.videos, ...uploadedUrls]
-      }));
-      setSelectedVideoFiles([]);
-      if (videoInputRef.current) {
-        videoInputRef.current.value = '';
-      }
-    } catch (error: any) {
-      console.error('Video upload error:', error);
-      setMessage({
-        type: 'error',
-        text: error.message || 'Failed to upload videos. Please try again.'
-      });
-    } finally {
-      setUploadingVideos(false);
-    }
-  };
-
-  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, fileType: 'images' | 'videos') => {
     const files = Array.from(e.target.files || []);
-    // Use mobile upload utility for validation
+    const maxFileSize = fileType === 'images' ? 4.5 * 1024 * 1024 : 30 * 1024 * 1024; // 4.5MB for images, 30MB for videos
+    
     const validFiles = files.filter(file => {
-      const validation = mobileUploadHandler.validateFile(file, 'image');
-      if (!validation.isValid) {
-        setMessage({
-          type: 'error',
-          text: validation.errors.join('\n')
+      if (fileType === 'images' && !file.type.startsWith('image/')) {
+        setMessage({ type: 'error', text: `${file.name} is not a valid image file.` });
+        return false;
+      }
+      if (fileType === 'videos' && !file.type.startsWith('video/')) {
+        setMessage({ type: 'error', text: `${file.name} is not a valid video file.` });
+        return false;
+      }
+      if (file.size > maxFileSize) {
+        setMessage({ 
+          type: 'error', 
+          text: `${file.name} is too large. Maximum size is ${fileType === 'images' ? '4.5MB' : '30MB'}.` 
         });
         return false;
       }
       return true;
     });
-    setSelectedImageFiles(validFiles);
+
+    updateFormData({ [fileType]: [...formData[fileType], ...validFiles] });
   };
 
-  const handleVideoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    // Use mobile upload utility for validation
-    const validFiles = files.filter(file => {
-      const validation = mobileUploadHandler.validateFile(file, 'video');
-      if (!validation.isValid) {
-        setMessage({
-          type: 'error',
-          text: validation.errors.join('\n')
-        });
-        return false;
-      }
-      return true;
-    });
-    setSelectedVideoFiles(validFiles);
+  const removeFile = (index: number, fileType: 'images' | 'videos') => {
+    const files = formData[fileType].filter((_, i) => i !== index);
+    updateFormData({ [fileType]: files });
   };
 
-  const removeImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index)
-    }));
-  };
-
-  const removeVideo = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      videos: prev.videos.filter((_, i) => i !== index)
-    }));
+  const handleAmenityToggle = (amenity: string) => {
+    const current = formData.amenities;
+    const updated = current.includes(amenity)
+      ? current.filter(a => a !== amenity)
+      : [...current, amenity];
+    updateFormData({ amenities: updated });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -161,46 +114,125 @@ export default function CreatePropertyPage() {
     setMessage(null);
 
     try {
-      // Convert string values to numbers and map to API schema
-      const submitData = {
-        title: formData.title,
-        description: formData.description,
-        price: parseFloat(formData.price) || 0,
-        type: formData.type,
-        category: formData.category,
-        purpose: 'SALE', // Default to SALE for admin-created properties
-        bedrooms: parseInt(formData.bedrooms) || 0,
-        bathrooms: parseInt(formData.bathrooms) || 0,
-        sizeInSqm: parseFloat(formData.size) || 0, // Map 'size' to 'sizeInSqm'
-        city: formData.city,
-        state: formData.state,
-        location: formData.address, // Map 'address' to 'location'
-        streetAddress: formData.address, // Also map to streetAddress
-        lga: '', // Optional field
-        landmark: '', // Optional field
-        latitude: formData.latitude ? parseFloat(formData.latitude) : undefined,
-        longitude: formData.longitude ? parseFloat(formData.longitude) : undefined,
-        features: formData.features,
-        amenities: formData.amenities,
-        images: formData.images,
-        videos: formData.videos,
-        isFeatured: formData.isFeatured,
-      };
+      // Basic validation
+      if (!formData.title || formData.title.length < 10) {
+        throw new Error('Property title must be at least 10 characters');
+      }
+      if (!formData.description || formData.description.length < 50) {
+        throw new Error('Property description must be at least 50 characters');
+      }
+      if (!formData.price || parseFloat(formData.price.replace(/,/g, '')) < 100000) {
+        throw new Error('Property price must be at least ₦100,000');
+      }
+      if (!formData.address || formData.address.length < 10) {
+        throw new Error('Address must be at least 10 characters');
+      }
+      if (!formData.city || !formData.state || !formData.lga) {
+        throw new Error('City, state, and LGA are required');
+      }
+      if (formData.amenities.length === 0) {
+        throw new Error('At least one amenity is required');
+      }
+      if (formData.images.length === 0) {
+        throw new Error('At least one property image is required');
+      }
+      if (!formData.contactPhone || !formData.contactEmail) {
+        throw new Error('Contact phone and email are required');
+      }
 
-      console.log('Submitting property data:', submitData);
+      // Upload images first
+      let imageUrls: string[] = [];
+      if (formData.images.length > 0) {
+        const imageFormData = new FormData();
+        formData.images.forEach((file: File) => {
+          imageFormData.append('images', file);
+        });
 
-      const response = await fetch('/api/admin/properties', {
+        const imageResponse = await fetch('/api/upload-images', {
+          method: 'POST',
+          body: imageFormData,
+        });
+
+        if (imageResponse.ok) {
+          const imageResult = await imageResponse.json();
+          if (imageResult.success && imageResult.urls) {
+            imageUrls = imageResult.urls;
+          } else {
+            throw new Error(imageResult.error || 'Failed to upload images');
+          }
+        } else {
+          const errorData = await imageResponse.json().catch(() => ({ error: 'Failed to upload images' }));
+          throw new Error(errorData.error || 'Failed to upload images');
+        }
+      }
+
+      // Upload videos
+      let videoUrls: string[] = [];
+      if (formData.videos.length > 0) {
+        const videoFormData = new FormData();
+        formData.videos.forEach((file: File) => {
+          videoFormData.append('videos', file);
+        });
+
+        const videoResponse = await fetch('/api/upload-videos', {
+          method: 'POST',
+          body: videoFormData,
+        });
+
+        if (videoResponse.ok) {
+          const videoResult = await videoResponse.json();
+          if (videoResult.success && videoResult.urls) {
+            videoUrls = videoResult.urls;
+          } else {
+            throw new Error(videoResult.error || 'Failed to upload videos');
+          }
+        } else {
+          const errorData = await videoResponse.json().catch(() => ({ error: 'Failed to upload videos' }));
+          throw new Error(errorData.error || 'Failed to upload videos');
+        }
+      }
+
+      // Transform form data for API submission using the same transformer as user form
+      const apiData = transformFormDataToApi(
+        {
+          ...formData,
+          country: 'Nigeria',
+          // Add required fields for the transformer
+          hasTitleDeed: true, // Admin properties are assumed to have proper documentation
+          hasSurveyPlan: true,
+          hasBuildingApproval: true,
+          hasCertificateOfOccupancy: true,
+          hasDeedOfAssignment: false,
+          hasPowerOfAttorney: false,
+          isAvailable: true,
+          viewingPreferences: ['WEEKDAYS', 'WEEKENDS'],
+          additionalNotes: `Admin-created property. Featured: ${formData.isFeatured ? 'Yes' : 'No'}`,
+        },
+        imageUrls,
+        videoUrls
+      );
+
+      console.log('Submitting property data:', apiData);
+
+      // Use the main properties API endpoint
+      const response = await fetch('/api/properties', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(submitData),
+        body: JSON.stringify({
+          ...apiData,
+          // Override with admin-specific settings
+          isFeatured: formData.isFeatured,
+          moderationStatus: 'APPROVED', // Auto-approve admin properties
+          isActive: true,
+        }),
       });
 
       const data = await response.json();
       console.log('Response:', data);
 
-      if (response.ok) {
+      if (response.ok && data.success) {
         setMessage({ type: 'success', text: 'Property created successfully!' });
         setTimeout(() => {
           router.push('/admin/properties');
@@ -208,19 +240,26 @@ export default function CreatePropertyPage() {
       } else {
         setMessage({
           type: 'error',
-          text: data.error || 'Failed to create property'
+          text: data.error || data.message || 'Failed to create property'
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating property:', error);
       setMessage({
         type: 'error',
-        text: 'An error occurred while creating the property'
+        text: error.message || 'An error occurred while creating the property'
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Common amenities list
+  const commonAmenities = [
+    'Air Conditioning', 'Parking', 'Swimming Pool', 'Gym', 'Garden', 
+    'Security', 'Elevator', 'Balcony', 'Furnished', 'Pet Friendly',
+    'Internet', 'Generator', 'Water Heater', 'Wardrobe', 'Kitchen Appliances'
+  ];
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
@@ -238,11 +277,11 @@ export default function CreatePropertyPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Basic Information */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="md:col-span-2">
               <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
                 Property Title *
               </label>
@@ -254,47 +293,8 @@ export default function CreatePropertyPage() {
                 value={formData.title}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Enter property title"
+                placeholder="Enter property title (minimum 10 characters)"
               />
-            </div>
-
-            <div>
-              <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
-                Price *
-              </label>
-              <input
-                type="number"
-                id="price"
-                name="price"
-                required
-                min="0"
-                step="0.01"
-                value={formData.price}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Enter price"
-              />
-            </div>
-
-            <div>
-              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
-                Property Type *
-              </label>
-              <select
-                id="type"
-                name="type"
-                required
-                value={formData.type}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              >
-                <option value="HOUSE">House</option>
-                <option value="APARTMENT">Apartment</option>
-                <option value="CONDO">Condo</option>
-                <option value="TOWNHOUSE">Townhouse</option>
-                <option value="LAND">Land</option>
-                <option value="COMMERCIAL">Commercial</option>
-              </select>
             </div>
 
             <div>
@@ -317,6 +317,42 @@ export default function CreatePropertyPage() {
             </div>
 
             <div>
+              <label htmlFor="type" className="block text-sm font-medium text-gray-700 mb-1">
+                Property Type *
+              </label>
+              <select
+                id="type"
+                name="type"
+                required
+                value={formData.type}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              >
+                <option value="HOUSE">House</option>
+                <option value="APARTMENT">Apartment</option>
+                <option value="VILLA">Villa</option>
+                <option value="LAND">Land</option>
+                <option value="COMMERCIAL">Commercial</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="price" className="block text-sm font-medium text-gray-700 mb-1">
+                Price (₦) *
+              </label>
+              <input
+                type="text"
+                id="price"
+                name="price"
+                required
+                value={formData.price}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter price (minimum ₦100,000)"
+              />
+            </div>
+
+            <div>
               <label htmlFor="bedrooms" className="block text-sm font-medium text-gray-700 mb-1">
                 Bedrooms
               </label>
@@ -325,7 +361,7 @@ export default function CreatePropertyPage() {
                 id="bedrooms"
                 name="bedrooms"
                 min="0"
-                value={formData.bedrooms}
+                value={formData.bedrooms || ''}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 placeholder="Number of bedrooms"
@@ -341,7 +377,7 @@ export default function CreatePropertyPage() {
                 id="bathrooms"
                 name="bathrooms"
                 min="0"
-                value={formData.bathrooms}
+                value={formData.bathrooms || ''}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 placeholder="Number of bathrooms"
@@ -349,20 +385,30 @@ export default function CreatePropertyPage() {
             </div>
 
             <div>
-              <label htmlFor="size" className="block text-sm font-medium text-gray-700 mb-1">
-                Size (sq ft)
+              <label htmlFor="area" className="block text-sm font-medium text-gray-700 mb-1">
+                Area
               </label>
-              <input
-                type="number"
-                id="size"
-                name="size"
-                min="0"
-                step="0.01"
-                value={formData.size}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Property size"
-              />
+              <div className="flex space-x-2">
+                <input
+                  type="number"
+                  id="area"
+                  name="area"
+                  min="0"
+                  value={formData.area || ''}
+                  onChange={handleInputChange}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Property area"
+                />
+                <select
+                  name="areaUnit"
+                  value={formData.areaUnit}
+                  onChange={handleInputChange}
+                  className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                >
+                  <option value="sqm">sqm</option>
+                  <option value="sqft">sqft</option>
+                </select>
+              </div>
             </div>
 
             <div className="md:col-span-2">
@@ -379,32 +425,32 @@ export default function CreatePropertyPage() {
                 </span>
               </label>
             </div>
-          </div>
 
-          <div className="mt-4">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-              Description *
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              required
-              rows={4}
-              value={formData.description}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              placeholder="Describe the property..."
-            />
+            <div className="md:col-span-2">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                Description *
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                required
+                rows={4}
+                value={formData.description}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Describe the property (minimum 50 characters)..."
+              />
+            </div>
           </div>
         </div>
 
+        {/* Location */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Location</h2>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
+            <div className="md:col-span-2">
               <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                Address *
+                Street Address *
               </label>
               <input
                 type="text"
@@ -414,7 +460,7 @@ export default function CreatePropertyPage() {
                 value={formData.address}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Enter full address"
+                placeholder="Enter full street address"
               />
             </div>
 
@@ -451,30 +497,31 @@ export default function CreatePropertyPage() {
             </div>
 
             <div>
-              <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
-                Postal Code
+              <label htmlFor="lga" className="block text-sm font-medium text-gray-700 mb-1">
+                LGA (Local Government Area) *
               </label>
               <input
                 type="text"
-                id="postalCode"
-                name="postalCode"
-                value={formData.postalCode}
+                id="lga"
+                name="lga"
+                required
+                value={formData.lga}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Enter postal code"
+                placeholder="Enter LGA"
               />
             </div>
 
             <div>
               <label htmlFor="latitude" className="block text-sm font-medium text-gray-700 mb-1">
-                Latitude
+                Latitude (Optional)
               </label>
               <input
                 type="number"
                 id="latitude"
                 name="latitude"
                 step="any"
-                value={formData.latitude}
+                value={formData.latitude || ''}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 placeholder="Enter latitude"
@@ -483,14 +530,14 @@ export default function CreatePropertyPage() {
 
             <div>
               <label htmlFor="longitude" className="block text-sm font-medium text-gray-700 mb-1">
-                Longitude
+                Longitude (Optional)
               </label>
               <input
                 type="number"
                 id="longitude"
                 name="longitude"
                 step="any"
-                value={formData.longitude}
+                value={formData.longitude || ''}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 placeholder="Enter longitude"
@@ -499,112 +546,136 @@ export default function CreatePropertyPage() {
           </div>
         </div>
 
+        {/* Amenities */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Amenities & Features *</h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {commonAmenities.map((amenity) => (
+              <label key={amenity} className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={formData.amenities.includes(amenity)}
+                  onChange={() => handleAmenityToggle(amenity)}
+                  className="mr-2 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+                />
+                <span className="text-sm text-gray-700">{amenity}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Media Upload */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Media</h2>
-
-          {/* Image Upload */}
+          
+          {/* Images */}
           <div className="mb-6">
-            <h3 className="text-lg font-medium mb-3">Images</h3>
-            <div className="space-y-4">
-              <div>
-                <input
-                  ref={imageInputRef}
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageSelect}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
-                />
-                {selectedImageFiles.length > 0 && (
-                  <div className="mt-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Property Images * (Max 4.5MB each)
+            </label>
+            <input
+              type="file"
+              multiple
+              accept="image/*"
+              onChange={(e) => handleFileChange(e, 'images')}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+            />
+            {formData.images.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                {formData.images.map((file, index) => (
+                  <div key={index} className="relative">
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt={`Image ${index + 1}`}
+                      className="w-full h-24 object-cover rounded-md"
+                    />
                     <button
                       type="button"
-                      onClick={handleImageUpload}
-                      disabled={uploadingImages}
-                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                      onClick={() => removeFile(index, 'images')}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
                     >
-                      {uploadingImages ? 'Uploading...' : 'Upload Images'}
+                      ×
                     </button>
                   </div>
-                )}
+                ))}
               </div>
-
-              {/* Display uploaded images */}
-              {formData.images.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {formData.images.map((url, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={url}
-                        alt={`Property image ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-md"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
-          {/* Video Upload */}
+          {/* Videos */}
           <div className="mb-6">
-            <h3 className="text-lg font-medium mb-3">Videos</h3>
-            <div className="space-y-4">
-              <div>
-                <input
-                  ref={videoInputRef}
-                  type="file"
-                  multiple
-                  accept="video/*"
-                  onChange={handleVideoSelect}
-                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
-                />
-                {selectedVideoFiles.length > 0 && (
-                  <div className="mt-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Property Videos (Optional, Max 30MB each)
+            </label>
+            <input
+              type="file"
+              multiple
+              accept="video/*"
+              onChange={(e) => handleFileChange(e, 'videos')}
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+            />
+            {formData.videos.length > 0 && (
+              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+                {formData.videos.map((file, index) => (
+                  <div key={index} className="relative">
+                    <video
+                      src={URL.createObjectURL(file)}
+                      className="w-full h-24 object-cover rounded-md"
+                      controls
+                    />
                     <button
                       type="button"
-                      onClick={handleVideoUpload}
-                      disabled={uploadingVideos}
-                      className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
+                      onClick={() => removeFile(index, 'videos')}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
                     >
-                      {uploadingVideos ? 'Uploading...' : 'Upload Videos'}
+                      ×
                     </button>
                   </div>
-                )}
+                ))}
               </div>
+            )}
+          </div>
+        </div>
 
-              {/* Display uploaded videos */}
-              {formData.videos.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {formData.videos.map((url, index) => (
-                    <div key={index} className="relative">
-                      <video
-                        src={url}
-                        className="w-full h-24 object-cover rounded-md"
-                        controls
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeVideo(index)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
+        {/* Contact Information */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold mb-4">Contact Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="contactPhone" className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Phone *
+              </label>
+              <input
+                type="tel"
+                id="contactPhone"
+                name="contactPhone"
+                required
+                value={formData.contactPhone}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter contact phone number"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Email *
+              </label>
+              <input
+                type="email"
+                id="contactEmail"
+                name="contactEmail"
+                required
+                value={formData.contactEmail}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Enter contact email"
+              />
             </div>
           </div>
         </div>
 
+        {/* Submit Buttons */}
         <div className="flex justify-end space-x-4">
           <button
             type="button"
@@ -618,7 +689,7 @@ export default function CreatePropertyPage() {
             disabled={isLoading}
             className="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50"
           >
-            {isLoading ? 'Creating...' : 'Create Property'}
+            {isLoading ? 'Creating Property...' : 'Create Property'}
           </button>
         </div>
       </form>
