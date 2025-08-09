@@ -12,7 +12,7 @@ cloudinary.config({
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Cloudinary signature request received');
+    console.log('Cloudinary signature request received for large file upload');
     
     // Check authentication
     const session = await getServerSession(authOptions);
