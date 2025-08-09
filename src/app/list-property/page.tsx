@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import Step1BasicInfo from '@/components/forms/property-listing/Step1BasicInfo';
@@ -119,6 +120,7 @@ export default function ListPropertyPage() {
 
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -165,31 +167,42 @@ export default function ListPropertyPage() {
       return;
     }
 
-    // Upload images first
+    // Upload images in parallel for better UX - now possible with efficient binary uploads!
     let imageUrls: string[] = [];
     if (formData.images.length > 0) {
       try {
-        const imageFormData = new FormData();
-        formData.images.forEach((file: File) => {
+        setUploadProgress(`Uploading ${formData.images.length} images in parallel...`);
+        console.log('Uploading images in parallel...', formData.images.length, 'files');
+        
+        // Create upload promises for all images
+        const uploadPromises = formData.images.map(async (file, index) => {
+          console.log(`Starting image upload ${index + 1}/${formData.images.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+          
+          const imageFormData = new FormData();
           imageFormData.append('images', file);
-        });
 
-        const imageResponse = await fetch('/api/upload-images', {
-          method: 'POST',
-          body: imageFormData,
-        });
+          const imageResponse = await fetch('/api/upload-images', {
+            method: 'POST',
+            body: imageFormData,
+          });
 
-        if (imageResponse.ok) {
-          const imageResult = await imageResponse.json();
-          if (imageResult.success && imageResult.urls) {
-            imageUrls = imageResult.urls;
+          if (imageResponse.ok) {
+            const imageResult = await imageResponse.json();
+            if (imageResult.success && imageResult.urls && imageResult.urls.length > 0) {
+              console.log(`Image ${index + 1} uploaded successfully:`, imageResult.urls[0]);
+              return imageResult.urls[0];
+            } else {
+              throw new Error(imageResult.error || `Failed to upload image ${index + 1}`);
+            }
           } else {
-            throw new Error(imageResult.error || 'Failed to upload images');
+            const errorData = await imageResponse.json().catch(() => ({ error: 'Failed to upload images' }));
+            throw new Error(errorData.error || `Failed to upload image ${index + 1}`);
           }
-        } else {
-          const errorData = await imageResponse.json().catch(() => ({ error: 'Failed to upload images' }));
-          throw new Error(errorData.error || 'Failed to upload images');
-        }
+        });
+
+        // Wait for all uploads to complete in parallel
+        imageUrls = await Promise.all(uploadPromises);
+        console.log('All images uploaded successfully in parallel:', imageUrls);
       } catch (uploadError: any) {
         console.warn('Image upload failed, proceeding without images:', uploadError.message);
         // Continue with property creation even if image upload fails
@@ -197,37 +210,50 @@ export default function ListPropertyPage() {
       }
     }
 
-    // Upload videos first
+    // Upload videos in parallel for better UX
     let videoUrls: string[] = [];
     if (formData.videos.length > 0) {
       try {
-        const videoFormData = new FormData();
-        formData.videos.forEach((file: File) => {
+        setUploadProgress(`Uploading ${formData.videos.length} videos in parallel...`);
+        console.log('Uploading videos in parallel...', formData.videos.length, 'files');
+        
+        // Create upload promises for all videos
+        const videoUploadPromises = formData.videos.map(async (file, index) => {
+          console.log(`Starting video upload ${index + 1}/${formData.videos.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+          
+          const videoFormData = new FormData();
           videoFormData.append('videos', file);
-        });
 
-        const videoResponse = await fetch('/api/upload-videos', {
-          method: 'POST',
-          body: videoFormData,
-        });
+          const videoResponse = await fetch('/api/upload-videos', {
+            method: 'POST',
+            body: videoFormData,
+          });
 
-        if (videoResponse.ok) {
-          const videoResult = await videoResponse.json();
-          if (videoResult.success && videoResult.urls) {
-            videoUrls = videoResult.urls;
+          if (videoResponse.ok) {
+            const videoResult = await videoResponse.json();
+            if (videoResult.success && videoResult.urls && videoResult.urls.length > 0) {
+              console.log(`Video ${index + 1} uploaded successfully:`, videoResult.urls[0]);
+              return videoResult.urls[0];
+            } else {
+              throw new Error(videoResult.error || `Failed to upload video ${index + 1}`);
+            }
           } else {
-            throw new Error(videoResult.error || 'Failed to upload videos');
+            const errorData = await videoResponse.json().catch(() => ({ error: 'Failed to upload videos' }));
+            throw new Error(errorData.error || `Failed to upload video ${index + 1}`);
           }
-        } else {
-          const errorData = await videoResponse.json().catch(() => ({ error: 'Failed to upload videos' }));
-          throw new Error(errorData.error || 'Failed to upload videos');
-        }
+        });
+
+        // Wait for all video uploads to complete in parallel
+        videoUrls = await Promise.all(videoUploadPromises);
+        console.log('All videos uploaded successfully in parallel:', videoUrls);
       } catch (uploadError: any) {
         console.warn('Video upload failed, proceeding without videos:', uploadError.message);
         // Continue with property creation even if video upload fails
         videoUrls = [];
       }
     }
+
+    setUploadProgress('Creating property...');
 
     // Transform data for API
     const apiData = transformFormDataToApi(formData, imageUrls, videoUrls);
@@ -280,6 +306,7 @@ export default function ListPropertyPage() {
       setError('An error occurred while creating the property. Please try again.');
     } finally {
       setIsSubmitting(false);
+      setUploadProgress('');
     }
   };
 
@@ -388,6 +415,11 @@ export default function ListPropertyPage() {
             {success && (
               <div className="mb-4 p-3 rounded bg-[#7C0302]/10 border border-[#7C0302] text-[#7C0302] text-sm font-semibold">
                 {success}
+              </div>
+            )}
+            {uploadProgress && (
+              <div className="mb-4 p-3 rounded bg-blue-50 border border-blue-200 text-blue-800 text-sm font-medium">
+                {uploadProgress}
               </div>
             )}
             {renderStepContent()}

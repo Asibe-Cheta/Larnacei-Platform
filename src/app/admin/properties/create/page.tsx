@@ -31,6 +31,7 @@ interface AdminPropertyData {
 export default function CreatePropertyPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const [formData, setFormData] = useState<AdminPropertyData>({
@@ -82,8 +83,8 @@ export default function CreatePropertyPage() {
         return false;
       }
       if (file.size > maxFileSize) {
-        setMessage({ 
-          type: 'error', 
+        setMessage({
+          type: 'error',
           text: `${file.name} is too large. Maximum size is ${fileType === 'images' ? '4.5MB' : '30MB'}.` 
         });
         return false;
@@ -139,97 +140,117 @@ export default function CreatePropertyPage() {
         throw new Error('Contact phone and email are required');
       }
 
-      // Upload images first
+      // Upload images in parallel for better UX - now possible with efficient binary uploads!
       let imageUrls: string[] = [];
       if (formData.images.length > 0) {
-        const imageFormData = new FormData();
-        formData.images.forEach((file: File) => {
-          imageFormData.append('images', file);
-        });
-
-        console.log('Uploading images...', formData.images.length, 'files');
-        const imageResponse = await fetch('/api/upload-images', {
-          method: 'POST',
-          body: imageFormData,
-        });
-
-        console.log('Image upload response status:', imageResponse.status);
-        const responseText = await imageResponse.text();
-        console.log('Image upload response text:', responseText);
-
-        if (imageResponse.ok) {
-          let imageResult;
-          try {
-            imageResult = JSON.parse(responseText);
-          } catch (parseError) {
-            console.error('Failed to parse image upload response:', parseError);
-            throw new Error('Invalid response from upload service');
-          }
+        setUploadProgress(`Uploading ${formData.images.length} images in parallel...`);
+        console.log('Uploading images in parallel...', formData.images.length, 'files');
+        
+        // Create upload promises for all images
+        const uploadPromises = formData.images.map(async (file, index) => {
+          console.log(`Starting upload ${index + 1}/${formData.images.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
           
-          if (imageResult.success && imageResult.urls) {
-            imageUrls = imageResult.urls;
-            console.log('Images uploaded successfully:', imageUrls);
+          const imageFormData = new FormData();
+          imageFormData.append('images', file);
+
+          const imageResponse = await fetch('/api/upload-images', {
+            method: 'POST',
+            body: imageFormData,
+          });
+
+          console.log(`Image ${index + 1} upload response status:`, imageResponse.status);
+          const responseText = await imageResponse.text();
+          console.log(`Image ${index + 1} upload response text:`, responseText);
+
+          if (imageResponse.ok) {
+            let imageResult;
+            try {
+              imageResult = JSON.parse(responseText);
+            } catch (parseError) {
+              console.error(`Failed to parse image ${index + 1} upload response:`, parseError);
+              throw new Error(`Invalid response from upload service for image ${index + 1}`);
+            }
+            
+            if (imageResult.success && imageResult.urls && imageResult.urls.length > 0) {
+              console.log(`Image ${index + 1} uploaded successfully:`, imageResult.urls[0]);
+              return imageResult.urls[0];
+            } else {
+              console.error(`Upload failed for image ${index + 1}:`, imageResult);
+              throw new Error(imageResult.error || `Failed to upload image ${index + 1}`);
+            }
           } else {
-            console.error('Upload failed:', imageResult);
-            throw new Error(imageResult.error || 'Failed to upload images');
+            console.error(`Upload request failed for image ${index + 1} with status:`, imageResponse.status);
+            let errorData;
+            try {
+              errorData = JSON.parse(responseText);
+            } catch {
+              errorData = { error: `Upload failed with status ${imageResponse.status}` };
+            }
+            throw new Error(errorData.error || `Upload failed for image ${index + 1} with status ${imageResponse.status}`);
           }
-        } else {
-          console.error('Upload request failed with status:', imageResponse.status);
-          let errorData;
-          try {
-            errorData = JSON.parse(responseText);
-          } catch {
-            errorData = { error: `Upload failed with status ${imageResponse.status}` };
-          }
-          throw new Error(errorData.error || `Upload failed with status ${imageResponse.status}`);
-        }
+        });
+
+        // Wait for all uploads to complete in parallel
+        imageUrls = await Promise.all(uploadPromises);
+        console.log('All images uploaded successfully in parallel:', imageUrls);
       }
 
-      // Upload videos
+      // Upload videos in parallel for better UX
       let videoUrls: string[] = [];
       if (formData.videos.length > 0) {
-        const videoFormData = new FormData();
-        formData.videos.forEach((file: File) => {
-          videoFormData.append('videos', file);
-        });
-
-        console.log('Uploading videos...', formData.videos.length, 'files');
-        const videoResponse = await fetch('/api/upload-videos', {
-          method: 'POST',
-          body: videoFormData,
-        });
-
-        console.log('Video upload response status:', videoResponse.status);
-        const responseText = await videoResponse.text();
-        console.log('Video upload response text:', responseText);
-
-        if (videoResponse.ok) {
-          let videoResult;
-          try {
-            videoResult = JSON.parse(responseText);
-          } catch (parseError) {
-            console.error('Failed to parse video upload response:', parseError);
-            throw new Error('Invalid response from upload service');
-          }
+        setUploadProgress(`Uploading ${formData.videos.length} videos in parallel...`);
+        console.log('Uploading videos in parallel...', formData.videos.length, 'files');
+        
+        // Create upload promises for all videos
+        const uploadPromises = formData.videos.map(async (file, index) => {
+          console.log(`Starting video upload ${index + 1}/${formData.videos.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
           
-          if (videoResult.success && videoResult.urls) {
-            videoUrls = videoResult.urls;
-            console.log('Videos uploaded successfully:', videoUrls);
+          const videoFormData = new FormData();
+          videoFormData.append('videos', file);
+
+          const videoResponse = await fetch('/api/upload-videos', {
+            method: 'POST',
+            body: videoFormData,
+          });
+
+          console.log(`Video ${index + 1} upload response status:`, videoResponse.status);
+          const responseText = await videoResponse.text();
+          console.log(`Video ${index + 1} upload response text:`, responseText);
+
+          if (videoResponse.ok) {
+            let videoResult;
+            try {
+              videoResult = JSON.parse(responseText);
+            } catch (parseError) {
+              console.error(`Failed to parse video ${index + 1} upload response:`, parseError);
+              throw new Error(`Invalid response from upload service for video ${index + 1}`);
+            }
+            
+            if (videoResult.success && videoResult.urls && videoResult.urls.length > 0) {
+              console.log(`Video ${index + 1} uploaded successfully:`, videoResult.urls[0]);
+              return videoResult.urls[0];
+            } else {
+              console.error(`Upload failed for video ${index + 1}:`, videoResult);
+              throw new Error(videoResult.error || `Failed to upload video ${index + 1}`);
+            }
           } else {
-            console.error('Upload failed:', videoResult);
-            throw new Error(videoResult.error || 'Failed to upload videos');
+            console.error(`Upload request failed for video ${index + 1} with status:`, videoResponse.status);
+            let errorData;
+            try {
+              errorData = JSON.parse(responseText);
+            } catch {
+              errorData = { error: `Upload failed with status ${videoResponse.status}` };
+            }
+            throw new Error(errorData.error || `Upload failed for video ${index + 1} with status ${videoResponse.status}`);
           }
-        } else {
-          console.error('Upload request failed with status:', videoResponse.status);
-          let errorData;
-          try {
-            errorData = JSON.parse(responseText);
-          } catch {
-            errorData = { error: `Upload failed with status ${videoResponse.status}` };
-          }
-          throw new Error(errorData.error || `Upload failed with status ${videoResponse.status}`);
-        }
+        });
+
+        // Wait for all video uploads to complete in parallel
+        videoUrls = await Promise.all(uploadPromises);
+        console.log('All videos uploaded successfully in parallel:', videoUrls);
       }
+
+      setUploadProgress('Creating property...');
 
       // Create API data directly without complex transformation
       const apiData = {
@@ -331,6 +352,7 @@ export default function CreatePropertyPage() {
       });
     } finally {
       setIsLoading(false);
+      setUploadProgress('');
     }
   };
 
@@ -352,6 +374,14 @@ export default function CreatePropertyPage() {
         <Alert className={`mb-6 ${message.type === 'success' ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>
           <AlertDescription className={message.type === 'success' ? 'text-green-800' : 'text-red-800'}>
             {message.text}
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {uploadProgress && (
+        <Alert className="mb-6 border-blue-200 bg-blue-50">
+          <AlertDescription className="text-blue-800">
+            {uploadProgress}
           </AlertDescription>
         </Alert>
       )}
@@ -469,13 +499,13 @@ export default function CreatePropertyPage() {
                 Area
               </label>
               <div className="flex space-x-2">
-                <input
-                  type="number"
+              <input
+                type="number"
                   id="area"
                   name="area"
-                  min="0"
+                min="0"
                   value={formData.area || ''}
-                  onChange={handleInputChange}
+                onChange={handleInputChange}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   placeholder="Property area"
                 />
@@ -504,22 +534,22 @@ export default function CreatePropertyPage() {
                   Feature this property on the home page
                 </span>
               </label>
-            </div>
+          </div>
 
             <div className="md:col-span-2">
-              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-                Description *
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                required
-                rows={4}
-                value={formData.description}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+              Description *
+            </label>
+            <textarea
+              id="description"
+              name="description"
+              required
+              rows={4}
+              value={formData.description}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
                 placeholder="Describe the property (minimum 50 characters)..."
-              />
+            />
             </div>
           </div>
         </div>
@@ -647,39 +677,39 @@ export default function CreatePropertyPage() {
         {/* Media Upload */}
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-xl font-semibold mb-4">Media</h2>
-          
+
           {/* Images */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Property Images * (Max 4.5MB each)
             </label>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
               onChange={(e) => handleFileChange(e, 'images')}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
-            />
-            {formData.images.length > 0 && (
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                />
+              {formData.images.length > 0 && (
               <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                 {formData.images.map((file, index) => (
-                  <div key={index} className="relative">
-                    <img
+                    <div key={index} className="relative">
+                      <img
                       src={URL.createObjectURL(file)}
                       alt={`Image ${index + 1}`}
-                      className="w-full h-24 object-cover rounded-md"
-                    />
-                    <button
-                      type="button"
+                        className="w-full h-24 object-cover rounded-md"
+                      />
+                      <button
+                        type="button"
                       onClick={() => removeFile(index, 'images')}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
           </div>
 
           {/* Videos */}
@@ -687,33 +717,33 @@ export default function CreatePropertyPage() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Property Videos (Optional, Max 30MB each)
             </label>
-            <input
-              type="file"
-              multiple
-              accept="video/*"
+                <input
+                  type="file"
+                  multiple
+                  accept="video/*"
               onChange={(e) => handleFileChange(e, 'videos')}
-              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
-            />
-            {formData.videos.length > 0 && (
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                />
+              {formData.videos.length > 0 && (
               <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
                 {formData.videos.map((file, index) => (
-                  <div key={index} className="relative">
-                    <video
+                    <div key={index} className="relative">
+                      <video
                       src={URL.createObjectURL(file)}
-                      className="w-full h-24 object-cover rounded-md"
-                      controls
-                    />
-                    <button
-                      type="button"
+                        className="w-full h-24 object-cover rounded-md"
+                        controls
+                      />
+                      <button
+                        type="button"
                       onClick={() => removeFile(index, 'videos')}
-                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
           </div>
         </div>
 

@@ -121,37 +121,46 @@ export async function POST(request: NextRequest) {
       }
 
       try {
-        // Convert file to base64 for Cloudinary (mobile-compatible)
+        // Use binary upload instead of base64 - much more efficient!
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
-        const base64String = `data:${file.type};base64,${buffer.toString('base64')}`;
 
-        // Generate unique filename with timestamp for mobile compatibility
+        // Generate unique filename with timestamp
         const timestamp = Date.now();
         const randomId = Math.random().toString(36).substring(2, 15);
         const fileExtension = file.name.split('.').pop() || 'mp4';
         const publicId = `larnacei-properties/videos/${session.user.id}-${timestamp}-${randomId}`;
 
-        console.log('Uploading to Cloudinary:', publicId);
+        console.log('Uploading video to Cloudinary with binary data:', publicId);
 
-        // Upload to Cloudinary with mobile-optimized settings
-        const uploadResult = await cloudinary.uploader.upload(base64String, {
-          public_id: publicId,
-          folder: 'larnacei-properties/videos',
-          resource_type: 'video',
-          transformation: [
-            { width: 1280, height: 720, crop: 'limit' }, // HD resolution
-            { quality: 'auto', fetch_format: 'auto' }, // Optimize
-            { flags: 'progressive' } // Progressive loading for mobile
-          ],
-          eager: [
-            { width: 640, height: 360, crop: 'limit', quality: 'auto' },
-            { width: 320, height: 180, crop: 'limit', quality: 'auto' }
-          ],
-          eager_async: true,
-          eager_notification_url: null,
-          chunk_size: 6000000, // 6MB chunks for mobile
+        // Create a promise to handle the stream upload - much more efficient than base64!
+        const uploadPromise = new Promise((resolve, reject) => {
+          const uploadStream = cloudinary.uploader.upload_stream(
+            {
+              public_id: publicId,
+              folder: 'larnacei-properties/videos',
+              resource_type: 'video',
+              transformation: [
+                { width: 1920, height: 1080, crop: 'limit' },
+                { quality: 'auto', fetch_format: 'auto' }
+              ],
+            },
+            (error, result) => {
+              if (error) {
+                console.error('Cloudinary video upload error:', error);
+                reject(error);
+              } else {
+                console.log('Cloudinary video upload success:', result?.secure_url);
+                resolve(result);
+              }
+            }
+          );
+
+          // Write the buffer directly to the stream - no base64 conversion!
+          uploadStream.end(buffer);
         });
+
+        const uploadResult = await uploadPromise as any;
 
         console.log('File uploaded successfully to Cloudinary:', uploadResult.secure_url);
 
