@@ -108,6 +108,47 @@ export default function CreatePropertyPage() {
     updateFormData({ amenities: updated });
   };
 
+  // Function to handle direct client-side upload to Cloudinary for large videos
+  const uploadVideoDirectly = async (file: File, uploadParams: any): Promise<string> => {
+    // Get signature from our API
+    const signatureResponse = await fetch('/api/cloudinary-signature', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ params_to_sign: uploadParams }),
+    });
+
+    if (!signatureResponse.ok) {
+      throw new Error('Failed to get upload signature');
+    }
+
+    const { signature, api_key, cloud_name } = await signatureResponse.json();
+
+    // Create form data for Cloudinary
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('public_id', uploadParams.public_id);
+    formData.append('folder', uploadParams.folder);
+    formData.append('resource_type', uploadParams.resource_type);
+    formData.append('timestamp', uploadParams.timestamp.toString());
+    formData.append('transformation', uploadParams.transformation);
+    formData.append('signature', signature);
+    formData.append('api_key', api_key);
+
+    // Upload directly to Cloudinary
+    const uploadResponse = await fetch(`https://api.cloudinary.com/v1_1/${cloud_name}/video/upload`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!uploadResponse.ok) {
+      const errorText = await uploadResponse.text();
+      throw new Error(`Cloudinary upload failed: ${errorText}`);
+    }
+
+    const result = await uploadResponse.json();
+    return result.secure_url;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -226,7 +267,12 @@ export default function CreatePropertyPage() {
               throw new Error(`Invalid response from upload service for video ${index + 1}`);
             }
             
-            if (videoResult.success && videoResult.urls && videoResult.urls.length > 0) {
+            // Check if we need to use client-side upload for large files
+            if (videoResult.useClientUpload) {
+              console.log(`Video ${index + 1} is too large for server upload, using direct Cloudinary upload...`);
+              setUploadProgress(`Uploading large video ${index + 1} directly to Cloudinary...`);
+              return await uploadVideoDirectly(file, videoResult.uploadParams);
+            } else if (videoResult.success && videoResult.urls && videoResult.urls.length > 0) {
               console.log(`Video ${index + 1} uploaded successfully:`, videoResult.urls[0]);
               return videoResult.urls[0];
             } else {

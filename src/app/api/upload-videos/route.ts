@@ -19,8 +19,9 @@ export const config = {
   maxDuration: 600, // 10 minutes timeout for videos
 };
 
-// Set maximum file size for Vercel (30MB limit for videos)
-const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
+// Set maximum file size for Vercel (4.5MB limit for serverless functions on Hobby plan)
+// For larger videos, we'll use direct client-side uploads
+const MAX_FILE_SIZE = 4.5 * 1024 * 1024; // 4.5MB for Vercel Hobby plan
 
 export async function POST(request: NextRequest) {
   try {
@@ -111,13 +112,26 @@ export async function POST(request: NextRequest) {
         continue; // Skip non-video files
       }
 
-      // Validate file size (30MB limit for Vercel)
+      // Check file size - if too large for serverless, return client-side upload instructions
       if (file.size > MAX_FILE_SIZE) {
-        console.log('File too large:', file.name, file.size);
-        return NextResponse.json(
-          { error: `File ${file.name} is too large. Maximum size is 30MB for videos.` },
-          { status: 400 }
-        );
+        console.log('File too large for serverless upload:', file.name, file.size);
+        
+        // Generate upload parameters for direct client-side upload
+        const timestamp = Math.round(Date.now() / 1000);
+        const publicId = `larnacei-properties/videos/${session.user.id}-${timestamp}-${Math.random().toString(36).substring(2, 15)}`;
+        
+        return NextResponse.json({
+          useClientUpload: true,
+          uploadParams: {
+            public_id: publicId,
+            folder: 'larnacei-properties/videos',
+            resource_type: 'video',
+            timestamp: timestamp,
+            transformation: 'w_1920,h_1080,c_limit,q_auto',
+          },
+          fileName: file.name,
+          fileSize: file.size,
+        });
       }
 
       try {
