@@ -179,6 +179,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Handle JSON parsing errors specifically
+    if (error.message?.includes('JSON.parse') || error.message?.includes('unexpected character')) {
+      return NextResponse.json(
+        { error: 'Invalid response format. Please try again.' },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json(
       { error: 'Failed to upload videos', details: error.message },
       { status: 500 }

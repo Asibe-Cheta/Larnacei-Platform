@@ -11,6 +11,7 @@ const adminPropertyCreateSchema = z.object({
   price: z.number().positive('Price must be positive'),
   type: z.enum(['HOUSE', 'APARTMENT', 'CONDO', 'TOWNHOUSE', 'LAND', 'COMMERCIAL']),
   category: z.enum(['SHORT_STAY', 'LONG_TERM_RENTAL', 'LANDED_PROPERTY', 'PROPERTY_SALE']),
+  purpose: z.enum(['SALE', 'RENT']).optional().default('SALE'),
   bedrooms: z.number().min(0, 'Bedrooms must be 0 or more').optional(),
   bathrooms: z.number().min(0, 'Bathrooms must be 0 or more').optional(),
   size: z.number().min(0, 'Size must be 0 or more').optional(),
@@ -181,6 +182,7 @@ export async function POST(request: NextRequest) {
         price: validatedData.price,
         type: validatedData.type,
         category: validatedData.category,
+        purpose: validatedData.purpose || 'SALE',
         bedrooms: validatedData.bedrooms || 0,
         bathrooms: validatedData.bathrooms || 0,
         size: validatedData.size || 0,
@@ -191,6 +193,7 @@ export async function POST(request: NextRequest) {
         moderationStatus: 'APPROVED', // Auto-approve admin-created properties
         isActive: true,
         isFeatured: validatedData.isFeatured,
+        isVerified: true, // Auto-verify admin-created properties
       },
     });
 

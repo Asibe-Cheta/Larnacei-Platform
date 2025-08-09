@@ -257,8 +257,14 @@ export async function GET(request: NextRequest) {
       where.OR = [
         { title: { contains: queryParams.query, mode: "insensitive" } },
         { description: { contains: queryParams.query, mode: "insensitive" } },
-        { city: { contains: queryParams.query, mode: "insensitive" } },
-        { state: { contains: queryParams.query, mode: "insensitive" } },
+        {
+          location: {
+            OR: [
+              { city: { contains: queryParams.query, mode: "insensitive" } },
+              { state: { contains: queryParams.query, mode: "insensitive" } },
+            ]
+          }
+        },
       ];
     }
 
@@ -268,8 +274,12 @@ export async function GET(request: NextRequest) {
     if (queryParams.purpose) where.purpose = queryParams.purpose;
 
     // Location filters
-    if (queryParams.state) where.state = { contains: queryParams.state, mode: "insensitive" };
-    if (queryParams.city) where.city = { contains: queryParams.city, mode: "insensitive" };
+    if (queryParams.state) {
+      where.location = { ...where.location, state: { contains: queryParams.state, mode: "insensitive" } };
+    }
+    if (queryParams.city) {
+      where.location = { ...where.location, city: { contains: queryParams.city, mode: "insensitive" } };
+    }
 
     // Price range
     if (queryParams.minPrice || queryParams.maxPrice) {
@@ -304,6 +314,13 @@ export async function GET(request: NextRequest) {
               name: true,
               email: true,
               phone: true,
+            },
+          },
+          location: {
+            select: {
+              city: true,
+              state: true,
+              address: true,
             },
           },
           images: {

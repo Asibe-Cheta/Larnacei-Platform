@@ -3,19 +3,20 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get featured properties (admin-created properties that are active and approved)
+    // Get featured properties (approved properties that are active)
     const properties = await prisma.property.findMany({
       where: {
         isActive: true,
-        isVerified: true,
-        // Include properties that are featured or have specific admin types
+        moderationStatus: 'APPROVED',
+        // Include properties that are featured, admin-created, or approved
         OR: [
           { isFeatured: true },
-          { 
+          {
             owner: {
               role: 'ADMIN'
             }
-          }
+          },
+          { moderationStatus: 'APPROVED' }
         ]
       },
       include: {
@@ -49,7 +50,7 @@ export async function GET(request: NextRequest) {
         { isFeatured: 'desc' },
         { createdAt: 'desc' }
       ],
-      take: 8, // Limit to 8 featured properties
+      take: 4, // Limit to 4 featured properties as requested
     });
 
     return NextResponse.json({

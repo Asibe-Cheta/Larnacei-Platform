@@ -32,7 +32,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    const { search, page = 1, limit = 20, accountType, verificationStatus, kycStatus, location, sortBy = 'registrationDate', order = 'desc' } = Object.fromEntries(req.nextUrl.searchParams);
+    const searchParams = req.nextUrl.searchParams;
+    const search = searchParams.get('search') || undefined;
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const accountType = searchParams.get('accountType') || undefined;
+    const verificationStatus = searchParams.get('verificationStatus') || undefined;
+    const kycStatus = searchParams.get('kycStatus') || undefined;
+    const location = searchParams.get('location') || undefined;
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const order = searchParams.get('order') || 'desc';
 
     console.log('Admin users GET: Query params:', { search, page, limit, accountType, verificationStatus, kycStatus, location, sortBy, order });
 

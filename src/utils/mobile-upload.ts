@@ -70,17 +70,42 @@ export const mobileUploadHandler = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to upload ${type}s. Please try again.`);
+        let errorMessage = `Failed to upload ${type}s. Please try again.`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (jsonError) {
+          // Handle JSON parsing errors
+          console.error('JSON parsing error in upload response:', jsonError);
+          errorMessage = `Upload failed. Please try again.`;
+        }
+        throw new Error(errorMessage);
       }
 
-      const result = await response.json();
+      let result;
+      try {
+        result = await response.json();
+      } catch (jsonError) {
+        console.error('JSON parsing error in upload success response:', jsonError);
+        throw new Error(`Upload completed but response format is invalid. Please try again.`);
+      }
+
+      if (!result.urls || !Array.isArray(result.urls)) {
+        throw new Error(`Upload response format is invalid. Please try again.`);
+      }
+
       return result.urls;
     } catch (error: any) {
       // Enhanced error handling for mobile blob issues
       if (error.message?.includes('blob') || error.message?.includes('Blob')) {
         throw new Error(`Mobile upload issue detected. Please try again or use a different ${type}.`);
       }
+
+      // Handle JSON parsing errors specifically
+      if (error.message?.includes('JSON.parse') || error.message?.includes('unexpected character')) {
+        throw new Error(`Upload response format error. Please try again.`);
+      }
+
       throw error;
     }
   },
