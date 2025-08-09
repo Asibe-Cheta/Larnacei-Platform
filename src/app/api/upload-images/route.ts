@@ -74,9 +74,14 @@ export async function POST(request: NextRequest) {
 
     if (!cloudinaryVars.cloud_name || !cloudinaryVars.api_key || !cloudinaryVars.api_secret) {
       console.error('Cloudinary configuration missing');
+      console.error('Missing vars:', {
+        cloud_name: !cloudinaryVars.cloud_name,
+        api_key: !cloudinaryVars.api_key,
+        api_secret: !cloudinaryVars.api_secret
+      });
       return NextResponse.json(
         { error: 'Upload service not configured. Please contact support.' },
-        { status: 500 }
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
       );
     }
 
@@ -145,13 +150,13 @@ export async function POST(request: NextRequest) {
         if (fileError.message?.includes('blob') || fileError.message?.includes('Blob')) {
           return NextResponse.json(
             { error: 'Mobile upload issue detected. Please try again or use a different image.' },
-            { status: 400 }
+            { status: 400, headers: { 'Content-Type': 'application/json' } }
           );
         }
 
         return NextResponse.json(
           { error: `Failed to process file ${file.name}: ${fileError.message}` },
-          { status: 500 }
+          { status: 500, headers: { 'Content-Type': 'application/json' } }
         );
       }
     }

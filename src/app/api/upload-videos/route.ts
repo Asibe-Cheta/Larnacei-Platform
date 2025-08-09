@@ -190,7 +190,7 @@ export async function POST(request: NextRequest) {
     if (error.message?.includes('blob') || error.message?.includes('Blob')) {
       return NextResponse.json(
         { error: 'Mobile upload issue detected. Please try again or use a different video.' },
-        { status: 400 }
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
 

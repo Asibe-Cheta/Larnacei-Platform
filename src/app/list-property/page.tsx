@@ -191,9 +191,9 @@ export default function ListPropertyPage() {
           throw new Error(errorData.error || 'Failed to upload images');
         }
       } catch (uploadError: any) {
-        setError(`Failed to upload images: ${uploadError.message}`);
-        setIsSubmitting(false);
-        return;
+        console.warn('Image upload failed, proceeding without images:', uploadError.message);
+        // Continue with property creation even if image upload fails
+        imageUrls = [];
       }
     }
 
@@ -223,9 +223,9 @@ export default function ListPropertyPage() {
           throw new Error(errorData.error || 'Failed to upload videos');
         }
       } catch (uploadError: any) {
-        setError(`Failed to upload videos: ${uploadError.message}`);
-        setIsSubmitting(false);
-        return;
+        console.warn('Video upload failed, proceeding without videos:', uploadError.message);
+        // Continue with property creation even if video upload fails
+        videoUrls = [];
       }
     }
 
