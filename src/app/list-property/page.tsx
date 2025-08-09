@@ -261,30 +261,50 @@ export default function ListPropertyPage() {
         const videoUploadPromises = formData.videos.map(async (file, index) => {
           console.log(`Starting video upload ${index + 1}/${formData.videos.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
           
-          const videoFormData = new FormData();
-          videoFormData.append('videos', file);
-
-          const videoResponse = await fetch('/api/upload-videos', {
-            method: 'POST',
-            body: videoFormData,
-          });
-
-          if (videoResponse.ok) {
-            const videoResult = await videoResponse.json();
-            // Check if we need to use client-side upload for large files
-            if (videoResult.useClientUpload) {
-              console.log(`Video ${index + 1} is too large for server upload, using direct Cloudinary upload...`);
-              setUploadProgress(`Uploading large video ${index + 1} directly to Cloudinary...`);
-              return await uploadVideoDirectly(file, videoResult.uploadParams);
-            } else if (videoResult.success && videoResult.urls && videoResult.urls.length > 0) {
-              console.log(`Video ${index + 1} uploaded successfully:`, videoResult.urls[0]);
-              return videoResult.urls[0];
-            } else {
-              throw new Error(videoResult.error || `Failed to upload video ${index + 1}`);
-            }
+          // Check file size on client-side first to avoid 413 errors
+          const MAX_SERVER_SIZE = 4.5 * 1024 * 1024; // 4.5MB limit for Vercel
+          
+          if (file.size > MAX_SERVER_SIZE) {
+            console.log(`Video ${index + 1} is ${(file.size / 1024 / 1024).toFixed(2)}MB, too large for server upload. Using direct Cloudinary upload...`);
+            setUploadProgress(`Uploading large video ${index + 1} (${(file.size / 1024 / 1024).toFixed(2)}MB) directly to Cloudinary...`);
+            
+            // Generate upload parameters for direct client-side upload
+            const timestamp = Math.round(Date.now() / 1000);
+            const publicId = `larnacei-properties/videos/user-${timestamp}-${Math.random().toString(36).substring(2, 15)}`;
+            
+            const uploadParams = {
+              public_id: publicId,
+              folder: 'larnacei-properties/videos',
+              resource_type: 'video',
+              timestamp: timestamp,
+              transformation: 'w_1920,h_1080,c_limit,q_auto',
+            };
+            
+            return await uploadVideoDirectly(file, uploadParams);
           } else {
-            const errorData = await videoResponse.json().catch(() => ({ error: 'Failed to upload videos' }));
-            throw new Error(errorData.error || `Failed to upload video ${index + 1}`);
+            // Use server-side upload for smaller files
+            console.log(`Video ${index + 1} is ${(file.size / 1024 / 1024).toFixed(2)}MB, using server upload...`);
+            
+            const videoFormData = new FormData();
+            videoFormData.append('videos', file);
+
+            const videoResponse = await fetch('/api/upload-videos', {
+              method: 'POST',
+              body: videoFormData,
+            });
+
+            if (videoResponse.ok) {
+              const videoResult = await videoResponse.json();
+              if (videoResult.success && videoResult.urls && videoResult.urls.length > 0) {
+                console.log(`Video ${index + 1} uploaded successfully:`, videoResult.urls[0]);
+                return videoResult.urls[0];
+              } else {
+                throw new Error(videoResult.error || `Failed to upload video ${index + 1}`);
+              }
+            } else {
+              const errorData = await videoResponse.json().catch(() => ({ error: 'Failed to upload videos' }));
+              throw new Error(errorData.error || `Failed to upload video ${index + 1}`);
+            }
           }
         });
 

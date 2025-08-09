@@ -246,48 +246,68 @@ export default function CreatePropertyPage() {
         const uploadPromises = formData.videos.map(async (file, index) => {
           console.log(`Starting video upload ${index + 1}/${formData.videos.length}: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
           
-          const videoFormData = new FormData();
-          videoFormData.append('videos', file);
-
-          const videoResponse = await fetch('/api/upload-videos', {
-            method: 'POST',
-            body: videoFormData,
-          });
-
-          console.log(`Video ${index + 1} upload response status:`, videoResponse.status);
-          const responseText = await videoResponse.text();
-          console.log(`Video ${index + 1} upload response text:`, responseText);
-
-          if (videoResponse.ok) {
-            let videoResult;
-            try {
-              videoResult = JSON.parse(responseText);
-            } catch (parseError) {
-              console.error(`Failed to parse video ${index + 1} upload response:`, parseError);
-              throw new Error(`Invalid response from upload service for video ${index + 1}`);
-            }
+          // Check file size on client-side first to avoid 413 errors
+          const MAX_SERVER_SIZE = 4.5 * 1024 * 1024; // 4.5MB limit for Vercel
+          
+          if (file.size > MAX_SERVER_SIZE) {
+            console.log(`Video ${index + 1} is ${(file.size / 1024 / 1024).toFixed(2)}MB, too large for server upload. Using direct Cloudinary upload...`);
+            setUploadProgress(`Uploading large video ${index + 1} (${(file.size / 1024 / 1024).toFixed(2)}MB) directly to Cloudinary...`);
             
-            // Check if we need to use client-side upload for large files
-            if (videoResult.useClientUpload) {
-              console.log(`Video ${index + 1} is too large for server upload, using direct Cloudinary upload...`);
-              setUploadProgress(`Uploading large video ${index + 1} directly to Cloudinary...`);
-              return await uploadVideoDirectly(file, videoResult.uploadParams);
-            } else if (videoResult.success && videoResult.urls && videoResult.urls.length > 0) {
-              console.log(`Video ${index + 1} uploaded successfully:`, videoResult.urls[0]);
-              return videoResult.urls[0];
-            } else {
-              console.error(`Upload failed for video ${index + 1}:`, videoResult);
-              throw new Error(videoResult.error || `Failed to upload video ${index + 1}`);
-            }
+            // Generate upload parameters for direct client-side upload
+            const timestamp = Math.round(Date.now() / 1000);
+            const publicId = `larnacei-properties/videos/admin-${timestamp}-${Math.random().toString(36).substring(2, 15)}`;
+            
+            const uploadParams = {
+              public_id: publicId,
+              folder: 'larnacei-properties/videos',
+              resource_type: 'video',
+              timestamp: timestamp,
+              transformation: 'w_1920,h_1080,c_limit,q_auto',
+            };
+            
+            return await uploadVideoDirectly(file, uploadParams);
           } else {
-            console.error(`Upload request failed for video ${index + 1} with status:`, videoResponse.status);
-            let errorData;
-            try {
-              errorData = JSON.parse(responseText);
-            } catch {
-              errorData = { error: `Upload failed with status ${videoResponse.status}` };
+            // Use server-side upload for smaller files
+            console.log(`Video ${index + 1} is ${(file.size / 1024 / 1024).toFixed(2)}MB, using server upload...`);
+            
+            const videoFormData = new FormData();
+            videoFormData.append('videos', file);
+
+            const videoResponse = await fetch('/api/upload-videos', {
+              method: 'POST',
+              body: videoFormData,
+            });
+
+            console.log(`Video ${index + 1} upload response status:`, videoResponse.status);
+            const responseText = await videoResponse.text();
+            console.log(`Video ${index + 1} upload response text:`, responseText);
+
+            if (videoResponse.ok) {
+              let videoResult;
+              try {
+                videoResult = JSON.parse(responseText);
+              } catch (parseError) {
+                console.error(`Failed to parse video ${index + 1} upload response:`, parseError);
+                throw new Error(`Invalid response from upload service for video ${index + 1}`);
+              }
+              
+              if (videoResult.success && videoResult.urls && videoResult.urls.length > 0) {
+                console.log(`Video ${index + 1} uploaded successfully:`, videoResult.urls[0]);
+                return videoResult.urls[0];
+              } else {
+                console.error(`Upload failed for video ${index + 1}:`, videoResult);
+                throw new Error(videoResult.error || `Failed to upload video ${index + 1}`);
+              }
+            } else {
+              console.error(`Upload request failed for video ${index + 1} with status:`, videoResponse.status);
+              let errorData;
+              try {
+                errorData = JSON.parse(responseText);
+              } catch {
+                errorData = { error: `Upload failed with status ${videoResponse.status}` };
+              }
+              throw new Error(errorData.error || `Upload failed for video ${index + 1} with status ${videoResponse.status}`);
             }
-            throw new Error(errorData.error || `Upload failed for video ${index + 1} with status ${videoResponse.status}`);
           }
         });
 
