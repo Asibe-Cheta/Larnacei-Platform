@@ -113,7 +113,7 @@ export const ninSchema = z
 export const nigerianCurrencySchema = z
   .number()
   .min(100, "Minimum amount is ₦1 (100 kobo)")
-  .max(100000000000, "Maximum amount is ₦1,000,000,000 (100 billion kobo)");
+  .max(90000000000, "Maximum amount is ₦900,000,000 (90 billion kobo)");
 
 /**
  * User registration schema

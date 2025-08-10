@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/bigint-serializer';
 import { z } from 'zod';
 
 // Schema for admin property creation
@@ -121,7 +122,8 @@ export async function GET(request: NextRequest) {
     console.log('Admin properties GET: Found properties:', properties.length);
     console.log('Admin properties GET: Total count:', total);
 
-    return NextResponse.json({
+    // Serialize BigInt values for JSON response
+    const serializedResponse = serializeBigInt({
       success: true,
       data: properties,
       pagination: {
@@ -132,10 +134,12 @@ export async function GET(request: NextRequest) {
       }
     });
 
-  } catch (error) {
+    return NextResponse.json(serializedResponse);
+
+  } catch (error: any) {
     console.error('Admin properties GET: Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }
@@ -255,11 +259,14 @@ export async function POST(request: NextRequest) {
 
     console.log('Admin properties POST: Property created successfully');
 
-    return NextResponse.json({
+    // Serialize BigInt values for JSON response
+    const serializedResponse = serializeBigInt({
       success: true,
       message: 'Property created successfully',
       data: { property },
     });
+
+    return NextResponse.json(serializedResponse);
 
   } catch (error) {
     console.error('Admin properties POST: Error:', error);

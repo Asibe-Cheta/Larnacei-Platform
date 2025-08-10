@@ -56,20 +56,28 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Params to sign:', params_to_sign);
+    console.log('Params to sign keys:', Object.keys(params_to_sign));
+    console.log('Resource type value:', params_to_sign.resource_type);
 
     // Ensure parameters are properly formatted for Cloudinary signature
     // Cloudinary expects parameters in alphabetical order for signature generation
     const sortedParams: Record<string, any> = {};
     
-    // Include all parameters that should be signed
+    // Include all parameters that should be signed (including resource_type)
     Object.keys(params_to_sign).sort().forEach(key => {
-      // Make sure we include resource_type in the signature
-      if (params_to_sign[key] !== undefined && params_to_sign[key] !== null && params_to_sign[key] !== '') {
-        sortedParams[key] = params_to_sign[key];
+      const value = params_to_sign[key];
+      console.log(`Processing param: ${key} = ${value} (type: ${typeof value})`);
+      
+      // Include all non-empty values
+      if (value !== undefined && value !== null && value !== '') {
+        sortedParams[key] = value;
+        console.log(`✓ Added to signature: ${key} = ${value}`);
+      } else {
+        console.log(`✗ Excluded from signature: ${key} = ${value}`);
       }
     });
 
-    console.log('Sorted params for signature:', sortedParams);
+    console.log('Final sorted params for signature:', sortedParams);
 
     // Create the string to sign manually to ensure all parameters are included
     const paramsToSign = Object.keys(sortedParams)

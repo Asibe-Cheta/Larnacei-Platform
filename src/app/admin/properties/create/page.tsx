@@ -340,7 +340,7 @@ export default function CreatePropertyPage() {
         landmark: '',
 
         // Pricing
-        price: BigInt(parseInt(formData.price.replace(/,/g, '')) * 100), // Convert to kobo as BigInt
+        price: parseInt(formData.price.replace(/,/g, '')) * 100, // Convert to kobo as number
         currency: 'NGN' as const,
         isNegotiable: true,
 

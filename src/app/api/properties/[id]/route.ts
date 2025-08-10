@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/authOptions';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/bigint-serializer';
 import { z } from 'zod';
 
 // Schema for property updates
@@ -130,14 +131,14 @@ export async function GET(
       data: { viewCount: { increment: 1 } },
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Property details fetched successfully",
-        data: property,
-      },
-      { status: 200 }
-    );
+    // Serialize BigInt values for JSON response
+    const serializedResponse = serializeBigInt({
+      success: true,
+      message: "Property details fetched successfully",
+      data: property,
+    });
+
+    return NextResponse.json(serializedResponse, { status: 200 });
   } catch (error: any) {
     console.error("Property fetch error:", error);
 
@@ -217,11 +218,14 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({
+    // Serialize BigInt values for JSON response
+    const serializedResponse = serializeBigInt({
       success: true,
       message: 'Property updated successfully',
       data: updatedProperty,
     });
+
+    return NextResponse.json(serializedResponse);
   } catch (error) {
     console.error('Error updating property:', error);
 
