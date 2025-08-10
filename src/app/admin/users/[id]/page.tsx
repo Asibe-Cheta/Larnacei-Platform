@@ -15,16 +15,11 @@ interface UserDetail {
   updatedAt: string;
   isVerified: boolean;
   verificationLevel: string;
-  isActive: boolean;
   role: string;
-  lastLoginAt?: string;
-  profile?: {
-    firstName?: string;
-    lastName?: string;
-    dateOfBirth?: string;
-    bio?: string;
-    avatar?: string;
-  };
+  bio?: string;
+  location?: string;
+  experience?: number;
+  specialization?: string[];
   _count?: {
     properties?: number;
     inquiries?: number;
@@ -217,10 +212,8 @@ export default function UserDetailPage({ params }: UserPageProps) {
                   <p className="text-gray-900 mt-1 capitalize">{user.role?.toLowerCase() || 'User'}</p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Account Status</label>
-                  <p className={`mt-1 font-medium ${user.isActive ? 'text-green-600' : 'text-red-600'}`}>
-                    {user.isActive ? 'Active' : 'Inactive'}
-                  </p>
+                  <label className="text-sm font-medium text-gray-700">Location</label>
+                  <p className="text-gray-900 mt-1">{user.location || 'Not provided'}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-700">Verification Level</label>
@@ -237,51 +230,35 @@ export default function UserDetailPage({ params }: UserPageProps) {
                   </p>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Last Login</label>
+                  <label className="text-sm font-medium text-gray-700">Experience</label>
                   <p className="text-gray-900 mt-1">
-                    {user.lastLoginAt 
-                      ? new Date(user.lastLoginAt).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })
-                      : 'Never'
-                    }
+                    {user.experience ? `${user.experience} years` : 'Not provided'}
                   </p>
                 </div>
               </div>
 
-              {user.profile && (
+              {(user.bio || user.specialization) && (
                 <div className="border-t pt-4 mt-6">
-                  <h3 className="text-lg font-medium text-gray-900 mb-3">Profile Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {user.profile.firstName && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">First Name</label>
-                        <p className="text-gray-900 mt-1">{user.profile.firstName}</p>
-                      </div>
-                    )}
-                    {user.profile.lastName && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">Last Name</label>
-                        <p className="text-gray-900 mt-1">{user.profile.lastName}</p>
-                      </div>
-                    )}
-                    {user.profile.dateOfBirth && (
-                      <div>
-                        <label className="text-sm font-medium text-gray-700">Date of Birth</label>
-                        <p className="text-gray-900 mt-1">
-                          {new Date(user.profile.dateOfBirth).toLocaleDateString()}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                  {user.profile.bio && (
-                    <div className="mt-4">
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Additional Information</h3>
+                  {user.bio && (
+                    <div className="mb-4">
                       <label className="text-sm font-medium text-gray-700">Bio</label>
-                      <p className="text-gray-900 mt-1">{user.profile.bio}</p>
+                      <p className="text-gray-900 mt-1">{user.bio}</p>
+                    </div>
+                  )}
+                  {user.specialization && user.specialization.length > 0 && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Specialization</label>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        {user.specialization.map((spec, index) => (
+                          <span 
+                            key={index}
+                            className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
+                          >
+                            {spec}
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -319,22 +296,7 @@ export default function UserDetailPage({ params }: UserPageProps) {
             </CardContent>
           </Card>
 
-          {user.profile?.avatar && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Profile Picture</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex justify-center">
-                  <img 
-                    src={user.profile.avatar} 
-                    alt="Profile"
-                    className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
-                  />
-                </div>
-              </CardContent>
-            </Card>
-          )}
+
         </div>
       </div>
     </div>

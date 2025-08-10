@@ -15,13 +15,41 @@ export class AnalyticsService {
 
       // Get user metrics
       const totalUsers = await prisma.user.count();
-      const activeUsers = await prisma.user.count({
+      // Since lastLoginAt doesn't exist, we'll count users who have been active (have properties, inquiries, or payments) in the time range
+      const activeUsersWithActivity = await prisma.user.count({
         where: {
-          lastLoginAt: {
-            gte: startDate
-          }
+          OR: [
+            {
+              properties: {
+                some: {
+                  createdAt: {
+                    gte: startDate
+                  }
+                }
+              }
+            },
+            {
+              inquiries: {
+                some: {
+                  createdAt: {
+                    gte: startDate
+                  }
+                }
+              }
+            },
+            {
+              payments: {
+                some: {
+                  createdAt: {
+                    gte: startDate
+                  }
+                }
+              }
+            }
+          ]
         }
       });
+      const activeUsers = activeUsersWithActivity;
       const newUsers = await prisma.user.count({
         where: {
           createdAt: {
