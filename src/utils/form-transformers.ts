@@ -61,8 +61,8 @@ export function transformFormDataToApi(
     'NEEDS_RENOVATION': 'NEEDS_RENOVATION'
   };
 
-  // Convert price from formatted string to kobo as BigInt
-  const priceInKobo = BigInt(parseInt(formData.price.replace(/,/g, '')) * 100);
+  // Convert price from formatted string to kobo as number (BigInt causes JSON serialization issues)
+  const priceInKobo = parseInt(formData.price.replace(/,/g, '')) * 100;
 
   // Build title documents object
   const titleDocuments: Record<string, boolean> = {};
