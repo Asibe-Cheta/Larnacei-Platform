@@ -2,18 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { v2 as cloudinary } from 'cloudinary';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
     console.log('Cloudinary signature request received');
     
-    const cloudinaryConfig = {
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    };
+    // Get Cloudinary configuration from environment variables
+    const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
+    const api_key = process.env.CLOUDINARY_API_KEY;
+    const api_secret = process.env.CLOUDINARY_API_SECRET;
 
-    if (!cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConfig.api_secret) {
+    console.log('Cloudinary config check:', {
+      cloud_name: cloud_name ? 'Set' : 'Missing',
+      api_key: api_key ? 'Set' : 'Missing',
+      api_secret: api_secret ? 'Set' : 'Missing'
+    });
+
+    if (!cloud_name || !api_key || !api_secret) {
       console.error('Cloudinary environment variables not configured');
       return NextResponse.json(
         { error: 'Cloudinary not configured. Please contact administrator.' },
@@ -21,7 +27,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    cloudinary.config(cloudinaryConfig);
+    // Configure Cloudinary
+    cloudinary.config({
+      cloud_name,
+      api_key,
+      api_secret,
+      secure: true
+    });
     
     // Check authentication
     const session = await getServerSession(authOptions);
@@ -45,18 +57,57 @@ export async function POST(request: NextRequest) {
 
     console.log('Params to sign:', params_to_sign);
 
-    // Generate signature for Cloudinary upload
-    const signature = cloudinary.utils.api_sign_request(
-      params_to_sign,
-      cloudinaryConfig.api_secret
+    // Ensure parameters are properly formatted for Cloudinary signature
+    // Cloudinary expects parameters in alphabetical order for signature generation
+    const sortedParams: Record<string, any> = {};
+    
+    // Include all parameters that should be signed
+    Object.keys(params_to_sign).sort().forEach(key => {
+      // Make sure we include resource_type in the signature
+      if (params_to_sign[key] !== undefined && params_to_sign[key] !== null && params_to_sign[key] !== '') {
+        sortedParams[key] = params_to_sign[key];
+      }
+    });
+
+    console.log('Sorted params for signature:', sortedParams);
+
+    // Create the string to sign manually to ensure all parameters are included
+    const paramsToSign = Object.keys(sortedParams)
+      .sort()
+      .map(key => `${key}=${sortedParams[key]}`)
+      .join('&');
+    
+    console.log('String to sign:', paramsToSign);
+
+    // Generate signature manually to ensure it's correct
+    // Create the string to sign according to Cloudinary's specification
+    const stringToSign = Object.keys(sortedParams)
+      .sort()
+      .map(key => `${key}=${sortedParams[key]}`)
+      .join('&');
+    
+    console.log('Manual string to sign:', stringToSign);
+    
+    // Create SHA1 hash of the string + API secret
+    const signature = crypto
+      .createHash('sha1')
+      .update(stringToSign + api_secret)
+      .digest('hex');
+
+    console.log('Manual signature generated:', signature);
+
+    // Also try Cloudinary's built-in method for comparison
+    const cloudinarySignature = cloudinary.utils.api_sign_request(
+      sortedParams,
+      api_secret
     );
 
-    console.log('Signature generated successfully');
+    console.log('Cloudinary built-in signature:', cloudinarySignature);
 
     return NextResponse.json({
       signature,
-      api_key: cloudinaryConfig.api_key,
-      cloud_name: cloudinaryConfig.cloud_name,
+      api_key,
+      cloud_name,
     });
 
   } catch (error: any) {
