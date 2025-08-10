@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        orderBy: { [sortBy]: order },
+        orderBy: { [sortBy]: order as 'asc' | 'desc' },
         skip: (Number(page) - 1) * Number(limit),
         take: Number(limit),
         select: {
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
           isVerified: true,
           image: true,
           properties: { select: { id: true } },
-          payments: { where: { status: 'SUCCESS' }, select: { amount: true } }
+          payments: { where: { status: 'PAID' }, select: { amount: true } }
         }
       }),
       prisma.user.count({ where })
