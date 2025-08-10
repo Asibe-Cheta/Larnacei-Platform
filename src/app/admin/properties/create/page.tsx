@@ -127,7 +127,7 @@ export default function CreatePropertyPage() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('public_id', uploadParams.public_id);
-    formData.append('resource_type', uploadParams.resource_type);
+    formData.append('resource_type', 'video'); // Add resource_type directly to form data
     formData.append('timestamp', uploadParams.timestamp.toString());
     formData.append('transformation', uploadParams.transformation);
     formData.append('signature', signature);
@@ -259,9 +259,9 @@ export default function CreatePropertyPage() {
             const timestamp = Math.round(Date.now() / 1000);
             const publicId = `larnacei-properties/videos/admin-${timestamp}-${Math.random().toString(36).substring(2, 15)}`;
             
+            // For Cloudinary signature, don't include resource_type (it's handled separately)
             const uploadParams = {
               public_id: publicId,
-              resource_type: 'video',
               timestamp: timestamp,
               transformation: 'w_1920,h_1080,c_limit,q_auto',
             };
@@ -397,8 +397,18 @@ export default function CreatePropertyPage() {
         body: JSON.stringify(apiData),
       });
 
+      console.log('Property creation response status:', response.status);
+      console.log('Property creation response headers:', response.headers);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Property creation failed with status:', response.status);
+        console.error('Error response text:', errorText);
+        throw new Error(`Property creation failed: ${response.status} ${errorText}`);
+      }
+
       const data = await response.json();
-      console.log('Response:', data);
+      console.log('Property creation successful:', data);
 
       if (response.ok && data.success) {
         setMessage({ type: 'success', text: 'Property created successfully!' });

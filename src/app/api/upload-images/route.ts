@@ -178,12 +178,24 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('Upload completed successfully. URLs:', uploadedUrls);
+    console.log('Upload completed successfully. URLs:', uploadedUrls.length, 'files');
+    
+    // Ensure we have at least one URL
+    if (uploadedUrls.length === 0) {
+      console.error('No URLs were generated after upload process');
+      return NextResponse.json(
+        { error: 'No images were successfully uploaded' },
+        { status: 400 }
+      );
+    }
 
-    return NextResponse.json({
+    const response = {
       success: true,
       urls: uploadedUrls
-    }, { headers: responseHeaders });
+    };
+    
+    console.log('Returning success response:', response);
+    return NextResponse.json(response, { headers: responseHeaders });
 
   } catch (error: any) {
     console.error('Image upload error:', error);
