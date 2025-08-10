@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import prisma from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/bigint-serializer';
 
 // GET /api/admin/users - Get all users with admin information
 export async function GET(req: NextRequest) {
@@ -125,7 +126,7 @@ export async function GET(req: NextRequest) {
     const mappedUsers = users.map(u => ({
       ...u,
       propertiesCount: u.properties.length,
-      totalRevenue: u.payments.reduce((sum, p) => sum + (p.amount || 0), 0),
+      totalRevenue: u.payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0),
       // Map field names for frontend compatibility
       verificationStatus: u.isVerified ? 'verified' : 
                          u.verificationLevel === 'EMAIL_VERIFIED' ? 'pending' : 'unverified',
@@ -135,13 +136,15 @@ export async function GET(req: NextRequest) {
       avatar: u.image
     }));
 
-    return NextResponse.json({
+    const response = {
       success: true,
       users: mappedUsers,
       total,
       page: Number(page),
       limit: Number(limit)
-    });
+    };
+
+    return NextResponse.json(serializeBigInt(response));
 
   } catch (error) {
     console.error('Admin users GET: Error:', error);

@@ -165,8 +165,8 @@ export default function CreatePropertyPage() {
       if (!formData.price || parseFloat(formData.price.replace(/,/g, '')) < 100000) {
         throw new Error('Property price must be at least ₦100,000');
       }
-      if (parseFloat(formData.price.replace(/,/g, '')) > 20000000) {
-        throw new Error('Property price cannot exceed ₦20,000,000 (system limit)');
+      if (parseFloat(formData.price.replace(/,/g, '')) > 900000000) {
+        throw new Error('Property price cannot exceed ₦900,000,000');
       }
       if (!formData.address || formData.address.length < 10) {
         throw new Error('Address must be at least 10 characters');
@@ -342,7 +342,7 @@ export default function CreatePropertyPage() {
         landmark: '',
 
         // Pricing
-        price: parseInt(formData.price.replace(/,/g, '')) * 100, // Convert to kobo
+        price: BigInt(parseInt(formData.price.replace(/,/g, '')) * 100), // Convert to kobo as BigInt
         currency: 'NGN' as const,
         isNegotiable: true,
 

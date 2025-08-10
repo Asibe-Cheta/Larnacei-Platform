@@ -10,6 +10,7 @@ import {
 } from "@/lib/validations";
 import { UserRole } from "@prisma/client";
 import { cacheManager } from "@/lib/redis";
+import { serializeBigInt, bigintToNumber } from "@/lib/bigint-serializer";
 
 /**
  * POST /api/properties
@@ -146,14 +147,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('Property creation completed successfully');
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Property created successfully",
-        data: property,
-      },
-      { status: 201 }
-    );
+    
+    // Serialize the response with BigInt handling
+    const responseData = serializeBigInt({
+      success: true,
+      message: "Property created successfully",
+      data: property,
+    });
+    
+    return NextResponse.json(responseData, { status: 201 });
   } catch (error: any) {
     console.error("Property creation error:", error);
 
@@ -343,7 +345,10 @@ export async function GET(request: NextRequest) {
     };
 
     console.log('Properties API: Returning response');
-    return NextResponse.json(response, { status: 200 });
+    
+    // Serialize the response with BigInt handling
+    const serializedResponse = serializeBigInt(response);
+    return NextResponse.json(serializedResponse, { status: 200 });
   } catch (error: any) {
     console.error('Properties API: Error:', error);
     return NextResponse.json(

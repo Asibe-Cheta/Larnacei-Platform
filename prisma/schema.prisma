@@ -118,7 +118,7 @@ model Property {
   longitude     Float?
 
   // Pricing
-  price        Int // Base price in kobo
+  price        BigInt // Base price in kobo
   currency     Currency @default(NGN)
   isNegotiable Boolean  @default(false)
 
@@ -671,7 +671,7 @@ model Payment {
   id String @id @default(cuid())
 
   // Payment Details
-  amount        Int // Amount in kobo
+  amount        BigInt // Amount in kobo
   currency      Currency      @default(NGN)
   paymentMethod PaymentMethod
   paymentType   PaymentType
@@ -688,7 +688,7 @@ model Payment {
   paidAt          DateTime?
 
   // Refund Information
-  refundAmount Int       @default(0)
+  refundAmount BigInt    @default(0)
   refundedAt   DateTime?
   refundReason String?
 
@@ -715,7 +715,7 @@ model PremiumFeature {
   id          String   @id @default(cuid())
   name        String
   description String
-  price       Int // Price in kobo
+  price       BigInt // Price in kobo
   currency    Currency @default(NGN)
   duration    Int? // Duration in days (null for one-time)
   isActive    Boolean  @default(true)
@@ -762,7 +762,7 @@ model Payout {
   user   User   @relation(fields: [userId], references: [id])
 
   // Payout Details
-  amount        Int // Amount in kobo
+  amount        BigInt // Amount in kobo
   currency      Currency @default(NGN)
   bankCode      String
   accountNumber String
