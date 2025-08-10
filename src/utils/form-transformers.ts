@@ -61,8 +61,8 @@ export function transformFormDataToApi(
     'NEEDS_RENOVATION': 'NEEDS_RENOVATION'
   };
 
-  // Convert price from formatted string to kobo
-  const priceInKobo = toKobo(parseFloat(formData.price.replace(/,/g, '')) || 0);
+  // Convert price from formatted string to kobo as BigInt
+  const priceInKobo = BigInt(parseInt(formData.price.replace(/,/g, '')) * 100);
 
   // Build title documents object
   const titleDocuments: Record<string, boolean> = {};
@@ -220,6 +220,9 @@ export function validateFormData(formData: any): { isValid: boolean; errors: str
   if (!formData.price || parseFloat(formData.price.replace(/,/g, '')) < 100000) {
     errors.push('Property price must be at least ₦100,000');
   }
+  if (parseFloat(formData.price.replace(/,/g, '')) > 900000000) {
+    errors.push('Property price cannot exceed ₦900,000,000');
+  }
 
   // Step 2: Location
   if (!formData.address || formData.address.length < 10) {
@@ -300,6 +303,9 @@ export function getStepValidationStatus(step: number, formData: any): { isValid:
       }
       if (!formData.price || parseFloat(formData.price.replace(/,/g, '')) < 100000) {
         errors.push('Property price must be at least ₦100,000');
+      }
+      if (parseFloat(formData.price.replace(/,/g, '')) > 900000000) {
+        errors.push('Property price cannot exceed ₦900,000,000');
       }
       break;
 

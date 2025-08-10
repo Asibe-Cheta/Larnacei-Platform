@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 import { analyticsService } from '@/lib/analytics-service';
 
 export async function GET(request: NextRequest) {
@@ -40,10 +40,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(analyticsData);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Admin analytics API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }

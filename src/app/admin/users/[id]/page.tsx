@@ -1,0 +1,342 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+
+interface UserDetail {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  createdAt: string;
+  updatedAt: string;
+  isVerified: boolean;
+  verificationLevel: string;
+  isActive: boolean;
+  role: string;
+  lastLoginAt?: string;
+  profile?: {
+    firstName?: string;
+    lastName?: string;
+    dateOfBirth?: string;
+    bio?: string;
+    avatar?: string;
+  };
+  _count?: {
+    properties?: number;
+    inquiries?: number;
+    payments?: number;
+  };
+}
+
+interface UserPageProps {
+  params: {
+    id: string;
+  };
+}
+
+export default function UserDetailPage({ params }: UserPageProps) {
+  const router = useRouter();
+  const [user, setUser] = useState<UserDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+
+  useEffect(() => {
+    fetchUserDetail();
+  }, [params.id]);
+
+  const fetchUserDetail = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/admin/users/${params.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user details: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setUser(data.user);
+      } else {
+        throw new Error(data.error || 'Failed to fetch user details');
+      }
+    } catch (error: any) {
+      console.error('Error fetching user details:', error);
+      setError(error.message || 'Failed to load user details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyUser = async () => {
+    if (!user) return;
+
+    try {
+      setIsVerifying(true);
+      setError(null);
+
+      const response = await fetch(`/api/admin/users/${user.id}/verify`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Verification failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Refresh user data
+        await fetchUserDetail();
+      } else {
+        throw new Error(data.error || 'Verification failed');
+      }
+    } catch (error: any) {
+      console.error('Error verifying user:', error);
+      setError(error.message || 'Failed to verify user');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-center min-h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading user details...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <Alert className="border-red-200 bg-red-50">
+          <AlertDescription className="text-red-800">
+            {error}
+          </AlertDescription>
+        </Alert>
+        <div className="mt-4">
+          <Button onClick={() => router.push('/admin/users')} variant="outline">
+            ← Back to Users
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <Alert className="border-yellow-200 bg-yellow-50">
+          <AlertDescription className="text-yellow-800">
+            User not found
+          </AlertDescription>
+        </Alert>
+        <div className="mt-4">
+          <Button onClick={() => router.push('/admin/users')} variant="outline">
+            ← Back to Users
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Header */}
+      <div className="mb-6">
+        <Button 
+          onClick={() => router.push('/admin/users')} 
+          variant="outline" 
+          className="mb-4"
+        >
+          ← Back to Users
+        </Button>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">User Details</h1>
+            <p className="text-gray-600 mt-2">{user.name || user.email}</p>
+          </div>
+          <div className="flex space-x-3">
+            {!user.isVerified && (
+              <Button 
+                onClick={handleVerifyUser}
+                disabled={isVerifying}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isVerifying ? 'Verifying...' : 'Verify User'}
+              </Button>
+            )}
+            <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+              user.isVerified 
+                ? 'bg-green-100 text-green-800' 
+                : 'bg-yellow-100 text-yellow-800'
+            }`}>
+              {user.isVerified ? 'Verified' : 'Unverified'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Basic Information */}
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Basic Information</CardTitle>
+              <CardDescription>User account details and profile information</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Full Name</label>
+                  <p className="text-gray-900 mt-1">{user.name || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Email</label>
+                  <p className="text-gray-900 mt-1">{user.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Phone</label>
+                  <p className="text-gray-900 mt-1">{user.phone || 'Not provided'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Role</label>
+                  <p className="text-gray-900 mt-1 capitalize">{user.role?.toLowerCase() || 'User'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Account Status</label>
+                  <p className={`mt-1 font-medium ${user.isActive ? 'text-green-600' : 'text-red-600'}`}>
+                    {user.isActive ? 'Active' : 'Inactive'}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Verification Level</label>
+                  <p className="text-gray-900 mt-1">{user.verificationLevel || 'Basic'}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Member Since</label>
+                  <p className="text-gray-900 mt-1">
+                    {new Date(user.createdAt).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Last Login</label>
+                  <p className="text-gray-900 mt-1">
+                    {user.lastLoginAt 
+                      ? new Date(user.lastLoginAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })
+                      : 'Never'
+                    }
+                  </p>
+                </div>
+              </div>
+
+              {user.profile && (
+                <div className="border-t pt-4 mt-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-3">Profile Information</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {user.profile.firstName && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">First Name</label>
+                        <p className="text-gray-900 mt-1">{user.profile.firstName}</p>
+                      </div>
+                    )}
+                    {user.profile.lastName && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">Last Name</label>
+                        <p className="text-gray-900 mt-1">{user.profile.lastName}</p>
+                      </div>
+                    )}
+                    {user.profile.dateOfBirth && (
+                      <div>
+                        <label className="text-sm font-medium text-gray-700">Date of Birth</label>
+                        <p className="text-gray-900 mt-1">
+                          {new Date(user.profile.dateOfBirth).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  {user.profile.bio && (
+                    <div className="mt-4">
+                      <label className="text-sm font-medium text-gray-700">Bio</label>
+                      <p className="text-gray-900 mt-1">{user.profile.bio}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Activity Summary */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Activity Summary</CardTitle>
+              <CardDescription>User engagement metrics</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-red-600">
+                  {user._count?.properties || 0}
+                </div>
+                <p className="text-sm text-gray-600">Properties Listed</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-blue-600">
+                  {user._count?.inquiries || 0}
+                </div>
+                <p className="text-sm text-gray-600">Inquiries Made</p>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">
+                  {user._count?.payments || 0}
+                </div>
+                <p className="text-sm text-gray-600">Payments Made</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {user.profile?.avatar && (
+            <Card className="mt-6">
+              <CardHeader>
+                <CardTitle>Profile Picture</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex justify-center">
+                  <img 
+                    src={user.profile.avatar} 
+                    alt="Profile"
+                    className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
