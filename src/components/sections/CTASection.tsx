@@ -14,7 +14,7 @@ export default function CTASection() {
           <Link href="/list-property" className="btn btn-white-bg">
             List Property
           </Link>
-          <Link href="/learn-more" className="btn btn-outline-white">
+          <Link href="/faq" className="btn btn-outline-white">
             Learn More
           </Link>
         </div>
