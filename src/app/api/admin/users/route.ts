@@ -191,9 +191,8 @@ export async function POST(request: NextRequest) {
           await prisma.user.updateMany({
             where: { id: { in: userIds } },
             data: {
-              verificationStatus: 'VERIFIED',
-              verifiedAt: new Date(),
-              verifiedBy: session.user.id
+              isVerified: true,
+              verificationLevel: 'FULL_VERIFIED'
             }
           });
           break;
@@ -202,9 +201,7 @@ export async function POST(request: NextRequest) {
           await prisma.user.updateMany({
             where: { id: { in: userIds } },
             data: {
-              isSuspended: true,
-              suspendedAt: new Date(),
-              suspendedBy: session.user.id
+              isVerified: false
             }
           });
           break;
@@ -213,9 +210,7 @@ export async function POST(request: NextRequest) {
           await prisma.user.updateMany({
             where: { id: { in: userIds } },
             data: {
-              isSuspended: false,
-              suspendedAt: null,
-              suspendedBy: null
+              isVerified: true
             }
           });
           break;
@@ -224,16 +219,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
       }
 
-      // Create audit logs for bulk actions
-      await prisma.adminAuditLog.createMany({
-        data: userIds.map((userId: string) => ({
-          action: `${action.toUpperCase()}_USER`,
-          adminId: session.user.id,
-          targetType: 'USER',
-          targetId: userId,
-          details: { action, bulkOperation: true }
-        }))
-      });
+      // Note: Audit logs removed as AdminAuditLog model doesn't exist in current schema
 
       return NextResponse.json({
         message: `Users ${action}ed successfully`,
@@ -273,24 +259,13 @@ export async function POST(request: NextRequest) {
           phone,
           accountType,
           role: role || 'USER',
-          verificationStatus: 'VERIFIED',
-          kycStatus: 'COMPLETED',
-          verifiedAt: new Date(),
-          verifiedBy: session.user.id,
-          isAdminCreated: true
+          isVerified: true,
+          verificationLevel: 'FULL_VERIFIED',
+          kycStatus: 'COMPLETED'
         }
       });
 
-      // Create audit log
-      await prisma.adminAuditLog.create({
-        data: {
-          action: 'CREATE_ADMIN_USER',
-          adminId: session.user.id,
-          targetType: 'USER',
-          targetId: user.id,
-          details: { accountType, role }
-        }
-      });
+      // Note: Audit log removed as AdminAuditLog model doesn't exist in current schema
 
       return NextResponse.json({
         message: 'Admin user created successfully',
