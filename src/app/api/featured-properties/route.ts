@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
+import { serializeBigInt } from '@/lib/bigint-serializer';
 
 export async function GET(request: NextRequest) {
   try {
@@ -26,6 +27,12 @@ export async function GET(request: NextRequest) {
             isPrimary: true,
           },
           take: 1,
+          select: {
+            id: true,
+            url: true,
+            alt: true,
+            isPrimary: true,
+          },
         },
         _count: {
           select: {
@@ -44,15 +51,18 @@ export async function GET(request: NextRequest) {
 
     console.log('Featured properties GET: Found', featuredProperties.length, 'featured properties');
 
+    // Serialize BigInt values for JSON response
+    const serializedProperties = serializeBigInt(featuredProperties);
+
     return NextResponse.json({
       success: true,
-      data: featuredProperties,
+      data: serializedProperties,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Featured properties GET: Error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }
