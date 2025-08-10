@@ -334,8 +334,8 @@ export default function CreatePropertyPage() {
         state: formData.state,
         lga: formData.lga,
         country: 'Nigeria',
-        latitude: formData.latitude || null,
-        longitude: formData.longitude || null,
+        latitude: formData.latitude || undefined,
+        longitude: formData.longitude || undefined,
         landmark: '',
 
         // Pricing
@@ -347,7 +347,7 @@ export default function CreatePropertyPage() {
         bedrooms: formData.bedrooms || 0,
         bathrooms: formData.bathrooms || 0,
         toilets: formData.bathrooms || 0,
-        sizeInSqm: formData.area || null,
+        sizeInSqm: formData.area || undefined,
         parkingSpaces: 0,
         features: formData.amenities,
         condition: 'NEW' as const,
@@ -367,7 +367,7 @@ export default function CreatePropertyPage() {
           hasDeedOfAssignment: false,
           hasPowerOfAttorney: false,
         },
-        ownershipType: 'FREEHOLD' as const,
+        ownershipType: 'PERSONAL' as const,
         legalStatus: 'CLEAR' as const,
 
         // Availability
