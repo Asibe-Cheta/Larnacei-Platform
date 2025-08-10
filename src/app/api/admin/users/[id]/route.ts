@@ -41,6 +41,9 @@ export async function GET(
     const user = await prisma.user.findUnique({
       where: { id: params.id },
       include: {
+        verificationDocs: {
+          orderBy: { createdAt: 'desc' }
+        },
         _count: {
           select: {
             properties: true,

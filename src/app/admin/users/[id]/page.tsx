@@ -101,6 +101,28 @@ export default function UserDetailPage({ params }: UserPageProps) {
     }
   };
 
+  const handleDocumentAction = async (documentId: string, status: 'APPROVED' | 'REJECTED') => {
+    try {
+      const response = await fetch(`/api/admin/documents/${documentId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to update document status: ${response.status}`);
+      }
+
+      // Refresh user data to get updated document status
+      fetchUser();
+    } catch (error) {
+      console.error('Error updating document status:', error);
+      setError('Failed to update document status');
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
@@ -262,6 +284,83 @@ export default function UserDetailPage({ params }: UserPageProps) {
                     </div>
                   )}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Verification Documents */}
+        <div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Verification Documents</CardTitle>
+              <CardDescription>User uploaded identity documents</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {user.verificationDocs && user.verificationDocs.length > 0 ? (
+                <div className="space-y-4">
+                  {user.verificationDocs.map((doc: any) => (
+                    <div key={doc.id} className="border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium text-gray-900 mr-2">
+                            {doc.documentType.replace('_', ' ')}
+                          </span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            doc.verificationStatus === 'APPROVED' ? 'bg-green-100 text-green-800' :
+                            doc.verificationStatus === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {doc.verificationStatus}
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {new Date(doc.createdAt).toLocaleDateString()}
+                        </div>
+                      </div>
+                      {doc.documentNumber && (
+                        <p className="text-sm text-gray-600 mb-2">
+                          Number: {doc.documentNumber}
+                        </p>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <a
+                          href={doc.documentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                          View Document
+                        </a>
+                        {doc.verificationStatus === 'PENDING' && (
+                          <div className="space-x-2">
+                            <button
+                              onClick={() => handleDocumentAction(doc.id, 'APPROVED')}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => handleDocumentAction(doc.id, 'REJECTED')}
+                              className="inline-flex items-center px-3 py-1 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {doc.rejectionReason && (
+                        <p className="text-sm text-red-600 mt-2">
+                          Rejection reason: {doc.rejectionReason}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-center py-4">
+                  No verification documents uploaded yet
+                </p>
               )}
             </CardContent>
           </Card>

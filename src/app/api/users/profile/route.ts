@@ -31,26 +31,10 @@ export async function GET(request: NextRequest) {
     // Fetch user profile
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        image: true,
-        role: true,
-        accountType: true,
-        isVerified: true,
-        verificationLevel: true,
-        kycStatus: true,
-        bio: true,
-        location: true,
-        experience: true,
-        specialization: true,
-        socialLinks: true,
-        contactPreference: true,
-        availabilityHours: true,
-        createdAt: true,
-        updatedAt: true,
+      include: {
+        verificationDocs: {
+          orderBy: { createdAt: 'desc' }
+        },
         _count: {
           select: {
             properties: true,
