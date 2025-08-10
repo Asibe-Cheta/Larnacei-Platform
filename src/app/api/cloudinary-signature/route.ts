@@ -3,16 +3,25 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/authOptions';
 import { v2 as cloudinary } from 'cloudinary';
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
 export async function POST(request: NextRequest) {
   try {
-    console.log('Cloudinary signature request received for large file upload');
+    console.log('Cloudinary signature request received');
+    
+    const cloudinaryConfig = {
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: process.env.CLOUDINARY_API_KEY,
+      api_secret: process.env.CLOUDINARY_API_SECRET,
+    };
+
+    if (!cloudinaryConfig.cloud_name || !cloudinaryConfig.api_key || !cloudinaryConfig.api_secret) {
+      console.error('Cloudinary environment variables not configured');
+      return NextResponse.json(
+        { error: 'Cloudinary not configured. Please contact administrator.' },
+        { status: 500 }
+      );
+    }
+
+    cloudinary.config(cloudinaryConfig);
     
     // Check authentication
     const session = await getServerSession(authOptions);
@@ -24,8 +33,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('User authenticated:', session.user.id);
-
     const body = await request.json();
     const { params_to_sign } = body;
 
@@ -36,16 +43,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log('Params to sign:', params_to_sign);
+
     // Generate signature for Cloudinary upload
     const signature = cloudinary.utils.api_sign_request(
       params_to_sign,
-      process.env.CLOUDINARY_API_SECRET!
+      cloudinaryConfig.api_secret
     );
+
+    console.log('Signature generated successfully');
 
     return NextResponse.json({
       signature,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+      api_key: cloudinaryConfig.api_key,
+      cloud_name: cloudinaryConfig.cloud_name,
     });
 
   } catch (error: any) {
