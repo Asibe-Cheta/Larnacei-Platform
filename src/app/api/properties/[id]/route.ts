@@ -42,8 +42,10 @@ export async function GET(
 ) {
   try {
     const { id } = params;
+    console.log('Property detail GET: Starting request for ID:', id);
 
     if (!id) {
+      console.log('Property detail GET: No ID provided');
       return NextResponse.json(
         { success: false, message: "Property ID is required" },
         { status: 400 }
@@ -51,6 +53,7 @@ export async function GET(
     }
 
     // Fetch property with all related data
+    console.log('Property detail GET: Querying database for property with ID:', id);
     const property = await prisma.property.findUnique({
       where: { id },
       include: {
@@ -99,15 +102,20 @@ export async function GET(
     });
 
     if (!property) {
+      console.log('Property detail GET: Property not found in database for ID:', id);
       return NextResponse.json(
         { success: false, message: "Property not found" },
         { status: 404 }
       );
     }
 
+    console.log('Property detail GET: Property found:', property.id, property.title);
+
     // Check if user is admin
     const session = await getServerSession(authOptions);
     let isAdmin = false;
+    
+    console.log('Property detail GET: Checking admin status for user:', session?.user?.email);
     
     if (session?.user?.email) {
       const user = await prisma.user.findUnique({
@@ -115,10 +123,18 @@ export async function GET(
         select: { role: true }
       });
       isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
+      console.log('Property detail GET: User role:', user?.role, 'isAdmin:', isAdmin);
     }
 
     // Only return active and approved properties (unless admin)
+    console.log('Property detail GET: Property status check:', {
+      isAdmin,
+      isActive: property.isActive,
+      moderationStatus: property.moderationStatus
+    });
+    
     if (!isAdmin && (!property.isActive || property.moderationStatus !== "APPROVED")) {
+      console.log('Property detail GET: Property not available - not active or not approved');
       return NextResponse.json(
         { success: false, message: "Property not available" },
         { status: 404 }
