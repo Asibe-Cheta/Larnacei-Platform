@@ -223,7 +223,10 @@ export const propertyLegalSchema = z.object({
  */
 export const propertyAvailabilitySchema = z.object({
   availabilityStatus: z.nativeEnum(AvailabilityStatus).default(AvailabilityStatus.AVAILABLE),
-  availableFrom: z.date().optional(),
+  availableFrom: z.union([
+    z.date(),
+    z.string().datetime().transform((str) => new Date(str))
+  ]).optional(),
   inspectionType: z.nativeEnum(InspectionType).default(InspectionType.BY_APPOINTMENT),
 });
 

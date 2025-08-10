@@ -372,7 +372,7 @@ export default function CreatePropertyPage() {
 
         // Availability
         availabilityStatus: 'AVAILABLE' as const,
-        availableFrom: new Date(),
+        availableFrom: new Date().toISOString(),
         inspectionType: 'BY_APPOINTMENT' as const,
 
         // Contact
