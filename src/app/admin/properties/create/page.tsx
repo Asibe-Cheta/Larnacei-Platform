@@ -127,7 +127,6 @@ export default function CreatePropertyPage() {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('public_id', uploadParams.public_id);
-    formData.append('folder', uploadParams.folder);
     formData.append('resource_type', uploadParams.resource_type);
     formData.append('timestamp', uploadParams.timestamp.toString());
     formData.append('transformation', uploadParams.transformation);
@@ -262,7 +261,6 @@ export default function CreatePropertyPage() {
             
             const uploadParams = {
               public_id: publicId,
-              folder: 'larnacei-properties/videos',
               resource_type: 'video',
               timestamp: timestamp,
               transformation: 'w_1920,h_1080,c_limit,q_auto',
