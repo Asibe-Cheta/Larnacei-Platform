@@ -138,9 +138,44 @@ export default function TermsPage() {
               </div>
             </section>
 
+            {/* Platform Liability and Private Dealings */}
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">10. Platform Liability and Private Dealings</h2>
+              <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
+                <div className="space-y-4 text-gray-700">
+                  <p><strong>Important Disclaimer:</strong></p>
+                  <p>
+                    Larnacei Global Limited operates as a platform that connects property owners with potential buyers and tenants. We are <strong>NOT responsible or accountable</strong> for any private dealings, negotiations, payments, or transactions that occur directly between users and property owners outside of our official platform.
+                  </p>
+                  <p>
+                    <strong>We are ONLY accountable for transactions and services that are conducted through our official platform and verified processes.</strong>
+                  </p>
+                  <p>
+                    If a customer or any user chooses to deal privately with a property owner, bypassing our platform, we will not be held responsible for:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li>Fraudulent activities or misrepresentations</li>
+                    <li>Financial losses or damages</li>
+                    <li>Property disputes or legal issues</li>
+                    <li>Non-delivery of services or properties</li>
+                    <li>Any other issues arising from such private dealings</li>
+                  </ul>
+                  <p>
+                    <strong>Property Verification Service:</strong> For your protection, you may contact us directly at <strong>info@larnaceiglobal.com</strong> to confirm the legitimacy of any property listing or verify the authenticity of any person claiming to represent properties on our platform.
+                  </p>
+                  <p>
+                    <strong>Complete Verification & Validation Service:</strong> We offer a comprehensive service where our team handles the entire verification and validation process for your property transaction. This includes property authenticity verification, owner legitimacy confirmation, secure payment processing, and legal documentation support. Look for the "Let us handle the process" option on property listings or contact us directly to arrange this service.
+                  </p>
+                  <p>
+                    We strongly recommend conducting all transactions through our verified platform for your safety and security.
+                  </p>
+                </div>
+              </div>
+            </section>
+
             {/* Limitation of Liability */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">10. Limitation of Liability</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">11. Limitation of Liability</h2>
               <p className="text-gray-600">
                 In no event shall Larnacei Global Limited be liable for any indirect, incidental, special, consequential, or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses, resulting from your use of the Service.
               </p>
@@ -148,7 +183,7 @@ export default function TermsPage() {
 
             {/* Indemnification */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">11. Indemnification</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">12. Indemnification</h2>
               <p className="text-gray-600">
                 You agree to defend, indemnify, and hold harmless Larnacei Global Limited from and against any claims, damages, obligations, losses, liabilities, costs, or debt arising from your use of the Service or violation of these Terms.
               </p>
@@ -156,7 +191,7 @@ export default function TermsPage() {
 
             {/* Termination */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">12. Termination</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">13. Termination</h2>
               <div className="space-y-4 text-gray-600">
                 <p>We may terminate or suspend your account and access to our Service immediately, without prior notice, for any reason, including breach of these Terms.</p>
                 <p>Upon termination, your right to use the Service will cease immediately. All provisions of these Terms which by their nature should survive termination shall survive termination.</p>
@@ -165,7 +200,7 @@ export default function TermsPage() {
 
             {/* Governing Law */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">13. Governing Law</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">14. Governing Law</h2>
               <p className="text-gray-600">
                 These Terms shall be governed by and construed in accordance with the laws of Nigeria, without regard to its conflict of law provisions.
               </p>
@@ -173,7 +208,7 @@ export default function TermsPage() {
 
             {/* Changes to Terms */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">14. Changes to Terms</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">15. Changes to Terms</h2>
               <p className="text-gray-600">
                 We reserve the right to modify or replace these Terms at any time. If a revision is material, we will provide at least 30 days notice prior to any new terms taking effect.
               </p>
@@ -181,14 +216,17 @@ export default function TermsPage() {
 
             {/* Contact Information */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">15. Contact Information</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">16. Contact Information</h2>
               <p className="text-gray-600">
                 If you have any questions about these Terms, please contact us at:
               </p>
               <div className="mt-4 space-y-2 text-gray-600">
                 <p><strong>Email:</strong> info@larnaceiglobal.com</p>
                 <p><strong>Phone:</strong> +234 123 456 7890</p>
-                <p><strong>Address:</strong> 123 Real Estate Avenue, Victoria Island, Lagos, Nigeria</p>
+                <p><strong>Address:</strong> Amaoba Plaza, No 1 Amaoba Avenue<br />
+                Mgbuoba, by Location Flyover<br />
+                Port Harcourt, Rivers State<br />
+                Nigeria</p>
               </div>
             </section>
           </div>

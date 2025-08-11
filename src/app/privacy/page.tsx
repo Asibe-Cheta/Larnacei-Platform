@@ -197,16 +197,50 @@ export default function PrivacyPage() {
                 If you have any questions about this Privacy Policy or our data practices, please contact us:
               </p>
               <div className="space-y-2 text-gray-600">
-                <p><strong>Email:</strong> privacy@larnacei.com</p>
+                <p><strong>Email:</strong> info@larnaceiglobal.com</p>
                 <p><strong>Phone:</strong> +234 123 456 7890</p>
-                <p><strong>Address:</strong> 123 Real Estate Avenue, Victoria Island, Lagos, Nigeria</p>
-                <p><strong>Data Protection Officer:</strong> dpo@larnacei.com</p>
+                <p><strong>Address:</strong> Amaoba Plaza, No 1 Amaoba Avenue<br />
+                Mgbuoba, by Location Flyover<br />
+                Port Harcourt, Rivers State<br />
+                Nigeria</p>
+                <p><strong>Data Protection Officer:</strong> info@larnaceiglobal.com</p>
+              </div>
+            </section>
+
+            {/* Platform Liability Disclaimer */}
+            <section>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">14. Platform Liability and Property Verification</h2>
+              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+                <div className="space-y-4 text-gray-700">
+                  <p><strong>Important Disclaimer:</strong></p>
+                  <p>
+                    Larnacei Global Limited serves as a platform to connect property owners with potential buyers and tenants. We are <strong>not responsible or accountable</strong> for any private dealings, negotiations, or transactions that occur directly between users and property owners outside of our platform.
+                  </p>
+                  <p>
+                    We are only accountable for transactions and services that are conducted through our official platform and processes. For your safety and protection, we strongly recommend:
+                  </p>
+                  <ul className="list-disc list-inside space-y-1 ml-4">
+                    <li>Conducting all transactions through our platform</li>
+                    <li>Verifying property legitimacy by contacting us directly</li>
+                    <li>Using our official communication channels</li>
+                    <li>Following our recommended verification procedures</li>
+                  </ul>
+                  <p>
+                    <strong>Property Verification Service:</strong> Before engaging in any property transaction, we encourage you to contact us directly at <strong>info@larnaceiglobal.com</strong> to confirm the legitimacy of any property listing or verify the authenticity of property owners claiming to represent properties on our platform.
+                  </p>
+                  <p>
+                    <strong>Full Service Option:</strong> For maximum security and peace of mind, you can request our complete verification and validation service. Look for the "Let us handle the process" button on any property listing, or contact us directly to have our team manage the entire transaction process from verification to completion.
+                  </p>
+                  <p>
+                    We cannot guarantee the accuracy, completeness, or legitimacy of properties or users outside of our verified processes.
+                  </p>
+                </div>
               </div>
             </section>
 
             {/* Complaints */}
             <section>
-              <h2 className="text-2xl font-bold text-gray-900 mb-4">14. Complaints</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">15. Complaints</h2>
               <p className="text-gray-600">
                 If you have concerns about our data practices, you may file a complaint with the relevant data protection authority in your jurisdiction. We will work with you to resolve any issues before you escalate to the authorities.
               </p>

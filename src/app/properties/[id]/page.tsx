@@ -197,6 +197,64 @@ export default function PropertyDetailPage() {
               propertyCurrency={property.currency}
             />
 
+            {/* Larnacei Verification Service */}
+            <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-lg shadow-sm border-2 border-red-200 p-6">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  🛡️ Secure Transaction Guarantee
+                </h3>
+                <p className="text-sm text-gray-700 mb-4">
+                  Want peace of mind? Let us handle the entire verification and validation process for this property transaction.
+                </p>
+                <div className="space-y-2 text-xs text-gray-600 mb-4">
+                  <div className="flex items-center justify-center">
+                    <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>Property authenticity verification</span>
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>Owner legitimacy confirmation</span>
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>Secure payment processing</span>
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <span>Legal documentation support</span>
+                  </div>
+                </div>
+                <a
+                  href={`mailto:info@larnaceiglobal.com?subject=Property Verification Request - Property ID: ${property.id}&body=Hello Larnacei Team,%0D%0A%0D%0AI am interested in having you handle the verification and validation process for this property:%0D%0A%0D%0AProperty: ${property.title}%0D%0ALocation: ${property.city}, ${property.state}%0D%0AProperty ID: ${property.id}%0D%0A%0D%0APlease contact me to discuss the verification process and your service fees.%0D%0A%0D%0AThank you!`}
+                  className="inline-flex items-center justify-center w-full px-4 py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors duration-200 shadow-lg hover:shadow-xl"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  Let Us Handle The Process
+                </a>
+                <p className="text-xs text-gray-500 mt-3">
+                  📞 Or call us: +234 123 456 7890
+                </p>
+                <p className="text-xs text-red-600 font-medium mt-1">
+                  ⚠️ Avoid private dealings - Use our verified process!
+                </p>
+              </div>
+            </div>
+
             {/* Quick Stats */}
             <div className="bg-white rounded-lg shadow-sm border p-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Property Stats</h3>
